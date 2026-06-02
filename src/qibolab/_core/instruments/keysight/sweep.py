@@ -18,8 +18,13 @@ SUPPORTED_PULSE_SWEEPERS = [
     Parameter.phase,
 ]
 
+RAMP_RATE = 1  # 1V/s
+QcsParallelSweep = tuple[list[qcs.Array], list[qcs.Scalar], list[qcs.NonHVIOperation]]
 
-def process_sweepers(sweepers: list[ParallelSweepers]):
+
+def process_sweepers(
+    sweepers: list[ParallelSweepers], virtual_channel_map: dict[ChannelId, qcs.Channels]
+):
     """Processes Qibocal sweepers into QCS sweepers. Currently nested hardware
     sweepers are not supported, so they will default to software sweeping.
 
@@ -27,14 +32,14 @@ def process_sweepers(sweepers: list[ParallelSweepers]):
         sweepers (list[ParallelSweepers]): Array of array of sweepers.
 
     Returns:
-        hardware_sweepers (list[tuple[list[qcs.Array], list[qcs.Scalar]]]): Array of hardware-based QCS sweepers.
-        software_sweepers (list[tuple[list[qcs.Array], list[qcs.Scalar]]]): Array of software-based QCS sweepers.
-        sweeper_channel_map (dict[ChannelId, qcs.Scalar]): Map of channel ID to frequency to be swept.
+        hardware_sweepers (list[QcsParallelSweep]): Array of hardware-based QCS sweepers.
+        software_sweepers (list[QcsParallelSweep]): Array of software-based QCS sweepers.
+        sweeper_channel_map (dict[ChannelId, qcs.Scalar]): Map of channel ID to frequency or offset to be swept.
         sweeper_pulse_map (defaultdict[PulseId, dict[str, qcs.Scalar]]): Map of pulse ID to map of parameter
         to be swept and corresponding QCS variable.
     """
-    hardware_sweepers: list[tuple[list[qcs.Array], list[qcs.Scalar]]] = []
-    software_sweepers: list[tuple[list[qcs.Array], list[qcs.Scalar]]] = []
+    hardware_sweepers: list[QcsParallelSweep] = []
+    software_sweepers: list[QcsParallelSweep] = []
     sweeper_points = 0
 
     # Mapper for pulses that are controlled by a sweeper and the parameter to be swept
@@ -48,6 +53,7 @@ def process_sweepers(sweepers: list[ParallelSweepers]):
         # Hardware sweeping is supported up to 8 sweepers
         # If a software sweeper has been declared, every sweeper after must be swept in software
         hardware_sweeping = len(hardware_sweepers) < 9 or len(software_sweepers) == 0
+        pre_op_list = []
 
         for idx2, sweeper in enumerate(parallel_sweeper):
             qcs_variable = qcs.Scalar(
@@ -61,6 +67,16 @@ def process_sweepers(sweepers: list[ParallelSweepers]):
                 # Offset must be software swept
                 if sweeper.parameter is Parameter.offset:
                     hardware_sweeping = False
+                    virtual_channels = [
+                        virtual_channel_map[chan_id] for chan_id in sweeper.channels
+                    ]
+                    for channel in virtual_channels:
+                        pre_op_list.append(
+                            qcs.SetBaseBandDCOffset(
+                                channel, qcs_variable, ramping_rate=RAMP_RATE
+                            )
+                        )
+
             elif sweeper.parameter in SUPPORTED_PULSE_SWEEPERS:
                 # Duration can only be swept in hardware for delays
                 if sweeper.parameter is Parameter.duration and any(
@@ -91,10 +107,10 @@ def process_sweepers(sweepers: list[ParallelSweepers]):
         # For the hardware sweeper, there is a memory limit for the total number of variables x values
         if hardware_sweeping and sweeper_points > HARDWARE_SWEEPER_MAX_POINTS:
             hardware_sweeping = False
-        if hardware_sweeping:
-            hardware_sweepers.append((sweep_values, sweep_variables))
-        else:
-            software_sweepers.append((sweep_values, sweep_variables))
+
+        (hardware_sweepers if hardware_sweeping else software_sweepers).append(
+            (sweep_values, sweep_variables, pre_op_list)
+        )
 
     return (
         hardware_sweepers,

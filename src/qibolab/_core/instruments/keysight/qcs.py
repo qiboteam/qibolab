@@ -23,7 +23,7 @@ from .pulse import (
     process_iq_channel_pulse,
 )
 from .results import fetch_result, parse_result
-from .sweep import process_sweepers
+from .sweep import RAMP_RATE, process_sweepers
 
 __all__ = ["KeysightQCS"]
 
@@ -55,19 +55,6 @@ class KeysightQCS(Controller):
             suppress_rounding_warnings=True,
         )
         self.backend.is_system_ready()
-
-    def configure_offset(self, channel: qcs.Channels, offset: float | qcs.Scalar):
-        """Configures the DC offset of a given Keysight channel object.
-
-        Arguments:
-            channel (qcs.Channels): Keysight channel object.
-            offset (float | qcs.Scalar): Channel DC offset.
-        """
-        physical_channel = self.backend.channel_mapper.get_physical_channels(channel)[0]
-        if isinstance(offset, qcs.Scalar):
-            physical_channel.settings.constrain("offset", offset)
-        else:
-            physical_channel.settings.offset.value = offset
 
     def create_layer(
         self,
@@ -131,18 +118,22 @@ class KeysightQCS(Controller):
         options: ExecutionParameters,
         sweepers: list[ParallelSweepers],
     ) -> dict[int, Result]:
+        # Set shot-to-shot delay
         if options.relaxation_time is not None:
             self.backend._init_time = int(options.relaxation_time)
+        # Set hardware averaging to speed up result retrival
+        averaging = options.averaging_mode is not AveragingMode.SINGLESHOT
+        self.backend._publish_every_shot = not averaging
 
         (
             hardware_sweepers,
             software_sweepers,
             sweeper_channel_map,
             sweeper_pulse_map,
-        ) = process_sweepers(sweepers)
-        # Here we are telling the program to run hardware sweepers first, then software sweepers
-        # It is essential that we match the original sweeper order to the modified sweeper order
-        # to reconcile the results at the end
+        ) = process_sweepers(sweepers, self.virtual_channel_map)
+        # Here we are telling the instrument to run hardware sweepers first, then software sweepers
+        # The order of sweeping is determined by the argument order and no re-arrangement is performed
+        # @see process_sweepers for hardware/software sweeping decision logic
         program = reduce(
             sweeper_reducer,
             software_sweepers,
@@ -152,28 +143,25 @@ class KeysightQCS(Controller):
         )
 
         # Configure channel offsets
-        dc_offset_layer = qcs.Layer()
-        empty_pulse = qcs.DCWaveform(
-            duration=20e-9, amplitude=0, envelope=qcs.ConstantEnvelope()
-        )
-
         for virtual_channel_id in self.offset_channels:
-            offset = sweeper_channel_map.get(
-                virtual_channel_id, configs[virtual_channel_id].offset
-            )
-
+            offset = configs[virtual_channel_id].offset
             virtual_channel = self.virtual_channel_map.get(virtual_channel_id)
-            self.configure_offset(virtual_channel, offset)
-            # FIXME: Currently we cannot have empty operations such as delays on channels
-            # So we need a zero-amplitude pulse to activate the channel and its offset
-            dc_offset_layer.insert(target=virtual_channel, operations=empty_pulse)
+            # Do not set DC offset if the channel is being modified by a sweeper
+            if virtual_channel not in sweeper_channel_map:
+                program.add_pre_program_operation(
+                    qcs.SetBaseBandDCOffset(
+                        channels=virtual_channel,
+                        constant_voltage=offset,
+                        ramping_rate=RAMP_RATE,
+                    )
+                )
 
         acquisition_map: defaultdict[qcs.Channels, list[InputOps]] = defaultdict(list)
         # For each sequence, we assign it to a layer
         # Each layer indicates a sequence of pulses/operations that are synchronized to start at the same time
         # The program will perform all channel operations in a layer before progressing to the next layer
 
-        layers = [dc_offset_layer]
+        layers = []
         for sequence in sequences:
             layers.append(
                 self.create_layer(
@@ -214,19 +202,14 @@ class KeysightQCS(Controller):
         time.sleep(0.2)
 
         ret: dict[PulseId, np.ndarray] = {}
-        averaging = options.averaging_mode is not AveragingMode.SINGLESHOT
         singleshot_dim = len(software_sweepers) if len(software_sweepers) > 0 else None
 
         for channel, input_ops in acquisition_map.items():
-            raw = next(
-                iter(
-                    fetch_result(
-                        results=results,
-                        channel=channel,
-                        acquisition_type=options.acquisition_type,
-                        averaging=averaging,
-                    ).values()
-                )
+            raw = fetch_result(
+                results=results,
+                channel=channel,
+                acquisition_type=options.acquisition_type,
+                averaging=averaging,
             )
 
             if len(input_ops) == 1:
