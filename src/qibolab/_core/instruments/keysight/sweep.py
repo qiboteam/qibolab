@@ -19,10 +19,7 @@ SUPPORTED_PULSE_SWEEPERS = [
 ]
 
 RAMP_RATE = 1  # 1V/s
-QcsParallelSweep = (
-    tuple[list[qcs.Array], list[qcs.Scalar]]
-    | tuple[list[qcs.Array], list[qcs.Scalar], list[qcs.NonHVIOperation]]
-)
+QcsParallelSweep = tuple[list[qcs.Array], list[qcs.Scalar], list[qcs.NonHVIOperation]]
 
 
 def process_sweepers(
@@ -35,9 +32,9 @@ def process_sweepers(
         sweepers (list[ParallelSweepers]): Array of array of sweepers.
 
     Returns:
-        hardware_sweepers (list[tuple[list[qcs.Array], list[qcs.Scalar]]]): Array of hardware-based QCS sweepers.
-        software_sweepers (list[tuple[list[qcs.Array], list[qcs.Scalar]]]): Array of software-based QCS sweepers.
-        sweeper_channel_map (dict[ChannelId, qcs.Scalar]): Map of channel ID to frequency to be swept.
+        hardware_sweepers (list[QcsParallelSweep]): Array of hardware-based QCS sweepers.
+        software_sweepers (list[QcsParallelSweep]): Array of software-based QCS sweepers.
+        sweeper_channel_map (dict[ChannelId, qcs.Scalar]): Map of channel ID to frequency or offset to be swept.
         sweeper_pulse_map (defaultdict[PulseId, dict[str, qcs.Scalar]]): Map of pulse ID to map of parameter
         to be swept and corresponding QCS variable.
     """
@@ -111,13 +108,8 @@ def process_sweepers(
         if hardware_sweeping and sweeper_points > HARDWARE_SWEEPER_MAX_POINTS:
             hardware_sweeping = False
 
-        parallel_sweep = (
-            (sweep_values, sweep_variables)
-            if len(pre_op_list) == 0
-            else (sweep_values, sweep_variables, pre_op_list)
-        )
         (hardware_sweepers if hardware_sweeping else software_sweepers).append(
-            parallel_sweep
+            (sweep_values, sweep_variables, pre_op_list)
         )
 
     return (
