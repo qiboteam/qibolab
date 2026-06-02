@@ -23,11 +23,24 @@ from .pulse import (
     process_iq_channel_pulse,
 )
 from .results import fetch_result, parse_result
-from .sweep import process_sweepers
+from .sweep import process_sweepers, RAMP_RATE
 
 __all__ = ["KeysightQCS"]
 
-RAMP_RATE = 1  # 1V/s
+
+def configure_offset(channel: qcs.Channels, offset: float, program: qcs.Program):
+    """Configures the DC offset of a given Keysight channel object.
+
+    Arguments:
+        channel (qcs.Channels): Keysight channel object.
+        offset (float | qcs.Scalar): Channel DC offset.
+        program (qcs.Program): Current program being executed.
+    """
+    program.add_pre_program_operation(
+        qcs.SetBaseBandDCOffset(
+            channels=channel, constant_voltage=offset, ramping_rate=RAMP_RATE
+        )
+    )
 
 
 def sweeper_reducer(
@@ -57,22 +70,6 @@ class KeysightQCS(Controller):
             suppress_rounding_warnings=True,
         )
         self.backend.is_system_ready()
-
-    def configure_offset(
-        self, channel: qcs.Channels, offset: float, program: qcs.Program
-    ):
-        """Configures the DC offset of a given Keysight channel object.
-
-        Arguments:
-            channel (qcs.Channels): Keysight channel object.
-            offset (float | qcs.Scalar): Channel DC offset.
-            program (qcs.Program): Current program being executed.
-        """
-        program.add_pre_program_operation(
-            qcs.SetBaseBandDCOffset(
-                channels=channel, constant_voltage=offset, ramping_rate=RAMP_RATE
-            )
-        )
 
     def create_layer(
         self,
