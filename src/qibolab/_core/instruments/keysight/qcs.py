@@ -218,15 +218,11 @@ class KeysightQCS(Controller):
         singleshot_dim = len(software_sweepers) if len(software_sweepers) > 0 else None
 
         for channel, input_ops in acquisition_map.items():
-            raw = next(
-                iter(
-                    fetch_result(
-                        results=results,
-                        channel=channel,
-                        acquisition_type=options.acquisition_type,
-                        averaging=averaging,
-                    ).values()
-                )
+            raw = fetch_result(
+                results=results,
+                channel=channel,
+                acquisition_type=options.acquisition_type,
+                averaging=averaging,
             )
 
             if len(input_ops) == 1:

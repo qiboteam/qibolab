@@ -15,7 +15,7 @@ def fetch_result(
     channel: qcs.Channels,
     acquisition_type: AcquisitionType,
     averaging: bool,
-) -> dict[qcs.Channels, np.ndarray]:
+) -> np.ndarray:
     """Processes the QCS result object to return the appropiate results.
 
     Arguments:
@@ -26,7 +26,7 @@ def fetch_result(
         sweeper_swaps_required (list[tuple[int, int]]): Array of axes pairs corresponding to swapped sweepers.
 
     Returns:
-        raw (dict[qcs.Channels, np.ndarray]): Map of virtual channel to acquisition results.
+        raw (np.ndarray): Acquisition results.
     """
     if acquisition_type is AcquisitionType.RAW:
         raw = results.get_trace(channel, averaging)
@@ -34,12 +34,17 @@ def fetch_result(
         raw = results.get_iq(channel, averaging, acq_index=None)
     elif acquisition_type is AcquisitionType.DISCRIMINATION:
         if averaging:
+            # At worst, raw currently holds an array with shape of (sweepers x measurements x state_counts)
             raw = results.get_qubit_state_counts(channel, acq_index=None)
+            # We shrink the last dimension to be consistent with the IQ acquisition
+            raw = {key: val[..., 1] / np.sum(val, axis=-1) for key, val in raw.items()}
         else:
-            raw = results.get_classified(channel, acq_index=None)
+            raw = results.get_classified(channel, avg=False, acq_index=None)
     else:
         raise ValueError("Acquisition type unrecognized")
-    return raw
+
+    # Since we request the results for a single channel, this is a dict with only one key
+    return raw[channel]
 
 
 def parse_result(
@@ -68,20 +73,5 @@ def parse_result(
     if options.acquisition_type is AcquisitionType.INTEGRATION:
         # Current result dtype is complex, and we need to unwrap it into the I and Q components
         return np.stack([np.real(result), np.imag(result)], axis=-1)
-
-    # Qubit state data
-    if options.acquisition_type is AcquisitionType.DISCRIMINATION:
-        # If no averaging was requested, we can pass the data as-is
-        if options.averaging_mode is AveragingMode.SINGLESHOT:
-            return result
-        # Otherwise, the data is in the form of state counts
-        else:
-            if result.shape == (2,):
-                # If there are no sweepers, we can just average directly
-                return result[1] / sum(result)
-            else:
-                # If there are sweepers, the shape is (sweepers x state_count_dim)
-                # We average over the last dimension to get the excited state probability
-                return result[..., 1] / np.sum(result, axis=-1)
 
     return result
