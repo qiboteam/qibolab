@@ -28,21 +28,6 @@ from .sweep import RAMP_RATE, process_sweepers
 __all__ = ["KeysightQCS"]
 
 
-def configure_offset(channel: qcs.Channels, offset: float, program: qcs.Program):
-    """Configures the DC offset of a given Keysight channel object.
-
-    Arguments:
-        channel (qcs.Channels): Keysight channel object.
-        offset (float | qcs.Scalar): Channel DC offset.
-        program (qcs.Program): Current program being executed.
-    """
-    program.add_pre_program_operation(
-        qcs.SetBaseBandDCOffset(
-            channels=channel, constant_voltage=offset, ramping_rate=RAMP_RATE
-        )
-    )
-
-
 def sweeper_reducer(
     program: qcs.Program, sweepers: tuple[list[qcs.Array], list[qcs.Scalar]]
 ):
@@ -163,7 +148,13 @@ class KeysightQCS(Controller):
             virtual_channel = self.virtual_channel_map.get(virtual_channel_id)
             # Do not set DC offset if the channel is being modified by a sweeper
             if virtual_channel not in sweeper_channel_map:
-                self.configure_offset(virtual_channel, offset, program)
+                program.add_pre_program_operation(
+                    qcs.SetBaseBandDCOffset(
+                        channels=virtual_channel,
+                        constant_voltage=offset,
+                        ramping_rate=RAMP_RATE,
+                    )
+                )
 
         acquisition_map: defaultdict[qcs.Channels, list[InputOps]] = defaultdict(list)
         # For each sequence, we assign it to a layer
