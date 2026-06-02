@@ -34,7 +34,7 @@ def fetch_result(
         raw = results.get_iq(channel, averaging, acq_index=None)
     elif acquisition_type is AcquisitionType.DISCRIMINATION:
         if averaging:
-            # At worst, raw currently holds an array with shape of (sweepers x measurements x state_counts)
+            # At worst, raw currently holds an array with shape of (sweepers, measurements, states)
             raw = results.get_qubit_state_counts(channel, acq_index=None)
             # We shrink the last dimension to be consistent with the IQ acquisition
             raw = {key: val[..., 1] / np.sum(val, axis=-1) for key, val in raw.items()}
