@@ -58,16 +58,20 @@ class KeysightQCS(Controller):
         )
         self.backend.is_system_ready()
 
-    def configure_offset(self, channel: qcs.Channels, offset: float):
+    def configure_offset(
+        self, channel: qcs.Channels, offset: float, program: qcs.Program
+    ):
         """Configures the DC offset of a given Keysight channel object.
 
         Arguments:
             channel (qcs.Channels): Keysight channel object.
             offset (float | qcs.Scalar): Channel DC offset.
+            program (qcs.Program): Current program being executed.
         """
-        physical_channel = self.backend.channel_mapper.get_physical_channels(channel)[0]
-        self.backend.set_bb_dc_offset(
-            physical_channel.address, offset, ramping_rate=RAMP_RATE
+        program.add_pre_program_operation(
+            qcs.SetBaseBandDCOffset(
+                channels=channel, constant_voltage=offset, ramping_rate=RAMP_RATE
+            )
         )
 
     def create_layer(
@@ -160,7 +164,9 @@ class KeysightQCS(Controller):
         for virtual_channel_id in self.offset_channels:
             offset = configs[virtual_channel_id].offset
             virtual_channel = self.virtual_channel_map.get(virtual_channel_id)
-            self.configure_offset(virtual_channel, offset)
+            # Do not set DC offset if the channel is being modified by a sweeper
+            if virtual_channel not in sweeper_channel_map:
+                self.configure_offset(virtual_channel, offset, program)
 
         acquisition_map: defaultdict[qcs.Channels, list[InputOps]] = defaultdict(list)
         # For each sequence, we assign it to a layer
