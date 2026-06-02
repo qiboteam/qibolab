@@ -23,7 +23,7 @@ from .pulse import (
     process_iq_channel_pulse,
 )
 from .results import fetch_result, parse_result
-from .sweep import process_sweepers, RAMP_RATE
+from .sweep import RAMP_RATE, process_sweepers
 
 __all__ = ["KeysightQCS"]
 
@@ -185,10 +185,9 @@ class KeysightQCS(Controller):
                 acquisition_map[channel].append(input_op)
                 # Add time of flight
                 time_of_flight = configs[channel_id].delay
-                if time_of_flight != 0:
-                    self.qcs_channel_map.get_physical_channels(channel)[
-                        0
-                    ].settings.delay.value = time_of_flight * nano
+                self.qcs_channel_map.get_physical_channels(channel)[
+                    0
+                ].settings.delay.value = time_of_flight * nano
 
             # Pad relaxation time delay after each sequence
             if sequence != sequences[-1]:
