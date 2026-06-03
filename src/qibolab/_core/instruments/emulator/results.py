@@ -11,10 +11,9 @@ In the results processing also, when simulating SINGLESHOTS, we'll add two dimen
 - M_unique, which is the number of unique measurement times
 """
 
-from collections.abc import Iterable
-
 import numpy as np
 from numpy.typing import NDArray
+from typing import Iterable
 
 from qibolab._core.identifier import ChannelId, Result
 from qibolab._core.pulses import Acquisition, Align, PulseId, Readout
@@ -293,13 +292,13 @@ def results(
     )
 
     # apply the confusion matrix to the probability tensor
-    # TODO: add also 2 qubit contributions to confusion matrix that spoils the tensor product
+    # TODO: move the ocnfusion matrix multiplication inside marginalised functions
+    # so that computing the total tensor product is no more necessary
     probabilities = np.einsum(
         "ij,...j",
         add_confusion_matrix(list(hamiltonian.qubits.values())),
         probabilities,
     )
-
     return results(
         state_probs=probabilities,
         sequence=sequence,

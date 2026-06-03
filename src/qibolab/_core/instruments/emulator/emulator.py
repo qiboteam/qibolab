@@ -382,7 +382,7 @@ def hamiltonians(
                 engine,
                 sampling_rate,
             )
-            hamiltonians_array += (new_terms, )
+            hamiltonians_array += (new_terms,)
     return hamiltonians_array
 
 

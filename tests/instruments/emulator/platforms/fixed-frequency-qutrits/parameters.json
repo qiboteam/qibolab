@@ -101,32 +101,27 @@
         "0/drive": {
             "kind": "drive-emulator",
             "frequency": 5114000000.0,
-            "rabi_frequency": 500000000.0,
-            "crosstalk": {}
+            "rabi_frequency": 500000000.0
         },
         "0/drive1": {
             "kind": "drive-emulator",
             "frequency": 4914000000.0,
-            "rabi_frequency": 500000000.0,
-            "crosstalk": {}
+            "rabi_frequency": 500000000.0
         },
         "0/drive12": {
             "kind": "drive-emulator",
             "frequency": 4784000000.0,
-            "rabi_frequency": 500000000.0,
-            "crosstalk": {}
+            "rabi_frequency": 500000000.0
         },
         "1/drive": {
             "kind": "drive-emulator",
             "frequency": 4914000000.0,
-            "rabi_frequency": 500000000.0,
-            "crosstalk": {}
+            "rabi_frequency": 500000000.0
         },
         "1/drive12": {
             "kind": "drive-emulator",
             "frequency": 4584000000.0,
-            "rabi_frequency": 500000000.0,
-            "crosstalk": {}
+            "rabi_frequency": 500000000.0
         },
         "0/probe": {
             "kind": "iq",
