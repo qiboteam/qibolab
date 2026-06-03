@@ -2,11 +2,12 @@
 
 import numpy as np
 import pytest
+from numpy.typing import NDArray
 
 from qibolab import Platform, Pulse, PulseSequence, Rectangular, VirtualZ
 
 
-def expectation_value_state(prob_vector: np.ndarray, confusion_matrix: np.ndarray):
+def expectation_value_state(prob_vector: NDArray, confusion_matrix: NDArray) -> float:
     """
     Calculate the expectation value of a quantum state after applying a confusion matrix.
     """
@@ -58,6 +59,7 @@ def test_excited_state(platform: Platform):
     seq = q0.RX() | q0.MZ()
     acq_handle = list(seq.channel(platform.qubits[0].acquisition))[-1].id
     res = platform.execute([seq], nshots=1e4)[acq_handle]
+    # adding check with also confusion matrix
     assert pytest.approx(res.mean(), abs=5e-2) == expectation_value_state(
         theoretical_probs, confusion_matrix
     )

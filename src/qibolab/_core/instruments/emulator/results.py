@@ -11,8 +11,6 @@ In the results processing also, when simulating SINGLESHOTS, we'll add two dimen
 - M_unique, which is the number of unique measurement times
 """
 
-from collections.abc import Iterable
-
 import numpy as np
 from numpy.typing import NDArray
 
@@ -138,10 +136,10 @@ def _cyclic_results(
     ]
     permuted_states_computational_idx = states_computational_idx[qubit_indices]
 
-    # applying a mask to select for each measurement the states that are outside the computational subspace, which are classified as 1
-    mask = permuted_states_computational_idx >= 1
+    # applying a mask to select for each measurement the 1 state
+    mask = permuted_states_computational_idx == 1
 
-    # res is a (M, *S, ...) array
+    # res is a (M, *S) array
     res = np.moveaxis(np.sum(np.where(mask, state_probs, 0), axis=-1), -1, 0)
 
     if options.acquisition_type is AcquisitionType.INTEGRATION:
@@ -196,13 +194,12 @@ def _singleshot_results(
     ]
 
     # we use inverse_map to expand back the sampled results
-    # res is a (M, M, Nshots, *S, ...) array
+    # res is a (M, M, Nshots, *S) array
     res = np.stack(np.unravel_index(sampled[inverse_map], hamiltonian.dims))[
         qubit_indices
     ]
-    # using np.einsum, so res is a (M, Nshots, *S, ...) array
+    # using np.einsum, so res is a (M, Nshots, *S) array
     res = np.einsum(res, np.array([0, 0] + [...]), np.array([0] + [...]))
-    res = np.clip(res, 0, 1)
 
     if options.acquisition_type is AcquisitionType.INTEGRATION:
         zeros = np.zeros(res.shape) if np.ndim(res) != 0 else 0.0
@@ -262,7 +259,6 @@ def results(
         add_confusion_matrix(list(hamiltonian.qubits.values())),
         probabilities,
     )
-
     return results(
         state_probs=probabilities,
         sequence=sequence,

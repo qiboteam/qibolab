@@ -155,12 +155,10 @@ class EmulatorController(Controller):
                         updates[channel].update({sweeper.parameter.name: value})
 
             # append new slice for the current parallel value
-            sweep_sim = self._sweep(sequence, configs, sweepers[1:], updates)
-            results.append(sweep_sim[0])
-            measurement_indices = sweep_sim[1]
+            results.append(self._sweep(sequence, configs, sweepers[1:], updates))
 
         # stack all slices in a single array, along the current outermost dimension
-        return np.stack(results), measurement_indices
+        return np.stack(results)
 
     def _evolve(
         self, sequence: PulseSequence, configs: dict[str, Config], updates: dict
@@ -299,7 +297,7 @@ def hamiltonians(
                 engine,
                 sampling_rate,
             )
-            hamiltonians_array += (new_terms, )
+            hamiltonians_array += (new_terms,)
     return hamiltonians_array
 
 

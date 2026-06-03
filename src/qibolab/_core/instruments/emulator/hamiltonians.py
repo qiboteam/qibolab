@@ -1,5 +1,5 @@
 from functools import cached_property
-from typing import Literal, cast
+from typing import Literal
 
 import numpy as np
 from numpy.typing import NDArray
@@ -144,7 +144,8 @@ class Qubit(Config):
                 matrix[0, 2:] = self.p_into_0
                 matrix[1, 2:] = 1 - self.p_into_0
 
-            return self.model_copy(update={"confusion_matrix": matrix})
+            # ATTENTION: forcing overwriting of confusion matrix despite it's frozen
+            object.__setattr__(self, "confusion_matrix", matrix)
 
         if self.confusion_matrix.shape != (n, n):
             raise ValueError(
@@ -373,16 +374,14 @@ class HamiltonianConfig(Config):
     def _validate_crosstalk(self) -> "HamiltonianConfig":
         """Validate or initialize crosstalk matrices."""
         n = self.nqubits
-        updates = {}
 
         if self.drive_crosstalk is None:
-            updates["drive_crosstalk"] = np.eye(n)
+            # ATTENTION: forcing overwriting of drive crosstalk matrix despite it's frozen
+            object.__setattr__(self, "drive_crosstalk", np.eye(n))
 
         if self.flux_crosstalk is None:
-            updates["flux_crosstalk"] = np.eye(n)
-
-        if updates:
-            return self.replace(cast(Update, updates))
+            # ATTENTION: forcing overwriting of flux crosstalk matrix despite it's frozen
+            object.__setattr__(self, "flux_crosstalk", np.eye(n))
 
         if self.drive_crosstalk.shape[1] != n:
             raise ValueError(
