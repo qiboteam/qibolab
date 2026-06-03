@@ -345,7 +345,6 @@ class QmController(Controller):
             credentials=credentials,
             cluster_name=self.cluster_name,
             octave_calibration_db_path=self._calibration_path,
-            log_level="DEBUG",
         )
 
     def disconnect(self):
