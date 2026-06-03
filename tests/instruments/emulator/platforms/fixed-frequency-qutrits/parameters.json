@@ -80,10 +80,10 @@
             "drive_crosstalk": [
                 [
                     1.0,
-                    0.0
+                    0.2
                 ],
                 [
-                    0.0,
+                    0.4,
                     1.0
                 ]
             ],
@@ -131,8 +131,8 @@
             "kind": "acquisition",
             "delay": 0.0,
             "smearing": 0.0,
-            "threshold": 0.0,
-            "iq_angle": 0.0,
+            "threshold": 1.0,
+            "iq_angle": -0.0,
             "kernel": null
         },
         "1/probe": {
@@ -143,8 +143,8 @@
             "kind": "acquisition",
             "delay": 0.0,
             "smearing": 0.0,
-            "threshold": 0.0,
-            "iq_angle": 0.0,
+            "threshold": 1.0,
+            "iq_angle": -0.0,
             "kernel": null
         }
     },
@@ -156,8 +156,8 @@
                         "0/drive",
                         {
                             "kind": "pulse",
-                            "duration": 20.0,
-                            "amplitude": 0.200449,
+                            "duration": 30.0,
+                            "amplitude": 0.13131702695978262,
                             "envelope": {
                                 "kind": "drag",
                                 "rel_sigma": 0.1,
@@ -232,8 +232,8 @@
                         "1/drive",
                         {
                             "kind": "pulse",
-                            "duration": 20.0,
-                            "amplitude": 0.200792,
+                            "duration": 30.0,
+                            "amplitude": 0.13130450160280718,
                             "envelope": {
                                 "kind": "drag",
                                 "rel_sigma": 0.1,

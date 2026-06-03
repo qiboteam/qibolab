@@ -206,11 +206,6 @@ class Platform:
         for instrument in self.instruments.values():
             if isinstance(instrument, Controller):
                 new_result = instrument.play(configs, sequences, options, sweepers)
-                # HERE I COULD RECOVER THE CORRECT SOLUTION ONLY FOR 'fixed-frequency-qutrits' PLATFORM
-                # STILL NOT WORKING FOR 'qutrits' PLATFORM
-                # qutip_res = [v for v in new_result.values()]
-                # t = datetime.datetime.now().strftime("%H:%M:%S")
-                # np.savez(f'{t}_platformpy_qutip_evolution.npz', np.stack(qutip_res))
                 if isinstance(new_result, dict):
                     result.update(new_result)
 
