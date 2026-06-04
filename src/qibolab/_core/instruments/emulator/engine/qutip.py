@@ -30,6 +30,9 @@ class QutipEngine(SimulationEngine):
         import qutip as qt
 
         return qt
+    def save_operators(self, operators, dump_dir: Path) -> None:
+        """Persist the static operators once per experiment."""
+        self.engine.qsave(operators, str(dump_dir / "operators"))
 
     def dump_results(
         self, hamiltonian: Operator, sim_results: Any, dump_dir: Path

@@ -4,6 +4,8 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Protocol
 
+import numpy
+from numpy.typing import NDArray
 from scipy.interpolate import BSpline
 
 from ....serialize import Model
@@ -53,6 +55,7 @@ class OperatorEvolution:
     """Abstract operator evolution interface."""
 
     operators: list[Operator | TimeDependentOperator] = field(default_factory=list)
+    coefficients: "NDArray | None" = None
 
 
 class SimulationEngine(Model, ABC):
@@ -99,3 +102,6 @@ class SimulationEngine(Model, ABC):
     @abstractmethod
     def basis(self, n: int, state: int) -> Operator:
         """Basis operator for n levels system."""
+    @abstractmethod
+    def save_operators(self, operators, dump_dir) -> None:
+        """Persist static operators in the engine's native format."""
