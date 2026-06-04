@@ -77,7 +77,9 @@ class EmulatorController(Controller):
         config = cast(HamiltonianConfig, configs["hamiltonian"])
         static = config.hamiltonian(config=configs, engine=self.engine)
         evolution = self._pulse_hamiltonian(sequence, configs)
-        time_ops = [pair[0] for pair in evolution.operators] if evolution is not None else []
+        time_ops = (
+            [pair[0] for pair in evolution.operators] if evolution is not None else []
+        )
         operators = [static] + time_ops
 
         self.engine.save_operators(operators, self.save_dir)
@@ -199,7 +201,9 @@ class EmulatorController(Controller):
             time_hamiltonian=time_hamiltonian,
         )
         states = np.stack([s.full() for s in results.states[1:]])[index]
-        coefficients = time_hamiltonian.coefficients if time_hamiltonian is not None else None
+        coefficients = (
+            time_hamiltonian.coefficients if time_hamiltonian is not None else None
+        )
         return states, coefficients
 
     def _pulse_hamiltonian(
@@ -214,8 +218,11 @@ class EmulatorController(Controller):
         times = tlist(sequence)
         channels, raw_coefficients = [], []
         for operator, waveforms in hamiltonians(
-                sequence, configs, self.engine, self.sampling_rate):
-            raw, spline = channel_coefficients(waveforms, sampling_rate=self.sampling_rate, times=times)
+            sequence, configs, self.engine, self.sampling_rate
+        ):
+            raw, spline = channel_coefficients(
+                waveforms, sampling_rate=self.sampling_rate, times=times
+            )
             channels.append([operator, spline])
             raw_coefficients.append(raw)
         if len(channels) == 0:
@@ -324,4 +331,6 @@ def channel_coefficients(
         cumulative_time = next_pulse_time
 
     # return pulse_waveforms
-    return pulse_waveforms, make_interp_spline(times, pulse_waveforms, k=SPLINE_INTERP_ORDER)
+    return pulse_waveforms, make_interp_spline(
+        times, pulse_waveforms, k=SPLINE_INTERP_ORDER
+    )
