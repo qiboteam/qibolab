@@ -51,9 +51,9 @@ class QutipEngine(SimulationEngine):
         count = max(count_1, count_2)
 
         self.engine.qsave(
-            hamiltonian, str(dump_dir) + f"/{HAMILTONIAN_FILENAME}_{count}"
+            hamiltonian, str(dump_dir) + f"/{HAMILTONIAN_FILENAME}_{count*2}"
         )
-        self.engine.qsave(sim_results, str(dump_dir) + f"/{STATE_FILENAME}_{count}")
+        self.engine.qsave(sim_results, str(dump_dir) + f"/{STATE_FILENAME}_{count*2}")
 
     def evolve(
         self,
