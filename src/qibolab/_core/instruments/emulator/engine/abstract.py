@@ -54,7 +54,7 @@ class OperatorEvolution:
     """Abstract operator evolution interface."""
 
     operators: list[Operator | TimeDependentOperator] = field(default_factory=list)
-    coefficients: "NDArray | None" = None
+    coefficients: NDArray | None = None
 
 
 class SimulationEngine(Model, ABC):
