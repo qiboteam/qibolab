@@ -25,7 +25,7 @@ from qibolab._core.pulses import (
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import ParallelSweepers
 
-from .engine import Operator, OperatorEvolution, QutipEngine, DynamiqsEngine, SimulationEngine
+from .engine import DynamiqsEngine, Operator, OperatorEvolution, SimulationEngine
 from .hamiltonians import (
     HamiltonianConfig,
     Modulated,
