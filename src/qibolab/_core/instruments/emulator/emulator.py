@@ -25,7 +25,7 @@ from qibolab._core.pulses import (
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import ParallelSweepers
 
-from .engine import Operator, OperatorEvolution, QutipEngine, SimulationEngine
+from .engine import Operator, OperatorEvolution, QutipEngine, DynamiqsEngine, SimulationEngine
 from .hamiltonians import (
     HamiltonianConfig,
     Modulated,
@@ -49,7 +49,8 @@ class EmulatorController(Controller):
 
     sampling_rate_: float = 1
     """Sampling rate used during simulation."""
-    engine: SimulationEngine = QutipEngine()
+    # engine: SimulationEngine = QutipEngine()
+    engine: SimulationEngine = DynamiqsEngine()
     """SimulationEngine. Default is QutipEngine."""
     save_dir: Path | None = None
     """Flag for saving the full system evolution computed from the simulation
