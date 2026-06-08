@@ -41,7 +41,6 @@ class DynamiqsEngine(SimulationEngine):
         self, hamiltonian: Operator, sim_results: Any, dump_dir: Path
     ) -> None:
         """Save the Hamiltonian and simulation results to files with incremented naming."""
-        raise NotImplementedError
 
         dump_dir.mkdir(parents=True, exist_ok=True)
 
@@ -56,11 +55,11 @@ class DynamiqsEngine(SimulationEngine):
             if file.is_file() and STATE_FILENAME in file.name
         )
         count = max(count_1, count_2)
+        H = hamiltonian
+        import qutip
 
-        self.engine.qsave(
-            hamiltonian, str(dump_dir) + f"/{HAMILTONIAN_FILENAME}_{count}"
-        )
-        self.engine.qsave(sim_results, str(dump_dir) + f"/{STATE_FILENAME}_{count}")
+        qutip.qsave(H, str(dump_dir) + f"/{HAMILTONIAN_FILENAME}_{count}")
+        qutip.qsave(sim_results, str(dump_dir) + f"/{STATE_FILENAME}_{count}")
 
     def evolve(
         self,
@@ -86,17 +85,22 @@ class DynamiqsEngine(SimulationEngine):
         H = hamiltonian
 
         if time_hamiltonian is not None:
+            import jax
 
-            def f(t):
-                dq.asqarray(hamiltonian)
-                +sum(
-                    [
-                        dq.asqarray(op[0]).elmul(op[1](t))
-                        for op in time_hamiltonian.operators
-                    ]
+            # Linear jax interpolation (splines not currently supported in JAX)
+            H = dq.timecallable(
+                lambda t: (
+                    dq.asqarray(hamiltonian)
+                    + sum(
+                        [
+                            dq.asqarray(op[0]).elmul(
+                                jax.numpy.interp(t, op[1][0], op[1][1])
+                            )
+                            for op in time_hamiltonian.operators
+                        ]
+                    )
                 )
-
-            H = dq.timecallable(f)
+            )
 
         sim_results = self.engine.mesolve(
             H=H,
@@ -109,8 +113,12 @@ class DynamiqsEngine(SimulationEngine):
         comp_results = CompResult(sim_results.states.to_qutip())
 
         if save_evolution is not None:
+            if isinstance(H, dq.QArray):
+                hamiltonian = hamiltonian.to_qutip()
+            if time_hamiltonian is not None:
+                hamiltonian = [hamiltonian, time_hamiltonian.operators]
             self.dump_results(
-                hamiltonian=H,
+                hamiltonian=hamiltonian,
                 sim_results=comp_results,
                 dump_dir=save_evolution,
             )

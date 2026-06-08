@@ -321,10 +321,7 @@ def channel_coefficients(
         cumulative_time = next_pulse_time
 
     if isinstance(engine, DynamiqsEngine):
-        # Linear jax interpolation (splines not currently supported in JAX)
-        import jax
-
-        return lambda t: jax.numpy.interp(t, times, pulse_waveforms)
+        return (times, pulse_waveforms)
 
     # return pulse_waveforms
     return make_interp_spline(times, pulse_waveforms, k=SPLINE_INTERP_ORDER)
