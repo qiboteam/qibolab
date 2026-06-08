@@ -136,6 +136,7 @@ class DynamiqsEngine(SimulationEngine):
     def expand(self, op: Operator, targets: int | list[int], dims: list[int]):
         """Expand operator in larger Hilbert space."""
         # parameters in hamiltonian.py:
+        # parameters in hamiltonian.py:
         # op, self.dims, self.hilbert_space_index(i)
         if isinstance(targets, int) or len(targets) == 1:
             return op
