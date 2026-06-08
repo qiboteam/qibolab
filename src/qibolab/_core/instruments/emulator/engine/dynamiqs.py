@@ -55,11 +55,35 @@ class DynamiqsEngine(SimulationEngine):
             if file.is_file() and STATE_FILENAME in file.name
         )
         count = max(count_1, count_2)
-        H = hamiltonian
+
         import qutip
 
-        qutip.qsave(H, str(dump_dir) + f"/{HAMILTONIAN_FILENAME}_{count}")
+        qutip.qsave(hamiltonian, str(dump_dir) + f"/{HAMILTONIAN_FILENAME}_{count}")
         qutip.qsave(sim_results, str(dump_dir) + f"/{STATE_FILENAME}_{count}")
+
+    def load_results(self, dump_dir: Path, count=None) -> None:
+        """Load the Hamiltonian and simulation results from file."""
+        # if count is not given, load the latest results (with highest count)
+        if not isinstance(dump_dir, Path):
+            dump_dir = Path(dump_dir)
+        if count is None:
+            count_1 = sum(
+                1
+                for file in dump_dir.iterdir()
+                if file.is_file() and HAMILTONIAN_FILENAME in file.name
+            )
+            count_2 = sum(
+                1
+                for file in dump_dir.iterdir()
+                if file.is_file() and STATE_FILENAME in file.name
+            )
+            count = max(count_1, count_2) - 1
+
+        import qutip
+
+        hamiltonian = qutip.qload(str(dump_dir) + f"/{HAMILTONIAN_FILENAME}_{count}")
+        sim_results = qutip.qload(str(dump_dir) + f"/{STATE_FILENAME}_{count}")
+        return hamiltonian, sim_results
 
     def evolve(
         self,
@@ -115,10 +139,8 @@ class DynamiqsEngine(SimulationEngine):
         if save_evolution is not None:
             if isinstance(H, dq.QArray):
                 hamiltonian = hamiltonian.to_qutip()
-            if time_hamiltonian is not None:
-                hamiltonian = [hamiltonian, time_hamiltonian.operators]
             self.dump_results(
-                hamiltonian=hamiltonian,
+                hamiltonian=[hamiltonian, time_hamiltonian],
                 sim_results=comp_results,
                 dump_dir=save_evolution,
             )
@@ -143,7 +165,6 @@ class DynamiqsEngine(SimulationEngine):
 
     def expand(self, op: Operator, targets: int | list[int], dims: list[int]):
         """Expand operator in larger Hilbert space."""
-        # parameters in hamiltonian.py:
         # parameters in hamiltonian.py:
         # op, self.dims, self.hilbert_space_index(i)
         if isinstance(targets, int) or len(targets) == 1:

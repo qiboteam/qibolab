@@ -55,6 +55,30 @@ class QutipEngine(SimulationEngine):
         )
         self.engine.qsave(sim_results, str(dump_dir) + f"/{STATE_FILENAME}_{count}")
 
+    def load_results(self, dump_dir: Path, count=None) -> None:
+        """Load the Hamiltonian and simulation results from file."""
+        # if count is not given, load the latest results (with highest count)
+        if not isinstance(dump_dir, Path):
+            dump_dir = Path(dump_dir)
+        if count is None:
+            count_1 = sum(
+                1
+                for file in dump_dir.iterdir()
+                if file.is_file() and HAMILTONIAN_FILENAME in file.name
+            )
+            count_2 = sum(
+                1
+                for file in dump_dir.iterdir()
+                if file.is_file() and STATE_FILENAME in file.name
+            )
+            count = max(count_1, count_2) - 1
+
+        hamiltonian = self.engine.qload(
+            str(dump_dir) + f"/{HAMILTONIAN_FILENAME}_{count}"
+        )
+        sim_results = self.engine.qload(str(dump_dir) + f"/{STATE_FILENAME}_{count}")
+        return hamiltonian, sim_results
+
     def evolve(
         self,
         hamiltonian: Operator,
