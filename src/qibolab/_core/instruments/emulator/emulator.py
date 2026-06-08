@@ -154,7 +154,8 @@ class EmulatorController(Controller):
         if len(sweepers) == 0:
             return self._evolve(sequence, configs, updates)
 
-        state_slices, coeff_slices = [], []
+        state_slices: list[NDArray] = [], 
+        coeff_slices = []
         parsweep = sweepers[0]
         # execute once for each parallel value
         for values in zip(*(s.values for s in parsweep)):
@@ -166,9 +167,9 @@ class EmulatorController(Controller):
                 if sweeper.channels is not None:
                     for channel in sweeper.channels:
                         updates[channel].update({sweeper.parameter.name: value})
-        states, coeffs = self._sweep(sequence, configs, sweepers[1:], updates)
-        state_slices.append(states)
-        coeff_slices.append(coeffs)
+            states, coeffs = self._sweep(sequence, configs, sweepers[1:], updates)
+            state_slices.append(states)
+            coeff_slices.append(coeffs)
 
         # stack all slices in a single array, along the current outermost dimension
         return np.stack(state_slices), np.stack(coeff_slices)
@@ -218,17 +219,12 @@ class EmulatorController(Controller):
         times = tlist(sequence)
         channels, raw_coefficients = [], []
         for operator, waveforms in hamiltonians(
-            sequence, configs, self.engine, self.sampling_rate
-        ):
-            raw, spline = channel_coefficients(
-                waveforms, sampling_rate=self.sampling_rate, times=times
-            )
-            channels.append([operator, spline])
+                sequence, configs, self.engine, self.sampling_rate):
+            raw = channel_coefficients(waveforms, sampling_rate=self.sampling_rate, times=times)
+            channels.append([operator])
             raw_coefficients.append(raw)
-        if len(channels) == 0:
-            return None
 
-        return OperatorEvolution(channels) if len(channels) > 0 else None
+        return OperatorEvolution(operators=channels, coefficients=np.stack(raw_coefficients), times=times) if len(channels) > 0 else None
 
 
 def update_sequence(sequence: PulseSequence, updates: dict) -> PulseSequence:
@@ -331,6 +327,4 @@ def channel_coefficients(
         cumulative_time = next_pulse_time
 
     # return pulse_waveforms
-    return pulse_waveforms, make_interp_spline(
-        times, pulse_waveforms, k=SPLINE_INTERP_ORDER
-    )
+    return pulse_waveforms
