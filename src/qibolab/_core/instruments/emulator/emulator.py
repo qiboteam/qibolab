@@ -1,7 +1,7 @@
 """Emulator controller."""
 
 from collections import defaultdict
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from functools import reduce
 from operator import or_
 from pathlib import Path
@@ -9,7 +9,7 @@ from typing import cast
 
 import numpy as np
 from numpy.typing import NDArray
-from scipy.interpolate import BSpline, make_interp_spline
+from scipy.interpolate import make_interp_spline
 
 from qibolab._core.components import Config
 from qibolab._core.components.configs import AcquisitionConfig
@@ -25,7 +25,13 @@ from qibolab._core.pulses import (
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import ParallelSweepers
 
-from .engine import Operator, OperatorEvolution, QutipEngine, DynamiqsEngine, SimulationEngine
+from .engine import (
+    DynamiqsEngine,
+    Operator,
+    OperatorEvolution,
+    QutipEngine,
+    SimulationEngine,
+)
 from .hamiltonians import (
     HamiltonianConfig,
     Modulated,
@@ -49,8 +55,7 @@ class EmulatorController(Controller):
 
     sampling_rate_: float = 1
     """Sampling rate used during simulation."""
-    # engine: SimulationEngine = QutipEngine()
-    engine: SimulationEngine = DynamiqsEngine()
+    engine: SimulationEngine = QutipEngine()
     """SimulationEngine. Default is QutipEngine."""
     save_dir: Path | None = None
     """Flag for saving the full system evolution computed from the simulation
@@ -205,6 +210,7 @@ class EmulatorController(Controller):
                     waveforms,
                     sampling_rate=self.sampling_rate,
                     times=times,
+                    engine=self.engine,
                 ),
             ]
             for operator, waveforms in hamiltonians(
@@ -284,7 +290,8 @@ def channel_coefficients(
     waveforms: Iterable[Modulated],
     sampling_rate: int,
     times: NDArray,
-) -> BSpline:
+    engine: SimulationEngine,
+) -> Callable:
     """
     Generate a B-spline interpolation of waveforms over a time evolution.
     This function processes a sequence of pulses, accumulating their waveforms
@@ -312,6 +319,12 @@ def channel_coefficients(
 
         cumulative_phase += pulse.phase
         cumulative_time = next_pulse_time
+
+    if isinstance(engine, DynamiqsEngine):
+        # Linear jax interpolation (splines not currently supported in JAX)
+        import jax
+
+        return lambda t: jax.numpy.interp(t, times, pulse_waveforms)
 
     # return pulse_waveforms
     return make_interp_spline(times, pulse_waveforms, k=SPLINE_INTERP_ORDER)

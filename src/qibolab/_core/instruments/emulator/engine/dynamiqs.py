@@ -2,12 +2,11 @@ from collections.abc import Iterable
 from functools import cached_property
 from pathlib import Path
 from typing import Any
-import dynamiqs as dq
-import qutip as qt
 
+import dynamiqs as dq
 import numpy as np
 
-from .abstract import Operator, OperatorEvolution, SimulationEngine, EvolutionResult
+from .abstract import EvolutionResult, Operator, OperatorEvolution, SimulationEngine
 
 __all__ = ["DynamiqsEngine"]
 
@@ -21,10 +20,12 @@ INTEGRATION_MIN_TIME_STEP = 5e-3
 HAMILTONIAN_FILENAME = "System_Hamiltonian"
 STATE_FILENAME = "State_Evolution"
 
+
 class CompResult(EvolutionResult):
     def __init__(self, states):
         self.states = states
-        
+
+
 class DynamiqsEngine(SimulationEngine):
     """Dynamiqs simulation engine."""
 
@@ -33,15 +34,14 @@ class DynamiqsEngine(SimulationEngine):
         """Return the dynamiqs engine."""
         # TODO: maybe it can be improved
         import dynamiqs as dq
-        return dq
-    
 
-    
+        return dq
+
     def dump_results(
         self, hamiltonian: Operator, sim_results: Any, dump_dir: Path
     ) -> None:
         """Save the Hamiltonian and simulation results to files with incremented naming."""
-        return NotImplementedError
+        raise NotImplementedError
 
         dump_dir.mkdir(parents=True, exist_ok=True)
 
@@ -75,26 +75,34 @@ class DynamiqsEngine(SimulationEngine):
         """Evolve the system."""
 
         time_diff = np.diff(time)
-        max_steps = len(time)*max(time_diff) / INTEGRATION_MIN_TIME_STEP * INTEGRATION_MULTIPLIER
+        max_steps = (
+            len(time)
+            * max(time_diff)
+            / INTEGRATION_MIN_TIME_STEP
+            * INTEGRATION_MULTIPLIER
+        )
         # adding qutip step size options to (default) dynamiqs integration method
-        method = self.engine.method.Tsit5(max_steps = int(max_steps))
+        method = self.engine.method.Tsit5(max_steps=int(max_steps))
+        H = hamiltonian
 
         if time_hamiltonian is not None:
-            # hamiltonian = [hamiltonian] + time_hamiltonian.operators
-            for op in time_hamiltonian.operators:
-                if len(op) == 2:
-                    print(op[1]) # time dependent part of the hamiltonian
-                    hamiltonian += op[0]
-                else:
-                    hamiltonian += op
 
-            
+            def f(t):
+                dq.asqarray(hamiltonian)
+                +sum(
+                    [
+                        dq.asqarray(op[0]).elmul(op[1](t))
+                        for op in time_hamiltonian.operators
+                    ]
+                )
+
+            H = dq.timecallable(f)
 
         sim_results = self.engine.mesolve(
-            H = hamiltonian,
-            jump_ops = collapse_operators,
-            rho0 = initial_state,
-            tsave = time,
+            H=H,
+            jump_ops=collapse_operators,
+            rho0=initial_state,
+            tsave=time,
             method=method,
             **kwargs,
         )
@@ -102,11 +110,10 @@ class DynamiqsEngine(SimulationEngine):
 
         if save_evolution is not None:
             self.dump_results(
-                hamiltonian=hamiltonian,
+                hamiltonian=H,
                 sim_results=comp_results,
                 dump_dir=save_evolution,
             )
-
 
         return comp_results
 
@@ -128,7 +135,7 @@ class DynamiqsEngine(SimulationEngine):
 
     def expand(self, op: Operator, targets: int | list[int], dims: list[int]):
         """Expand operator in larger Hilbert space."""
-        # parameters in hamiltonian.py: 
+        # parameters in hamiltonian.py:
         # op, self.dims, self.hilbert_space_index(i)
         if isinstance(targets, int) or len(targets) == 1:
             return op
@@ -139,7 +146,7 @@ class DynamiqsEngine(SimulationEngine):
         if not isinstance(actual_targets, list):
             actual_targets = [actual_targets]
 
-
+        # from qutip source code:
         new_order = [0] * actual_N
         for i, t in enumerate(actual_targets):
             new_order[t] = i
@@ -151,7 +158,6 @@ class DynamiqsEngine(SimulationEngine):
             new_order[ind] = rest_qubits[i]
         id_list = [self.identity(actual_dims[i]) for i in rest_pos]
         return self.tensor([op] + id_list).permute(new_order)
-        # return self.engine.expand_operator(op, targets, dims)
 
     def basis(self, dim: int, state: int) -> Operator:
         """Basis operator for n levels system."""
