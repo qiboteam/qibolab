@@ -2,7 +2,6 @@ from collections.abc import Iterable
 from functools import cached_property
 from pathlib import Path
 from typing import Any
-from qibolab.src.qibolab._core.instruments.emulator.emulator import SPLINE_INTERP_ORDER
 from scipy.interpolate import make_interp_spline
 
 import numpy as np
