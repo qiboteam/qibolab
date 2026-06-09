@@ -6,13 +6,31 @@
     "configs": {
         "hamiltonian": {
             "kind": "hamiltonian",
-            "transmon_levels": 3,
             "qubits": {
                 "0": {
+                    "transmon_levels": 3,
+                    "confusion_matrix": [
+                        [
+                            1,
+                            0,
+                            0
+                        ],
+                        [
+                            0,
+                            1,
+                            1
+                        ],
+                        [
+                            0,
+                            0,
+                            0
+                        ]
+                    ],
                     "frequency": 5114000000.0,
                     "anharmonicity": -330000000.0,
                     "sweetspot": 0.0,
                     "asymmetry": 0.0,
+                    "p_into_0": null,
                     "t1": {
                         "0-1": 38000.0,
                         "1-2": 19000.0
@@ -22,10 +40,29 @@
                     }
                 },
                 "1": {
+                    "transmon_levels": 3,
+                    "confusion_matrix": [
+                        [
+                            1,
+                            0,
+                            0
+                        ],
+                        [
+                            0,
+                            1,
+                            1
+                        ],
+                        [
+                            0,
+                            0,
+                            0
+                        ]
+                    ],
                     "frequency": 4914000000.0,
                     "anharmonicity": -330000000.0,
                     "sweetspot": 0.0,
                     "asymmetry": 0.0,
+                    "p_into_0": null,
                     "t1": {
                         "0-1": 42000.0,
                         "1-2": 21000.0
@@ -39,7 +76,27 @@
                 "0-1": {
                     "coupling": 3800000.0
                 }
-            }
+            },
+            "drive_crosstalk": [
+                [
+                    1.0,
+                    0.0
+                ],
+                [
+                    0.0,
+                    1.0
+                ]
+            ],
+            "flux_crosstalk": [
+                [
+                    1.0,
+                    0.0
+                ],
+                [
+                    0.0,
+                    1.0
+                ]
+            ]
         },
         "0/drive": {
             "kind": "drive-emulator",
@@ -410,6 +467,20 @@
                     ],
                     [
                         "1/drive",
+                        {
+                            "kind": "delay",
+                            "duration": 20.0
+                        }
+                    ],
+                    [
+                        "1/acquisition",
+                        {
+                            "kind": "delay",
+                            "duration": 20.0
+                        }
+                    ],
+                    [
+                        "0/acquisition",
                         {
                             "kind": "delay",
                             "duration": 20.0
