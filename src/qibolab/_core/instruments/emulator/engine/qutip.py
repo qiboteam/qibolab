@@ -1,10 +1,9 @@
 from collections.abc import Iterable
 from functools import cached_property
 from pathlib import Path
-from typing import Any
-from scipy.interpolate import make_interp_spline
 
 import numpy as np
+from scipy.interpolate import make_interp_spline
 
 from .abstract import Operator, OperatorEvolution, SimulationEngine
 

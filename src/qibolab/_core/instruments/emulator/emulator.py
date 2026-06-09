@@ -9,7 +9,7 @@ from typing import cast
 
 import numpy as np
 from numpy.typing import NDArray
-from scipy.interpolate import BSpline, make_interp_spline
+from scipy.interpolate import BSpline
 
 from qibolab._core.components import Config
 from qibolab._core.components.configs import AcquisitionConfig
@@ -154,7 +154,7 @@ class EmulatorController(Controller):
         if len(sweepers) == 0:
             return self._evolve(sequence, configs, updates)
 
-        state_slices: list[NDArray] = [], 
+        state_slices: list[NDArray] = ([],)
         coeff_slices = []
         parsweep = sweepers[0]
         # execute once for each parallel value
@@ -219,12 +219,21 @@ class EmulatorController(Controller):
         times = tlist(sequence)
         channels, raw_coefficients = [], []
         for operator, waveforms in hamiltonians(
-                sequence, configs, self.engine, self.sampling_rate):
-            raw = channel_coefficients(waveforms, sampling_rate=self.sampling_rate, times=times)
+            sequence, configs, self.engine, self.sampling_rate
+        ):
+            raw = channel_coefficients(
+                waveforms, sampling_rate=self.sampling_rate, times=times
+            )
             channels.append([operator])
             raw_coefficients.append(raw)
 
-        return OperatorEvolution(operators=channels, coefficients=np.stack(raw_coefficients), times=times) if len(channels) > 0 else None
+        return (
+            OperatorEvolution(
+                operators=channels, coefficients=np.stack(raw_coefficients), times=times
+            )
+            if len(channels) > 0
+            else None
+        )
 
 
 def update_sequence(sequence: PulseSequence, updates: dict) -> PulseSequence:
