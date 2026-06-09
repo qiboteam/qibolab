@@ -81,8 +81,7 @@ class DynamiqsEngine(SimulationEngine):
         convention and QuTiP's expand_operator).
         """
         factors = [
-            op if i == target else self.engine.eye(dim)
-            for i, dim in enumerate(dims)
+            op if i == target else self.engine.eye(dim) for i, dim in enumerate(dims)
         ]
         return self.engine.tensor(*factors)
 
