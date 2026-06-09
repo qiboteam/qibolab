@@ -3,9 +3,6 @@ from functools import cached_property
 from pathlib import Path
 from typing import Any
 
-import dynamiqs as dq
-import numpy as np
-
 from .abstract import EvolutionResult, Operator, OperatorEvolution, SimulationEngine
 
 __all__ = ["DynamiqsEngine"]
@@ -61,7 +58,9 @@ class DynamiqsEngine(SimulationEngine):
         qutip.qsave(hamiltonian, str(dump_dir) + f"/{HAMILTONIAN_FILENAME}_{count}")
         qutip.qsave(sim_results, str(dump_dir) + f"/{STATE_FILENAME}_{count}")
 
-    def load_results(self, dump_dir: Path, count=None) -> None:
+    def load_results(
+        self, dump_dir: Path, count=None
+    ) -> tuple[tuple[Operator, OperatorEvolution], Any]:
         """Load the Hamiltonian and simulation results from file."""
         # if count is not given, load the latest results (with highest count)
         if not isinstance(dump_dir, Path):
@@ -81,9 +80,11 @@ class DynamiqsEngine(SimulationEngine):
 
         import qutip
 
-        hamiltonian = qutip.qload(str(dump_dir) + f"/{HAMILTONIAN_FILENAME}_{count}")
+        [hamiltonian, time_hamiltonian] = qutip.qload(
+            str(dump_dir) + f"/{HAMILTONIAN_FILENAME}_{count}"
+        )
         sim_results = qutip.qload(str(dump_dir) + f"/{STATE_FILENAME}_{count}")
-        return hamiltonian, sim_results
+        return [hamiltonian, time_hamiltonian], sim_results
 
     def evolve(
         self,
@@ -97,28 +98,22 @@ class DynamiqsEngine(SimulationEngine):
     ):
         """Evolve the system."""
 
-        time_diff = np.diff(time)
-        max_steps = (
-            len(time)
-            * max(time_diff)
-            / INTEGRATION_MIN_TIME_STEP
-            * INTEGRATION_MULTIPLIER
-        )
-        # adding qutip step size options to (default) dynamiqs integration method
-        method = self.engine.method.Tsit5(max_steps=int(max_steps))
+        # Using an integrator with a fixed time step
+        method = self.engine.method.Rouchon3(dt=INTEGRATION_MIN_TIME_STEP)
+
         H = hamiltonian
 
         if time_hamiltonian is not None:
             import jax
 
             # Linear jax interpolation (splines not currently supported in JAX)
-            H = dq.timecallable(
+            H = self.engine.timecallable(
                 lambda t: (
-                    dq.asqarray(hamiltonian)
+                    self.engine.asqarray(hamiltonian)
                     + sum(
                         [
-                            dq.asqarray(op[0]).elmul(
-                                jax.numpy.interp(t, op[1][0], op[1][1])
+                            self.engine.asqarray(op[0]).elmul(
+                                jax.numpy.interp(t, op[1], op[2])
                             )
                             for op in time_hamiltonian.operators
                         ]
@@ -137,7 +132,7 @@ class DynamiqsEngine(SimulationEngine):
         comp_results = CompResult(sim_results.states.to_qutip())
 
         if save_evolution is not None:
-            if isinstance(H, dq.QArray):
+            if isinstance(H, self.engine.QArray):
                 hamiltonian = hamiltonian.to_qutip()
             self.dump_results(
                 hamiltonian=[hamiltonian, time_hamiltonian],
@@ -147,6 +142,10 @@ class DynamiqsEngine(SimulationEngine):
 
         return comp_results
 
+    # Converting all Dynamiqs objects to Qutip for compatibility:
+    # Qutip uses the * symbol to multiply operators, while in Dynamiqs,
+    # the @ symbol is used for matrix multiplication, and the * symbol
+    # is reserved for element-wise multiplication with a scalar.
     def create(self, n: int) -> Operator:
         """Create operator for n levels system."""
         return self.engine.create(n).to_qutip()

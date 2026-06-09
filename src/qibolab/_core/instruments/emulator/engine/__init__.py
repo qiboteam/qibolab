@@ -1,4 +1,4 @@
-from . import abstract, qutip
+from . import abstract, dynamiqs, qutip
 from .abstract import *
 from .dynamiqs import *
 from .qutip import *

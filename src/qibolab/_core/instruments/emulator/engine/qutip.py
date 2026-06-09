@@ -4,11 +4,14 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
+from scipy.interpolate import make_interp_spline
 
 from .abstract import Operator, OperatorEvolution, SimulationEngine
 
 __all__ = ["QutipEngine"]
 
+SPLINE_INTERP_ORDER = 3
+"""Polynomial order used for interpolating the pulses with a spline function."""
 INTEGRATION_MAX_TIME_STEP = 0.02
 """ns, min resolution of the integrator"""
 INTEGRATION_MULTIPLIER = 200
@@ -55,7 +58,7 @@ class QutipEngine(SimulationEngine):
         )
         self.engine.qsave(sim_results, str(dump_dir) + f"/{STATE_FILENAME}_{count}")
 
-    def load_results(self, dump_dir: Path, count=None) -> None:
+    def load_results(self, dump_dir: Path, count=None) -> tuple[Operator, Any]:
         """Load the Hamiltonian and simulation results from file."""
         # if count is not given, load the latest results (with highest count)
         if not isinstance(dump_dir, Path):
@@ -98,7 +101,10 @@ class QutipEngine(SimulationEngine):
         options = {"max_step": INTEGRATION_MAX_TIME_STEP, "nsteps": nsteps}
 
         if time_hamiltonian is not None:
-            hamiltonian = [hamiltonian] + time_hamiltonian.operators
+            hamiltonian = [hamiltonian] + [
+                [op[0], make_interp_spline(op[1], op[2], k=SPLINE_INTERP_ORDER)]
+                for op in time_hamiltonian.operators
+            ]
 
         sim_results = self.engine.mesolve(
             hamiltonian,
