@@ -102,7 +102,12 @@ class QutipEngine(SimulationEngine):
 
         if time_hamiltonian is not None:
             hamiltonian = [hamiltonian] + [
-                [op[0], make_interp_spline(op[1], op[2], k=SPLINE_INTERP_ORDER)]
+                [
+                    op[0],
+                    make_interp_spline(
+                        time_hamiltonian.times, op[1], k=SPLINE_INTERP_ORDER
+                    ),
+                ]
                 for op in time_hamiltonian.operators
             ]
 

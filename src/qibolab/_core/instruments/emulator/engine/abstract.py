@@ -37,8 +37,6 @@ class TimeDependentOperator(Protocol):
 
     operator: Operator
     """Operator."""
-    times: NDArray
-    """Time array for pulse sequence execution."""
     pulse_waveforms: NDArray
     """Waveform array for pulse sequence execution."""
 
@@ -55,6 +53,9 @@ class OperatorEvolution:
     """Abstract operator evolution interface."""
 
     operators: list[Operator | TimeDependentOperator] = field(default_factory=list)
+
+    times: NDArray = field(default_factory=NDArray)
+    """Time array for pulse sequence execution."""
 
 
 class SimulationEngine(Model, ABC):

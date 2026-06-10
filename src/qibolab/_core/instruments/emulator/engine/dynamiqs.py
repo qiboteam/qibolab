@@ -124,7 +124,7 @@ class DynamiqsEngine(SimulationEngine):
                     + sum(
                         [
                             self.engine.asqarray(op[0]).elmul(
-                                jax.numpy.interp(t, op[1], op[2])
+                                jax.numpy.interp(t, time_hamiltonian.times, op[1])
                             )
                             for op in time_hamiltonian.operators
                         ]

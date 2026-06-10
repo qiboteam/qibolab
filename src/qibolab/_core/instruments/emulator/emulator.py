@@ -202,7 +202,6 @@ class EmulatorController(Controller):
         channels = [
             [
                 operator,
-                times,
                 channel_coefficients(
                     waveforms,
                     sampling_rate=self.sampling_rate,
@@ -213,7 +212,11 @@ class EmulatorController(Controller):
                 sequence, configs, self.engine, self.sampling_rate
             )
         ]
-        return OperatorEvolution(channels) if len(channels) > 0 else None
+        return (
+            OperatorEvolution(operators=channels, times=times)
+            if len(channels) > 0
+            else None
+        )
 
 
 def update_sequence(sequence: PulseSequence, updates: dict) -> PulseSequence:
