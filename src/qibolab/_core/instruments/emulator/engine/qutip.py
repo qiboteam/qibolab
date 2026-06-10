@@ -20,6 +20,7 @@ HAMILTONIAN_FILENAME = "System_Hamiltonian"
 STATE_FILENAME = "State_Evolution"
 
 SPLINE_INTERP_ORDER = 3
+"""Polynomial order used for interpolating the pulses with a spline function."""
 
 
 class QutipEngine(SimulationEngine):
