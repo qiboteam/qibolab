@@ -3,6 +3,8 @@ from functools import cached_property
 from pathlib import Path
 from typing import Any
 
+import numpy as np
+
 from .abstract import EvolutionResult, Operator, OperatorEvolution, SimulationEngine
 
 __all__ = ["DynamiqsEngine"]
@@ -97,11 +99,20 @@ class DynamiqsEngine(SimulationEngine):
         **kwargs,
     ):
         """Evolve the system."""
+        time_diff = np.diff(time)
+        max_steps = (
+            len(time)
+            * max(time_diff)
+            / INTEGRATION_MIN_TIME_STEP
+            * INTEGRATION_MULTIPLIER
+        )
 
         # Using an integrator with a fixed time step
-        method = self.engine.method.Rouchon3(dt=INTEGRATION_MIN_TIME_STEP)
+        method = self.engine.method.Rouchon3(
+            dt=INTEGRATION_MIN_TIME_STEP, max_steps=int(max_steps)
+        )
 
-        H = hamiltonian
+        H = self.engine.asqarray(hamiltonian)
 
         if time_hamiltonian is not None:
             import jax
