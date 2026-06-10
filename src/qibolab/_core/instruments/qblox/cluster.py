@@ -183,10 +183,8 @@ class Cluster(Controller):
     def disconnect(self):
         """Disconnect and reset the instrument."""
         assert self._cluster is not None
-
         for module in self._modules.values():
             module.stop_sequencer()
-        self._cluster.reset()
         self._cluster.close()
         self._cluster = None
 
@@ -198,6 +196,8 @@ class Cluster(Controller):
         sweepers: list[ParallelSweepers],
     ) -> dict[PulseId, Result]:
         """Execute the given experiment."""
+
+        self.reset()
 
         processed_sequences, phase_sweeper_present = _merge_phases_if_no_phase_sweeper(
             sweepers, sequences
@@ -227,7 +227,8 @@ class Cluster(Controller):
             # synchronization registration
             # TODO: don't reset unnecessarily. In RB with depths 2**np.arange(11) the
             # reset alone takes 14% of total execution time
-            self.reset()
+            for module in self._modules.values():
+                module.stop_sequencer()
             psres = []
             for shots in batch_shots(ps, sweepers, options):
                 options_ = options.model_copy(update={"nshots": shots})
