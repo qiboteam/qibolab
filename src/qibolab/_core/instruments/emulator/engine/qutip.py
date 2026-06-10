@@ -74,7 +74,7 @@ class QutipEngine(SimulationEngine):
         options = {"max_step": INTEGRATION_MAX_TIME_STEP, "nsteps": nsteps}
 
         if time_hamiltonian is not None:
-            hamiltonian = [hamiltonian] + time_hamiltonian.operators
+            hamiltonian = [hamiltonian] + [list(o) for o in time_hamiltonian.operators]
 
         sim_results = self.engine.mesolve(
             hamiltonian,
@@ -110,9 +110,9 @@ class QutipEngine(SimulationEngine):
         """Tensor product of a list of operators."""
         return self.engine.tensor(*operators)
 
-    def expand(self, op: Operator, targets: int | list[int], dims: list[int]):
+    def expand(self, op: Operator, dims: list[int], targets: int | list[int]):
         """Expand operator in larger Hilbert space."""
-        return self.engine.expand_operator(op, targets, dims)
+        return self.engine.expand_operator(op, dims, targets)
 
     def basis(self, dim: int, state: int) -> Operator:
         """Basis operator for n levels system."""
