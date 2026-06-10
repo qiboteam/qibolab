@@ -32,13 +32,8 @@ class Operator(Protocol):
         """Add two operators."""
 
 
-class TimeDependentOperator(Protocol):
-    """Abstract time dependent operator interface."""
-
-    operator: Operator
-    """Operator."""
-    time: BSpline
-    """Time function."""
+TimeDependentOperator = tuple[Operator, BSpline]
+"""Abstract time dependent operator type."""
 
 
 class EvolutionResult(Protocol):

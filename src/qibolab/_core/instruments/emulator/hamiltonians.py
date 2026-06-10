@@ -44,7 +44,7 @@ class FluxEmulatorConfig(Config):
 
     @staticmethod
     def operator(n: int, engine: SimulationEngine) -> Operator:
-        return engine.create(n) * engine.destroy(n)
+        return engine.create(n) @ engine.destroy(n)
 
     @property
     def flux(self) -> float:
@@ -86,10 +86,12 @@ class Qubit(Config):
             self.anharmonicity
             * np.pi
             / giga
-            * engine.create(n)
-            * engine.create(n)
-            * engine.destroy(n)
-            * engine.destroy(n)
+            * (
+                engine.create(n)
+                @ engine.create(n)
+                @ engine.destroy(n)
+                @ engine.destroy(n)
+            )
         )
         return quadratic_term + quartic_term
 
@@ -100,8 +102,10 @@ class Qubit(Config):
     def relaxation(self, n: int, engine: SimulationEngine) -> Operator:
         return sum(
             np.sqrt(1 / t1)
-            * engine.basis(state=transition[0], dim=n)
-            * engine.basis(state=transition[1], dim=n).dag()
+            * (
+                engine.basis(state=transition[0], dim=n)
+                @ engine.basis(state=transition[1], dim=n).dag()
+            )
             for transition, t1 in self.t1.items()
         )
 
@@ -110,9 +114,9 @@ class Qubit(Config):
             np.sqrt(1 / self.t_phi(pair) / 2)
             * (
                 engine.basis(state=pair[0], dim=n)
-                * engine.basis(state=pair[0], dim=n).dag()
+                @ engine.basis(state=pair[0], dim=n).dag()
                 - engine.basis(state=pair[1], dim=n)
-                * engine.basis(state=pair[1], dim=n).dag()
+                @ engine.basis(state=pair[1], dim=n).dag()
             )
             for pair in self.t2
         )

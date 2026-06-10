@@ -25,7 +25,13 @@ from qibolab._core.pulses import (
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import ParallelSweepers
 
-from .engine import Operator, OperatorEvolution, QutipEngine, SimulationEngine
+from .engine import (
+    Operator,
+    OperatorEvolution,
+    QutipEngine,
+    SimulationEngine,
+    TimeDependentOperator,
+)
 from .hamiltonians import (
     HamiltonianConfig,
     Modulated,
@@ -198,14 +204,16 @@ class EmulatorController(Controller):
         times = tlist(sequence)
 
         channels = [
-            [
-                operator,
-                channel_coefficients(
-                    waveforms,
-                    sampling_rate=self.sampling_rate,
-                    times=times,
-                ),
-            ]
+            TimeDependentOperator(
+                (
+                    operator,
+                    channel_coefficients(
+                        waveforms,
+                        sampling_rate=self.sampling_rate,
+                        times=times,
+                    ),
+                )
+            )
             for operator, waveforms in hamiltonians(
                 sequence, configs, self.engine, self.sampling_rate
             )
