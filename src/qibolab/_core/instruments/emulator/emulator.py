@@ -291,10 +291,10 @@ def channel_coefficients(
     times: NDArray,
 ) -> NDArray:
     """
-    Preparation of waveforms for interpolation over a time evolution.
+    Generate waveforms over a time evolution.
     This function processes a sequence of pulses, accumulating their waveforms
-    over time and applying phase modulation. The resulting waveform can then be interpolated
-    in the simulation engine for time evolution analysis.
+    over time and applying phase modulation. The resulting waveform is then passed
+    to the various engines for time evolution analysis.
     """
 
     pulse_waveforms = np.zeros_like(times)
