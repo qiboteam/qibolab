@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Protocol
 
-from scipy.interpolate import BSpline
+from numpy.typing import NDArray
 
 from ....serialize import Model
 
@@ -37,8 +37,8 @@ class TimeDependentOperator(Protocol):
 
     operator: Operator
     """Operator."""
-    time: BSpline
-    """Time function."""
+    pulse_waveforms: NDArray
+    """Waveform array for pulse sequence execution."""
 
 
 class EvolutionResult(Protocol):
@@ -53,6 +53,9 @@ class OperatorEvolution:
     """Abstract operator evolution interface."""
 
     operators: list[Operator | TimeDependentOperator] = field(default_factory=list)
+
+    times: NDArray = field(default_factory=NDArray)
+    """Time array for pulse sequence execution."""
 
 
 class SimulationEngine(Model, ABC):

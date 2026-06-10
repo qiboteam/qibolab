@@ -9,7 +9,6 @@ from typing import cast
 
 import numpy as np
 from numpy.typing import NDArray
-from scipy.interpolate import BSpline, make_interp_spline
 
 from qibolab._core.components import Config
 from qibolab._core.components.configs import AcquisitionConfig
@@ -25,7 +24,12 @@ from qibolab._core.pulses import (
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import ParallelSweepers
 
-from .engine import Operator, OperatorEvolution, QutipEngine, SimulationEngine
+from .engine import (
+    Operator,
+    OperatorEvolution,
+    QutipEngine,
+    SimulationEngine,
+)
 from .hamiltonians import (
     HamiltonianConfig,
     Modulated,
@@ -33,8 +37,6 @@ from .hamiltonians import (
 )
 from .results import acquisitions, index, results
 
-SPLINE_INTERP_ORDER = 3
-"""Polynomial order used for interpolating the pulses with a spline function."""
 NYQUIST_FREQUENCY = 20
 """GHz, Nyquist frequency used for computing the solution and resolve qubit oscillations."""
 SAMPLING_INTERVAL = 1 / (2 * NYQUIST_FREQUENCY)
@@ -210,7 +212,11 @@ class EmulatorController(Controller):
                 sequence, configs, self.engine, self.sampling_rate
             )
         ]
-        return OperatorEvolution(channels) if len(channels) > 0 else None
+        return (
+            OperatorEvolution(operators=channels, times=times)
+            if len(channels) > 0
+            else None
+        )
 
 
 def update_sequence(sequence: PulseSequence, updates: dict) -> PulseSequence:
@@ -283,12 +289,12 @@ def channel_coefficients(
     waveforms: Iterable[Modulated],
     sampling_rate: int,
     times: NDArray,
-) -> BSpline:
+) -> NDArray:
     """
-    Generate a B-spline interpolation of waveforms over a time evolution.
+    Generate waveforms over a time evolution.
     This function processes a sequence of pulses, accumulating their waveforms
-    over time and applying phase modulation. The resulting waveform is then interpolated
-    into a smooth B-spline curve for time evolution analysis.
+    over time and applying phase modulation. The resulting waveform is then passed
+    to the various engines for time evolution analysis.
     """
 
     pulse_waveforms = np.zeros_like(times)
@@ -311,6 +317,4 @@ def channel_coefficients(
 
         cumulative_phase += pulse.phase
         cumulative_time = next_pulse_time
-
-    # return pulse_waveforms
-    return make_interp_spline(times, pulse_waveforms, k=SPLINE_INTERP_ORDER)
+    return pulse_waveforms
