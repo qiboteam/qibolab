@@ -216,19 +216,23 @@ class EmulatorController(Controller):
         # set a nyquist frequency to define the timesteps in order to compute the solution
         times = tlist(sequence)
         channels = [
-                    [
-                        operator,
-                        channel_coefficients(
-                            waveforms,
-                            sampling_rate=self.sampling_rate,
-                            times=times,
-                        ),
-                    ]
-                    for operator, waveforms in hamiltonians(
-                        sequence, configs, self.engine, self.sampling_rate
-                    )
-                ]
-        return OperatorEvolution(operators=channels, times=times) if len(channels) > 0 else None
+            [
+                operator,
+                channel_coefficients(
+                    waveforms,
+                    sampling_rate=self.sampling_rate,
+                    times=times,
+                ),
+            ]
+            for operator, waveforms in hamiltonians(
+                sequence, configs, self.engine, self.sampling_rate
+            )
+        ]
+        return (
+            OperatorEvolution(operators=channels, times=times)
+            if len(channels) > 0
+            else None
+        )
 
 
 def update_sequence(sequence: PulseSequence, updates: dict) -> PulseSequence:
@@ -273,6 +277,7 @@ def hamiltonian(
         if isinstance(pulse, (Pulse, Delay, VirtualZ))
     )
     return (op, [w for w in waveforms if w is not None])
+
 
 def hamiltonians(
     sequence: PulseSequence,

@@ -1,8 +1,7 @@
 import numpy as np
-import pytest
 
-from qibolab._core.instruments.emulator.engine.qutip import QutipEngine
 from qibolab._core.instruments.emulator.engine.dynamiqs import DynamiqsEngine
+from qibolab._core.instruments.emulator.engine.qutip import QutipEngine
 
 
 def test_op_dims_structure():
@@ -27,8 +26,12 @@ def test_expand_multi_target_matches_qutip():
     qt, dq = QutipEngine(), DynamiqsEngine()
     n = 2
     dims = [n, n, n]
-    op_qt = qt.tensor([qt.destroy(n), qt.create(n)]) + qt.tensor([qt.create(n), qt.destroy(n)])
-    op_dq = dq.tensor([dq.destroy(n), dq.create(n)]) + dq.tensor([dq.create(n), dq.destroy(n)])
+    op_qt = qt.tensor([qt.destroy(n), qt.create(n)]) + qt.tensor(
+        [qt.create(n), qt.destroy(n)]
+    )
+    op_dq = dq.tensor([dq.destroy(n), dq.create(n)]) + dq.tensor(
+        [dq.create(n), dq.destroy(n)]
+    )
     for targets in ([0, 1], [1, 2], [0, 2], [2, 0]):
         e_qt = qt.expand(op_qt, dims, targets).full()
         e_dq = np.asarray(dq.expand(op_dq, dims, targets).to_jax())

@@ -2,9 +2,8 @@ from collections.abc import Iterable
 from functools import cached_property
 from pathlib import Path
 
-import numpy as np
 import jax.numpy as jnp
-
+import numpy as np
 
 from .abstract import Operator, OperatorEvolution, SimulationEngine
 
@@ -45,7 +44,9 @@ class DynamiqsEngine(SimulationEngine):
             dt = times[1] - times[0]
             boundaries = np.append(times, times[-1] + dt)
             for td in time_hamiltonian.operators:
-                H = H + self.engine.pwc(boundaries, np.asarray(td.coefficients), td.operator)
+                H = H + self.engine.pwc(
+                    boundaries, np.asarray(td.coefficients), td.operator
+                )
 
         jump_ops = collapse_operators if collapse_operators is not None else []
 
