@@ -139,3 +139,12 @@ debug/
 
 # Nix
 .devenv
+
+.DS_Store
+**/.DS_Store
+
+.venv/
+**/.venv/
+htmlcov/
+coverage.xml
+.coverage
