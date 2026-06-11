@@ -33,8 +33,6 @@ from .hamiltonians import (
 )
 from .results import acquisitions, index, results
 
-SPLINE_INTERP_ORDER = 3
-"""Polynomial order used for interpolating the pulses with a spline function."""
 NYQUIST_FREQUENCY = 20
 """GHz, Nyquist frequency used for computing the solution and resolve qubit oscillations."""
 SAMPLING_INTERVAL = 1 / (2 * NYQUIST_FREQUENCY)
@@ -217,23 +215,20 @@ class EmulatorController(Controller):
         # the oscillation and correctly solve the system evolution, hence we
         # set a nyquist frequency to define the timesteps in order to compute the solution
         times = tlist(sequence)
-        channels, raw_coefficients = [], []
-        for operator, waveforms in hamiltonians(
-            sequence, configs, self.engine, self.sampling_rate
-        ):
-            raw = channel_coefficients(
-                waveforms, sampling_rate=self.sampling_rate, times=times
-            )
-            channels.append(operator)
-            raw_coefficients.append(raw)
-
-        return (
-            OperatorEvolution(
-                operators=channels, coefficients=np.stack(raw_coefficients), times=times
-            )
-            if len(channels) > 0
-            else None
-        )
+        channels = [
+                    [
+                        operator,
+                        channel_coefficients(
+                            waveforms,
+                            sampling_rate=self.sampling_rate,
+                            times=times,
+                        ),
+                    ]
+                    for operator, waveforms in hamiltonians(
+                        sequence, configs, self.engine, self.sampling_rate
+                    )
+                ]
+        return OperatorEvolution(operators=channels, times=times) if len(channels) > 0 else None
 
 
 def update_sequence(sequence: PulseSequence, updates: dict) -> PulseSequence:
@@ -278,7 +273,6 @@ def hamiltonian(
         if isinstance(pulse, (Pulse, Delay, VirtualZ))
     )
     return (op, [w for w in waveforms if w is not None])
-
 
 def hamiltonians(
     sequence: PulseSequence,

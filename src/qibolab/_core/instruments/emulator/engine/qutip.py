@@ -59,10 +59,8 @@ class QutipEngine(SimulationEngine):
         if time_hamiltonian is not None:
             times = time_hamiltonian.times
             pairs = [
-                [op, make_interp_spline(times, coeff, k=SPLINE_INTERP_ORDER)]
-                for op, coeff in zip(
-                    time_hamiltonian.operators, time_hamiltonian.coefficients
-                )
+                [td.operator, make_interp_spline(times, td.coefficients, k=SPLINE_INTERP_ORDER)]
+                for td in time_hamiltonian.operators
             ]
             hamiltonian = [hamiltonian] + pairs
 

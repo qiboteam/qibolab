@@ -40,6 +40,7 @@ class TimeDependentOperator(Protocol):
     """Operator."""
     time: BSpline
     """Time function."""
+    coefficients: NDArray
 
 
 class EvolutionResult(Protocol):
@@ -54,7 +55,6 @@ class OperatorEvolution:
     """Abstract operator evolution interface."""
 
     operators: list[Operator | TimeDependentOperator] = field(default_factory=list)
-    coefficients: "NDArray | None" = None
     times: "NDArray | None" = None
 
 
