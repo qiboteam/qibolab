@@ -127,9 +127,7 @@ def _bspline_prefactor(spline: BSpline):
         return jnp.where(denominator == 0, 0, numerator / denominator)
 
     def prefactor(time):
-        basis = ((knots[:-1] <= time) & (time < knots[1:])).astype(
-            coefficients.dtype
-        )
+        basis = ((knots[:-1] <= time) & (time < knots[1:])).astype(coefficients.dtype)
 
         for order in range(1, degree + 1):
             size = knots.size - 1 - order
@@ -311,9 +309,13 @@ class DynamiqsEngine(SimulationEngine):
         permutation = [position[i] for i in range(len(dims))] + [
             len(dims) + position[i] for i in range(len(dims))
         ]
-        expanded = compact.reshape(shape).transpose(permutation).reshape(
-            np.prod(dims, dtype=int),
-            np.prod(dims, dtype=int),
+        expanded = (
+            compact.reshape(shape)
+            .transpose(permutation)
+            .reshape(
+                np.prod(dims, dtype=int),
+                np.prod(dims, dtype=int),
+            )
         )
 
         return self._wrap(self.engine.asqarray(expanded, dims=tuple(dims)))
