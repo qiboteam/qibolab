@@ -23,3 +23,69 @@ To accurately resolve qubit dynamics and capture all contributions from the time
 At present, state collapse is not implemented in the Qibolab emulator. As a result, this tool is not suitable for simulating mid-circuit measurements, and should be restricted to circuits in which all measurements occur simultaneously at the end of the computation. In physical systems, mid-circuit measurement induces wavefunction collapse; if the measured qubit is entangled with others, this process introduces correlations that condition the state of the remaining system. The current emulator does not account for such measurement-induced correlations, leading to intrinsically inaccurate results in these scenarios.
 
 An additional limitation arises from the handling of measurement ordering. In certain experimental protocols, the temporal order of measurements may vary across parameter sweeps, while the :paramref:`PulseSequence` object remains fixed and does not reflect such reordering. This discrepancy may introduce inconsistencies during the execution of :func:`qibolab._core.instruments.emulator.results.results`, which assumes alignment between the time-ordering structure and the acquisition pulses defined in the pulse sequence. If this alignment is violated, acquisition events may be incorrectly matched to simulation time steps, ultimately resulting in invalid outputs.
+
+Saving full evolutions
+----------------------
+
+The Qutip emulator can optionally save the complete Hamiltonian and solver result for
+debugging and offline analysis. Set :attr:`.EmulatorController.save_dir` to a dedicated
+directory when constructing the emulator instrument:
+
+.. code-block:: python
+
+    from pathlib import Path
+
+    from qibolab.instruments.emulator import EmulatorController
+
+    controller = EmulatorController(
+        address="0.0.0.0",
+        channels=channels,
+        save_dir=Path("qutip_data"),
+    )
+
+For every solver invocation, Qibolab writes a matching pair of Qutip ``.qu`` files:
+
+.. code-block:: text
+
+    qutip_data/
+    |-- System_Hamiltonian_0.qu
+    |-- State_Evolution_0.qu
+    |-- System_Hamiltonian_1.qu
+    `-- State_Evolution_1.qu
+
+``System_Hamiltonian_<n>.qu`` contains the time-independent Hamiltonian followed by
+the time-dependent operator terms and their coefficient functions.
+``State_Evolution_<n>.qu`` contains the full :class:`qutip.solver.Result`, including
+the density matrices produced at the solver time points. The matching numeric suffix
+identifies data from the same solver invocation.
+
+The files can be loaded with :func:`qutip.qload`:
+
+.. code-block:: python
+
+    import qutip
+
+    hamiltonian = qutip.qload("qutip_data/System_Hamiltonian_0")
+    evolution = qutip.qload("qutip_data/State_Evolution_0")
+
+    density_matrices = evolution.states
+
+Qutip serialization uses Python pickle internally. Only load evolution files from
+trusted sources.
+
+Storage and concurrency considerations
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The current strategy writes each solver result immediately. This bounds memory usage
+during large parameter sweeps, but has the following trade-offs:
+
+* a sweep produces one Hamiltonian/result pair for every point, even when the
+  time-independent Hamiltonian is shared;
+* many small writes can be slower than a batched representation;
+* file suffixes are selected by scanning the destination directory, so concurrent
+  executions must not share the same directory.
+
+Use a new, empty directory for each experiment run and move or archive it only after
+the execution has finished. Leave ``save_dir=None`` for normal execution, because full
+density-matrix traces and Hamiltonians can consume substantially more storage than the
+regular Qibolab acquisition results.
