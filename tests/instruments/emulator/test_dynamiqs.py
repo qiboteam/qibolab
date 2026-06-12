@@ -7,10 +7,10 @@ import pytest
 from scipy.interpolate import make_interp_spline
 
 from qibolab import AcquisitionType, AveragingMode, create_platform
-from qibolab.instruments.emulator import DynamiqsEngine as PublicDynamiqsEngine
+from qibolab._core.instruments.emulator.emulator import EmulatorController
 from qibolab._core.instruments.emulator.engine import DynamiqsEngine, QutipEngine
 from qibolab._core.instruments.emulator.engine.abstract import OperatorEvolution
-from qibolab._core.instruments.emulator.emulator import EmulatorController
+from qibolab.instruments.emulator import DynamiqsEngine as PublicDynamiqsEngine
 
 pytest.importorskip("dynamiqs")
 

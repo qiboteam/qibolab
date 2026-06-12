@@ -23,7 +23,6 @@ from qibolab import AcquisitionType, AveragingMode, create_platform
 from qibolab._core.platform.load import PLATFORMS
 from qibolab.instruments.emulator import DynamiqsEngine, EmulatorController, QutipEngine
 
-
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parent
 DEFAULT_PLATFORMS = REPO / "tests" / "instruments" / "emulator" / "platforms"

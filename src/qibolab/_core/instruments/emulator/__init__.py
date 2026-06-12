@@ -1,6 +1,6 @@
 from . import emulator, engine, hamiltonians
-from .engine import *
 from .emulator import *
+from .engine import *
 from .hamiltonians import *
 
 __all__ = []

@@ -44,8 +44,8 @@ import time
 import numpy as np
 from scipy.interpolate import make_interp_spline
 
-from qibolab.instruments.emulator import DynamiqsEngine, QutipEngine
 from qibolab._core.instruments.emulator.engine.abstract import OperatorEvolution
+from qibolab.instruments.emulator import DynamiqsEngine, QutipEngine
 
 GIGA = 1e9
 FREQUENCIES = (4.5, 5.5)
