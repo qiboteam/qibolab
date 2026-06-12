@@ -108,8 +108,9 @@ Emulation of QPU platforms
 
 Although Qibolab is mostly dedicated to providing hardware drivers for self-hosted quantum computing setups,
 it is also possible to simulate the outcome of a pulse sequence with an emulator.
-The emulator currently available is based on `QuTiP <https://qutip.org/>`_, the simulation is performed
-by solving the master equation for a given Hamiltonian including dissipation using `mesolve <https://qutip.readthedocs.io/en/qutip-5.1.x/apidoc/solver.html#qutip.solver.mesolve.mesolve>`_.
+The default emulator engine is based on `QuTiP <https://qutip.org/>`_, and :class:`.DynamiqsEngine`
+is also available as an alternative JAX-based engine. In both cases, the simulation is performed
+by solving the master equation for a given Hamiltonian including dissipation.
 
 With Qibolab it is currently possible to emulate a system of split-transmon qubits capacitively coupled. The Hamiltonian solved numerically in the case
 of two transmon qubits is given by
