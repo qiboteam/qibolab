@@ -13,7 +13,6 @@ from qibolab._core.instruments.emulator.engine.evolution_dump import (
     MANIFEST_FILENAME,
     TIME_COEFFICIENTS_FILENAME,
     TIME_GRID_FILENAME,
-    EvolutionDump,
     dump_evolution,
     load_evolution_dump,
 )

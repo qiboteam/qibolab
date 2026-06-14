@@ -7,8 +7,8 @@ from scipy.interpolate import make_interp_spline
 
 from .abstract import Operator, OperatorEvolution, SimulationEngine
 from .evolution_dump import (
-    EvolutionDump,
     SPLINE_ORDER,
+    EvolutionDump,
     dump_evolution,
     load_evolution_dump,
 )

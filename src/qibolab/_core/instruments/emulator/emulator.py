@@ -91,7 +91,9 @@ class EmulatorController(Controller):
         time_hamiltonian = self._pulse_hamiltonian(sequence, configs)
         time_ops = time_hamiltonian.operators if time_hamiltonian is not None else []
         operators = [static] + time_ops
-        time_grid = time_hamiltonian.times if time_hamiltonian is not None else np.array([])
+        time_grid = (
+            time_hamiltonian.times if time_hamiltonian is not None else np.array([])
+        )
 
         self.engine.dump_evolution(
             dump_dir,
