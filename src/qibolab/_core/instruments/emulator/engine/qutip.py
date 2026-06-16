@@ -1,11 +1,9 @@
-import json
 from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from functools import cached_property
 from pathlib import Path
 from typing import Any
-from uuid import uuid4
 
 import numpy as np
 
@@ -22,8 +20,6 @@ INTEGRATION_MIN_TIME_STEP = 5e-3
 
 HAMILTONIAN_FILENAME = "System_Hamiltonian"
 STATE_FILENAME = "State_Evolution"
-DUMP_MANIFEST_FILENAME = "manifest.json"
-DUMP_SCHEMA_VERSION = 1
 
 
 @dataclass(frozen=True)
@@ -36,8 +32,6 @@ class EvolutionDump:
     """Saved time-dependent Hamiltonian."""
     states: Any
     """Saved state evolution results."""
-    manifest: dict[str, Any]
-    """Dump metadata."""
 
 
 class QutipEngine(SimulationEngine):
@@ -61,38 +55,22 @@ class QutipEngine(SimulationEngine):
         self.engine.qsave(hamiltonian, str(run_dir / HAMILTONIAN_FILENAME))
         self.engine.qsave(sim_results, str(run_dir / STATE_FILENAME))
 
-        manifest = {
-            "version": DUMP_SCHEMA_VERSION,
-            "engine": "qutip",
-            "created_at": datetime.now(timezone.utc).isoformat(),
-            "files": {
-                "hamiltonian": f"{HAMILTONIAN_FILENAME}.qu",
-                "states": f"{STATE_FILENAME}.qu",
-            },
-        }
-        (run_dir / DUMP_MANIFEST_FILENAME).write_text(
-            json.dumps(manifest, indent=2, sort_keys=True) + "\n"
-        )
-
         return run_dir
 
     def load_results(self, dump_dir: Path) -> EvolutionDump:
         """Load a saved Hamiltonian and state evolution dump."""
 
         run_dir = self._resolve_dump_run_dir(dump_dir)
-        manifest = json.loads((run_dir / DUMP_MANIFEST_FILENAME).read_text())
-        files = manifest["files"]
 
         hamiltonian = self.engine.qload(
-            self._qload_path(run_dir / files["hamiltonian"])
+            self._qload_path(run_dir / f"{HAMILTONIAN_FILENAME}.qu")
         )
-        states = self.engine.qload(self._qload_path(run_dir / files["states"]))
+        states = self.engine.qload(self._qload_path(run_dir / f"{STATE_FILENAME}.qu"))
 
         return EvolutionDump(
             path=run_dir,
             hamiltonian=hamiltonian,
             states=states,
-            manifest=manifest,
         )
 
     @staticmethod
@@ -100,27 +78,22 @@ class QutipEngine(SimulationEngine):
         """Create a unique run folder without counting existing files."""
 
         dump_dir.mkdir(parents=True, exist_ok=True)
-        for _ in range(10):
-            timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
-            run_dir = dump_dir / f"run-{timestamp}-{uuid4().hex[:8]}"
-            try:
-                run_dir.mkdir()
-            except FileExistsError:
-                continue
-            return run_dir
-        raise RuntimeError(f"Could not create a unique dump directory in {dump_dir}.")
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+        run_dir = dump_dir / f"run-{timestamp}"
+        run_dir.mkdir()
+        return run_dir
 
     @staticmethod
     def _resolve_dump_run_dir(dump_dir: Path) -> Path:
         """Resolve a dump root or a concrete run directory to a run directory."""
 
-        if (dump_dir / DUMP_MANIFEST_FILENAME).is_file():
+        if _has_qutip_dump_files(dump_dir):
             return dump_dir
 
         run_dirs = sorted(
             path
             for path in dump_dir.iterdir()
-            if path.is_dir() and (path / DUMP_MANIFEST_FILENAME).is_file()
+            if path.is_dir() and _has_qutip_dump_files(path)
         )
         if len(run_dirs) == 0:
             raise FileNotFoundError(f"No qutip evolution dumps found in {dump_dir}.")
@@ -196,3 +169,11 @@ class QutipEngine(SimulationEngine):
     def basis(self, dim: int, state: int) -> Operator:
         """Basis operator for n levels system."""
         return self.engine.basis(dimensions=dim, n=state)
+
+
+def _has_qutip_dump_files(path: Path) -> bool:
+    """Return whether a directory has the fixed qutip dump artifacts."""
+
+    return (path / f"{HAMILTONIAN_FILENAME}.qu").is_file() and (
+        path / f"{STATE_FILENAME}.qu"
+    ).is_file()

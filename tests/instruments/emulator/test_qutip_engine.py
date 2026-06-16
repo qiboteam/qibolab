@@ -1,12 +1,12 @@
 """Testing Qutip emulator engine helpers."""
 
 import json
+import re
 from pathlib import Path
 
 import pytest
 
 from qibolab._core.instruments.emulator.engine.qutip import (
-    DUMP_MANIFEST_FILENAME,
     HAMILTONIAN_FILENAME,
     STATE_FILENAME,
     QutipEngine,
@@ -39,34 +39,29 @@ def test_dump_results_creates_separate_run_directories(
     assert first != second
     assert first.parent == tmp_path
     assert second.parent == tmp_path
-    assert first.name.startswith("run-")
-    assert second.name.startswith("run-")
+    assert re.fullmatch(r"run-\d{8}T\d{6}\d{6}Z", first.name)
+    assert re.fullmatch(r"run-\d{8}T\d{6}\d{6}Z", second.name)
     assert not list(tmp_path.glob(f"{HAMILTONIAN_FILENAME}*"))
     assert not list(tmp_path.glob(f"{STATE_FILENAME}*"))
 
 
-def test_dump_results_writes_manifest_and_loads_run(
+def test_dump_results_writes_fixed_qutip_files_and_loads_run(
     qutip_engine: QutipEngine, tmp_path: Path
 ):
     run_dir = qutip_engine.dump_results(
         {"hamiltonian": "saved"}, {"states": ["saved"]}, tmp_path
     )
 
-    manifest = json.loads((run_dir / DUMP_MANIFEST_FILENAME).read_text())
-
-    assert manifest["version"] == 1
-    assert manifest["engine"] == "qutip"
-    assert manifest["files"] == {
-        "hamiltonian": f"{HAMILTONIAN_FILENAME}.qu",
-        "states": f"{STATE_FILENAME}.qu",
-    }
+    assert not (run_dir / "manifest.json").exists()
+    assert (run_dir / f"{HAMILTONIAN_FILENAME}.qu").is_file()
+    assert (run_dir / f"{STATE_FILENAME}.qu").is_file()
 
     dump = qutip_engine.load_results(run_dir)
 
     assert dump.path == run_dir
     assert dump.hamiltonian == {"hamiltonian": "saved"}
     assert dump.states == {"states": ["saved"]}
-    assert dump.manifest == manifest
+    assert not hasattr(dump, "manifest")
 
 
 def test_load_results_uses_latest_run_from_dump_root(
