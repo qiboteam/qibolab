@@ -2,10 +2,12 @@
 
 import json
 import re
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
 
+from qibolab._core.instruments.emulator.engine import qutip as qutip_module
 from qibolab._core.instruments.emulator.engine.qutip import (
     HAMILTONIAN_FILENAME,
     STATE_FILENAME,
@@ -39,10 +41,36 @@ def test_dump_results_creates_separate_run_directories(
     assert first != second
     assert first.parent == tmp_path
     assert second.parent == tmp_path
-    assert re.fullmatch(r"run-\d{8}T\d{6}\d{6}Z", first.name)
-    assert re.fullmatch(r"run-\d{8}T\d{6}\d{6}Z", second.name)
+    assert re.fullmatch(r"run-\d{8}T\d{6}\d{6}Z(?:-\d{4})?", first.name)
+    assert re.fullmatch(r"run-\d{8}T\d{6}\d{6}Z(?:-\d{4})?", second.name)
     assert not list(tmp_path.glob(f"{HAMILTONIAN_FILENAME}*"))
     assert not list(tmp_path.glob(f"{STATE_FILENAME}*"))
+
+
+def test_dump_results_handles_timestamp_collisions(
+    qutip_engine: QutipEngine, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    class FixedDatetime:
+        @classmethod
+        def now(cls, tz=None):
+            return datetime(2026, 6, 16, 15, 41, 12, 732057, tzinfo=timezone.utc)
+
+    monkeypatch.setattr(qutip_module, "datetime", FixedDatetime)
+
+    first = qutip_engine.dump_results({"hamiltonian": 1}, {"states": [1]}, tmp_path)
+    second = qutip_engine.dump_results({"hamiltonian": 2}, {"states": [2]}, tmp_path)
+
+    assert first != second
+    assert first.is_dir()
+    assert second.is_dir()
+    assert first.name == "run-20260616T154112732057Z"
+    assert second.name == "run-20260616T154112732057Z-0001"
+
+    dump = qutip_engine.load_results(tmp_path)
+
+    assert dump.path == second
+    assert dump.hamiltonian == {"hamiltonian": 2}
+    assert dump.states == {"states": [2]}
 
 
 def test_dump_results_writes_fixed_qutip_files_and_loads_run(

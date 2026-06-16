@@ -79,9 +79,15 @@ class QutipEngine(SimulationEngine):
 
         dump_dir.mkdir(parents=True, exist_ok=True)
         timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
-        run_dir = dump_dir / f"run-{timestamp}"
-        run_dir.mkdir()
-        return run_dir
+        for collision_count in range(10):
+            suffix = "" if collision_count == 0 else f"-{collision_count:04d}"
+            run_dir = dump_dir / f"run-{timestamp}{suffix}"
+            try:
+                run_dir.mkdir()
+            except FileExistsError:
+                continue
+            return run_dir
+        raise RuntimeError(f"Could not create a unique dump directory in {dump_dir}.")
 
     @staticmethod
     def _resolve_dump_run_dir(dump_dir: Path) -> Path:
