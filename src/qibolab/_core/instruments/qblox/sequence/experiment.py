@@ -25,7 +25,7 @@ from ..q1asm.ast_ import (
     WaitSync,
 )
 from .acquisition import AcquisitionSpec, MeasureId
-from .asm import MAX_PARAM, Registers, convert
+from .asm import Registers, convert
 from .sweepers import (
     Param,
     ParameterizedPulse,
@@ -61,10 +61,6 @@ def _play_duration_swept(registers: dict[ParamRole, Register]) -> list[Instructi
     ]
 
 
-_OFFSET_ON = MAX_PARAM[Parameter.amplitude]
-"""Normalised full-scale value for set_awg_offs (same scale as set_awg_gain)."""
-
-
 def _process_longpulse(
     pulse: LongPulse, params: set[Param], merged_vzs: bool
 ):
@@ -73,10 +69,7 @@ def _process_longpulse(
     Uses ``set_awg_offs`` to produce a continuous CW tone without storing
     any per-duration waveforms.  The signal chain on the RF module is:
 
-        output = (waveform + offset) * gain
-
-    With no waveform playing, ``set_awg_offs(FULL_SCALE, 0)`` combined with
-    the amplitude-sweep ``set_awg_gain`` gives ``output = amplitude``.
+        output = (waveform * gain + offset)
 
     Timing:  ``upd_param(4)`` starts the tone (4 ns), then ``wait(dur - 4)``
     holds it.  The DURATION sweep register already holds ``total_duration - 4``
@@ -86,6 +79,9 @@ def _process_longpulse(
     uid = pulse.id
     duration_sweep = {
         p.role: p.reg for p in params if p.role.value[1] is Parameter.duration
+    }
+    amplitude_sweep = {
+        p.role: p.reg for p in params if p.role.value[1] is Parameter.amplitude
     }
 
     if merged_vzs:
@@ -113,16 +109,25 @@ def _process_longpulse(
     else:
         hold = [Wait(duration=int(pulse.duration) - 4)] if pulse.duration > 4 else []
 
-    return (
-        phase_pre
-        + [
-            SetAwgOffs(value_0=_OFFSET_ON, value_1=0),
+    if amplitude_sweep :
+        pseudo_pulse = [
+            SetAwgOffs(value_0=amplitude_sweep[ParamRole.AMPLITUDE], value_1=0),
             Line(instruction=UpdParam(duration=4), comment=f"longpulse id: 0x{uid.hex[:5]}"),
         ]
+    else:
+        pseudo_pulse = [
+            SetAwgOffs(value_0=int(convert(pulse.amplitude, Parameter.amplitude)), value_1=0),
+            Line(instruction=UpdParam(duration=4), comment=f"longpulse id: 0x{uid.hex[:5]}"),
+        ]
+
+
+    return (
+        phase_pre
+        + pseudo_pulse
         + hold
         + phase_post
         + [SetAwgOffs(value_0=0, value_1=0)]
-           #Line(instruction=UpdParam(duration=4))]
+           #Line(instruction=UpdParam(duration=4))] # This may be neeed if this is the last pulse in the sequence, otherwise it will never turn off the tone.
     )
 
 
