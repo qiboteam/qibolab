@@ -2,6 +2,7 @@ from qibolab._core.pulses.pulse import (
     Acquisition,
     Align,
     Delay,
+    LongPulse,
     Pulse,
     Readout,
     VirtualZ,
@@ -17,13 +18,14 @@ from ..q1asm.ast_ import (
     Move,
     Play,
     Register,
+    SetAwgOffs,
     SetPhDelta,
     UpdParam,
     Wait,
     WaitSync,
 )
 from .acquisition import AcquisitionSpec, MeasureId
-from .asm import Registers, convert
+from .asm import MAX_PARAM, Registers, convert
 from .sweepers import (
     Param,
     ParameterizedPulse,
@@ -57,6 +59,71 @@ def _play_duration_swept(registers: dict[ParamRole, Register]) -> list[Instructi
         ),
         Wait(duration=registers[ParamRole.DURATION]),
     ]
+
+
+_OFFSET_ON = MAX_PARAM[Parameter.amplitude]
+"""Normalised full-scale value for set_awg_offs (same scale as set_awg_gain)."""
+
+
+def _process_longpulse(
+    pulse: LongPulse, params: set[Param], merged_vzs: bool
+):
+    """Emit Q1ASM for a LongPulse.
+
+    Uses ``set_awg_offs`` to produce a continuous CW tone without storing
+    any per-duration waveforms.  The signal chain on the RF module is:
+
+        output = (waveform + offset) * gain
+
+    With no waveform playing, ``set_awg_offs(FULL_SCALE, 0)`` combined with
+    the amplitude-sweep ``set_awg_gain`` gives ``output = amplitude``.
+
+    Timing:  ``upd_param(4)`` starts the tone (4 ns), then ``wait(dur - 4)``
+    holds it.  The DURATION sweep register already holds ``total_duration - 4``
+    (set by ``_longpulse_duration``).  After the wait, ``set_awg_offs(0, 0)``
+    is latched and applied by the next real-time instruction.
+    """
+    uid = pulse.id
+    duration_sweep = {
+        p.role: p.reg for p in params if p.role.value[1] is Parameter.duration
+    }
+
+    if merged_vzs:
+        assert pulse.relative_phase == 0.0
+        phase_pre: list[Instruction] = []
+        phase_post: list[Instruction] = []
+    else:
+        phase = int(convert(pulse.relative_phase, Parameter.relative_phase))
+        minus_phase = int(convert(-pulse.relative_phase, Parameter.relative_phase))
+        phase_pre = (
+            [
+                Add(
+                    a=Registers.phase_delta.value,
+                    b=phase,
+                    destination=Registers.phase_delta.value,
+                )
+            ]
+            if phase != 0
+            else []
+        ) + [SetPhDelta(value=Registers.phase_delta.value)]
+        phase_post = [Move(source=minus_phase, destination=Registers.phase_delta.value)]
+
+    if duration_sweep:
+        hold: list[Instruction] = [Wait(duration=duration_sweep[ParamRole.DURATION])]
+    else:
+        hold = [Wait(duration=int(pulse.duration) - 4)] if pulse.duration > 4 else []
+
+    return (
+        phase_pre
+        + [
+            SetAwgOffs(value_0=_OFFSET_ON, value_1=0),
+            Line(instruction=UpdParam(duration=4), comment=f"longpulse id: 0x{uid.hex[:5]}"),
+        ]
+        + hold
+        + phase_post
+        + [SetAwgOffs(value_0=0, value_1=0)]
+           #Line(instruction=UpdParam(duration=4))]
+    )
 
 
 def _process_pulse(
@@ -175,6 +242,8 @@ def play(
     """Process the individual pulse in experiment."""
     pulse = parpulse[0]
     params = parpulse[1]
+    if isinstance(pulse, LongPulse):
+        return _process_longpulse(pulse, params, merged_vzs)
     if isinstance(pulse, Pulse):
         return _process_pulse(pulse, params, waveforms, merged_vzs)
     if isinstance(pulse, Delay):

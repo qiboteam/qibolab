@@ -13,6 +13,7 @@ __all__ = [
     "Acquisition",
     "Align",
     "Delay",
+    "LongPulse",
     "Pulse",
     "PulseId",
     "PulseLike",
@@ -96,6 +97,26 @@ class Pulse(_PulseLike):
     def envelopes(self, sampling_rate: float) -> IqWaveform:
         """Compute a tuple with the i and q envelopes."""
         return np.array([self.i(sampling_rate), self.q(sampling_rate)])
+
+
+class LongPulse(_PulseLike):
+    """Long rectangular pulse for hardware with limited waveform memory.
+
+    On Qblox the backend stores a minimal 4-sample waveform and extends the
+    output with a Q1ASM ``wait``, avoiding the per-duration waveform storage
+    that exhausts AWG memory for swept long pulses.
+    """
+
+    kind: Literal["longpulse"] = "longpulse"
+
+    duration: float
+    """Total pulse duration [ns]."""
+
+    amplitude: float
+    """Pulse digital amplitude (unitless), normalised between -1 and 1."""
+
+    relative_phase: float = 0.0
+    """Relative phase of the pulse, in radians."""
 
 
 class Delay(_PulseLike):
@@ -198,6 +219,6 @@ class Align(_PulseLike):
 
 
 PulseLike = Annotated[
-    Union[Align, Pulse, Delay, VirtualZ, Acquisition, Readout],
+    Union[Align, LongPulse, Pulse, Delay, VirtualZ, Acquisition, Readout],
     Field(discriminator="kind"),
 ]

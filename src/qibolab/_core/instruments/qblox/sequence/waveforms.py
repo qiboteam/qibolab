@@ -180,12 +180,18 @@ def waveforms(
 
     pulses_not_swept: list[Pulse] = []
     pulses_swept: list[tuple[Pulse, Sweeper]] = []
+    _seen_swept: set = set()
     for p in sequence:
         if isinstance(p, (Pulse, Readout)):
             if p.id in duration_swept:
-                pulses_swept.append(
-                    (_pulse(p, p.id in amplitude_swept), duration_swept[p.id])
-                )
+                # Deduplicate by UUID: the same pulse object may appear N times
+                # in the sequence (pulse-train approach) but should only
+                # contribute one set of waveforms to avoid N-fold memory usage.
+                if p.id not in _seen_swept:
+                    _seen_swept.add(p.id)
+                    pulses_swept.append(
+                        (_pulse(p, p.id in amplitude_swept), duration_swept[p.id])
+                    )
             else:
                 pulses_not_swept.append(_pulse(p, p.id in amplitude_swept))
 
