@@ -284,7 +284,8 @@ class PulseSequence(UserList[_Element]):
                 el
                 for els in (
                     [(ch, ev)]
-                    if not isinstance(ev, (Pulse, LongPulse)) or np.isclose(ev.relative_phase, 0)
+                    if not isinstance(ev, (Pulse, LongPulse))
+                    or np.isclose(ev.relative_phase, 0)
                     else [
                         (ch, VirtualZ(phase=ev.relative_phase)),
                         (ch, ev.model_copy(update={"relative_phase": 0})),

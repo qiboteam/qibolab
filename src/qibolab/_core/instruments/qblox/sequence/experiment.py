@@ -61,9 +61,7 @@ def _play_duration_swept(registers: dict[ParamRole, Register]) -> list[Instructi
     ]
 
 
-def _process_longpulse(
-    pulse: LongPulse, params: set[Param], merged_vzs: bool
-):
+def _process_longpulse(pulse: LongPulse, params: set[Param], merged_vzs: bool):
     """Emit Q1ASM for a LongPulse.
 
     Uses ``set_awg_offs`` to produce a continuous CW tone without storing
@@ -109,17 +107,24 @@ def _process_longpulse(
     else:
         hold = [Wait(duration=int(pulse.duration) - 4)] if pulse.duration > 4 else []
 
-    if amplitude_sweep :
+    if amplitude_sweep:
         pseudo_pulse = [
             SetAwgOffs(value_0=amplitude_sweep[ParamRole.AMPLITUDE], value_1=0),
-            Line(instruction=UpdParam(duration=4), comment=f"longpulse id: 0x{uid.hex[:5]}"),
+            Line(
+                instruction=UpdParam(duration=4),
+                comment=f"longpulse id: 0x{uid.hex[:5]}",
+            ),
         ]
     else:
         pseudo_pulse = [
-            SetAwgOffs(value_0=int(convert(pulse.amplitude, Parameter.amplitude)), value_1=0),
-            Line(instruction=UpdParam(duration=4), comment=f"longpulse id: 0x{uid.hex[:5]}"),
+            SetAwgOffs(
+                value_0=int(convert(pulse.amplitude, Parameter.amplitude)), value_1=0
+            ),
+            Line(
+                instruction=UpdParam(duration=4),
+                comment=f"longpulse id: 0x{uid.hex[:5]}",
+            ),
         ]
-
 
     return (
         phase_pre
@@ -127,7 +132,7 @@ def _process_longpulse(
         + hold
         + phase_post
         + [SetAwgOffs(value_0=0, value_1=0)]
-           #Line(instruction=UpdParam(duration=4))] # This may be neeed if this is the last pulse in the sequence, otherwise it will never turn off the tone.
+        # Line(instruction=UpdParam(duration=4))] # This may be neeed if this is the last pulse in the sequence, otherwise it will never turn off the tone.
     )
 
 
