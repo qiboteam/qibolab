@@ -1,9 +1,9 @@
 from collections.abc import Iterable
 from functools import cached_property
 from pathlib import Path
-from typing import Any
 
 import numpy as np
+from scipy.interpolate import make_interp_spline
 
 from .abstract import Operator, OperatorEvolution, SimulationEngine
 
@@ -19,6 +19,8 @@ INTEGRATION_MIN_TIME_STEP = 5e-3
 HAMILTONIAN_FILENAME = "System_Hamiltonian"
 STATE_FILENAME = "State_Evolution"
 
+SPLINE_INTERP_ORDER = 3
+
 
 class QutipEngine(SimulationEngine):
     """Qutip simulation engine."""
@@ -31,29 +33,9 @@ class QutipEngine(SimulationEngine):
 
         return qt
 
-    def dump_results(
-        self, hamiltonian: Operator, sim_results: Any, dump_dir: Path
-    ) -> None:
-        """Save the Hamiltonian and simulation results to files with incremented naming."""
-
-        dump_dir.mkdir(parents=True, exist_ok=True)
-
-        count_1 = sum(
-            1
-            for file in dump_dir.iterdir()
-            if file.is_file() and HAMILTONIAN_FILENAME in file.name
-        )
-        count_2 = sum(
-            1
-            for file in dump_dir.iterdir()
-            if file.is_file() and STATE_FILENAME in file.name
-        )
-        count = max(count_1, count_2)
-
-        self.engine.qsave(
-            hamiltonian, str(dump_dir) + f"/{HAMILTONIAN_FILENAME}_{count}"
-        )
-        self.engine.qsave(sim_results, str(dump_dir) + f"/{STATE_FILENAME}_{count}")
+    def save_operators(self, operators, dump_dir: Path) -> None:
+        """Persist the static operators once per experiment."""
+        self.engine.qsave(operators, str(dump_dir / "operators"))
 
     def evolve(
         self,
@@ -74,7 +56,14 @@ class QutipEngine(SimulationEngine):
         options = {"max_step": INTEGRATION_MAX_TIME_STEP, "nsteps": nsteps}
 
         if time_hamiltonian is not None:
-            hamiltonian = [hamiltonian] + time_hamiltonian.operators
+            times = time_hamiltonian.times
+            pairs = [
+                [op, make_interp_spline(times, coeff, k=SPLINE_INTERP_ORDER)]
+                for op, coeff in zip(
+                    time_hamiltonian.operators, time_hamiltonian.coefficients
+                )
+            ]
+            hamiltonian = [hamiltonian] + pairs
 
         sim_results = self.engine.mesolve(
             hamiltonian,
@@ -84,13 +73,6 @@ class QutipEngine(SimulationEngine):
             options=options,
             **kwargs,
         )
-
-        if save_evolution is not None:
-            self.dump_results(
-                hamiltonian=hamiltonian,
-                sim_results=sim_results,
-                dump_dir=save_evolution,
-            )
 
         return sim_results
 

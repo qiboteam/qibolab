@@ -9,7 +9,7 @@ from typing import cast
 
 import numpy as np
 from numpy.typing import NDArray
-from scipy.interpolate import BSpline, make_interp_spline
+from scipy.interpolate import BSpline
 
 from qibolab._core.components import Config
 from qibolab._core.components.configs import AcquisitionConfig
@@ -69,6 +69,23 @@ class EmulatorController(Controller):
     def disconnect(self):
         """Dummy disconnect method."""
 
+    def _dump_simulation(self, sequence, configs, states, coefficients):
+        """Write operators (once), time coefficients (n-d), density matrices (n-d)."""
+        self.save_dir.mkdir(parents=True, exist_ok=True)
+
+        # operators: run-invariant, so build them once here (outside the sweep loop)
+        config = cast(HamiltonianConfig, configs["hamiltonian"])
+        static = config.hamiltonian(config=configs, engine=self.engine)
+        evolution = self._pulse_hamiltonian(sequence, configs)
+        time_ops = (
+            [pair[0] for pair in evolution.operators] if evolution is not None else []
+        )
+        operators = [static] + time_ops
+
+        self.engine.save_operators(operators, self.save_dir)
+        np.save(self.save_dir / "time_coefficients.npy", coefficients)
+        np.save(self.save_dir / "density_matrices.npy", states)
+
     def play(
         self,
         configs: dict[str, Config],
@@ -105,12 +122,13 @@ class EmulatorController(Controller):
         Executes a sweep of the quantum sequence and processes the results
         into a structured results object containing quantum states and measurement data.
         """
-
-        sweep_results = self._sweep(sequence, configs, sweepers)
+        sweep_states, sweep_coefficients = self._sweep(sequence, configs, sweepers)
+        if self.save_dir is not None:
+            self._dump_simulation(sequence, configs, sweep_states, sweep_coefficients)
         hamiltonian = cast(HamiltonianConfig, configs["hamiltonian"])
         return results(
             # states in computational basis
-            states=sweep_results,
+            states=sweep_states,
             sequence=sequence,
             hamiltonian=hamiltonian,
             options=options,
@@ -136,9 +154,9 @@ class EmulatorController(Controller):
         if len(sweepers) == 0:
             return self._evolve(sequence, configs, updates)
 
+        state_slices: list[NDArray] = []
+        coeff_slices = []
         parsweep = sweepers[0]
-        # collect slices of results, corresponding to the current iteration
-        results = []
         # execute once for each parallel value
         for values in zip(*(s.values for s in parsweep)):
             # update all parallel sweepers with the respective values
@@ -149,12 +167,12 @@ class EmulatorController(Controller):
                 if sweeper.channels is not None:
                     for channel in sweeper.channels:
                         updates[channel].update({sweeper.parameter.name: value})
-
-            # append new slice for the current parallel value
-            results.append(self._sweep(sequence, configs, sweepers[1:], updates))
+            states, coeffs = self._sweep(sequence, configs, sweepers[1:], updates)
+            state_slices.append(states)
+            coeff_slices.append(coeffs)
 
         # stack all slices in a single array, along the current outermost dimension
-        return np.stack(results)
+        return np.stack(state_slices), np.stack(coeff_slices)
 
     def _evolve(
         self, sequence: PulseSequence, configs: dict[str, Config], updates: dict
@@ -182,9 +200,12 @@ class EmulatorController(Controller):
             time=np.concatenate(([0], tlist_)),
             collapse_operators=config.dissipation(self.engine),
             time_hamiltonian=time_hamiltonian,
-            save_evolution=self.save_dir,
         )
-        return np.stack([s.full() for s in results.states[1:]])[index]
+        states = np.stack([s.full() for s in results.states[1:]])[index]
+        coefficients = (
+            time_hamiltonian.coefficients if time_hamiltonian is not None else None
+        )
+        return states, coefficients
 
     def _pulse_hamiltonian(
         self, sequence: PulseSequence, configs: dict[str, Config]
@@ -196,21 +217,23 @@ class EmulatorController(Controller):
         # the oscillation and correctly solve the system evolution, hence we
         # set a nyquist frequency to define the timesteps in order to compute the solution
         times = tlist(sequence)
-
-        channels = [
-            [
-                operator,
-                channel_coefficients(
-                    waveforms,
-                    sampling_rate=self.sampling_rate,
-                    times=times,
-                ),
-            ]
-            for operator, waveforms in hamiltonians(
-                sequence, configs, self.engine, self.sampling_rate
+        channels, raw_coefficients = [], []
+        for operator, waveforms in hamiltonians(
+            sequence, configs, self.engine, self.sampling_rate
+        ):
+            raw = channel_coefficients(
+                waveforms, sampling_rate=self.sampling_rate, times=times
             )
-        ]
-        return OperatorEvolution(channels) if len(channels) > 0 else None
+            channels.append(operator)
+            raw_coefficients.append(raw)
+
+        return (
+            OperatorEvolution(
+                operators=channels, coefficients=np.stack(raw_coefficients), times=times
+            )
+            if len(channels) > 0
+            else None
+        )
 
 
 def update_sequence(sequence: PulseSequence, updates: dict) -> PulseSequence:
@@ -313,4 +336,4 @@ def channel_coefficients(
         cumulative_time = next_pulse_time
 
     # return pulse_waveforms
-    return make_interp_spline(times, pulse_waveforms, k=SPLINE_INTERP_ORDER)
+    return pulse_waveforms
