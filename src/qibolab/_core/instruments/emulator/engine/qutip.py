@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 import numpy as np
+from scipy.interpolate import make_interp_spline
 
 from .abstract import (
     HAMILTONIAN_FILENAME,
@@ -26,6 +27,8 @@ GPU_DTYPE_PLUGINS = {"jax": "qutip_jax", "jaxdia": "qutip_jax", "cupyd": "qutip_
 """QuTiP data-layer dtypes usable on GPU and the plugin packages providing them."""
 JAX_GPU_DTYPES = {"jax", "jaxdia"}
 """QuTiP GPU dtypes backed by JAX."""
+
+SPLINE_INTERP_ORDER = 3
 
 
 class QutipEngine(SimulationEngine):
@@ -88,29 +91,10 @@ class QutipEngine(SimulationEngine):
         """Move a QuTiP operator to the selected data layer."""
         return op.to(self.gpu_dtype) if self.device == "gpu" else op
 
-    def dump_results(
-        self, hamiltonian: Operator, sim_results: Any, dump_dir: Path
-    ) -> None:
-        """Save the Hamiltonian and simulation results to files with incremented naming."""
+    def save_operators(self, operators, dump_dir: Path) -> None:
+        """Persist the static operators once per experiment."""
+        self.engine.qsave(operators, str(dump_dir / "operators"))
 
-        dump_dir.mkdir(parents=True, exist_ok=True)
-
-        count_1 = sum(
-            1
-            for file in dump_dir.iterdir()
-            if file.is_file() and HAMILTONIAN_FILENAME in file.name
-        )
-        count_2 = sum(
-            1
-            for file in dump_dir.iterdir()
-            if file.is_file() and STATE_FILENAME in file.name
-        )
-        count = max(count_1, count_2)
-
-        self.engine.qsave(
-            hamiltonian, str(dump_dir) + f"/{HAMILTONIAN_FILENAME}_{count}"
-        )
-        self.engine.qsave(sim_results, str(dump_dir) + f"/{STATE_FILENAME}_{count}")
 
     def evolve(
         self,
@@ -151,6 +135,7 @@ class QutipEngine(SimulationEngine):
             }
 
         if time_hamiltonian is not None:
+<<<<<<< emulator-gpu-1414
             coefficients = [
                 coefficient for _, coefficient in time_hamiltonian.operators
             ]
@@ -171,6 +156,16 @@ class QutipEngine(SimulationEngine):
             ]
         else:
             hamiltonian = self._to_device(hamiltonian)
+=======
+            times = time_hamiltonian.times
+            pairs = [
+                [op, make_interp_spline(times, coeff, k=SPLINE_INTERP_ORDER)]
+                for op, coeff in zip(
+                    time_hamiltonian.operators, time_hamiltonian.coefficients
+                )
+            ]
+            hamiltonian = [hamiltonian] + pairs
+>>>>>>> main
 
         sim_results = self.engine.mesolve(
             hamiltonian,
@@ -180,13 +175,6 @@ class QutipEngine(SimulationEngine):
             options=options,
             **kwargs,
         )
-
-        if save_evolution is not None:
-            self.dump_results(
-                hamiltonian=hamiltonian,
-                sim_results=sim_results,
-                dump_dir=save_evolution,
-            )
 
         return sim_results
 

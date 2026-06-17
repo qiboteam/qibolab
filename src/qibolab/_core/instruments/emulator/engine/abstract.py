@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from typing import Protocol
 
 from scipy.interpolate import BSpline, PPoly
-
+from numpy.typing import NDArray
 from ....serialize import Model
 
 __all__ = [
@@ -61,6 +61,8 @@ class OperatorEvolution:
     """Abstract operator evolution interface."""
 
     operators: list[Operator | TimeDependentOperator] = field(default_factory=list)
+    coefficients: NDArray | None = None
+    times: NDArray | None = None
 
 
 class SimulationEngine(Model, ABC):
@@ -107,8 +109,12 @@ class SimulationEngine(Model, ABC):
     @abstractmethod
     def basis(self, n: int, state: int) -> Operator:
         """Basis operator for n levels system."""
+        
+    @abstractmethod
+    def save_operators(self, operators, dump_dir) -> None:
+        """Persist static operators in the engine's native format."""
 
-
+        
 def _spline_function(spline: BSpline):
     """Convert a SciPy spline into a JAX-traceable piecewise polynomial.
 

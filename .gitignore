@@ -139,3 +139,5 @@ debug/
 
 # Nix
 .devenv
+.DS_Store
+.DS_Store
