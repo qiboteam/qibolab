@@ -5,7 +5,6 @@ from pathlib import Path
 from typing import Literal
 
 import numpy as np
-from scipy.interpolate import make_interp_spline
 
 from .abstract import (
     INTEGRATION_MIN_TIME_STEP,
