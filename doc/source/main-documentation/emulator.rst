@@ -12,7 +12,43 @@ For a more detailed description of how Qibolab handles different QPUs (here refe
 Usage
 -----
 
-The emulator leverages a third-party numerical engine that solves the Master Equation for a system governed by the sum of a time-independent Hamiltonian and a time-dependent (pulse) Hamiltonian. The solver produces the system density matrix at each time step. From this solution, the emulator extracts only those density matrices corresponding to acquisition pulses defined within the pulse sequence.
+The emulator leverages a third-party numerical engine that solves the Master Equation for a system governed by the sum of a time-independent Hamiltonian and a time-dependent (pulse) Hamiltonian. The solver produces the system density matrix at each time step. From this solution, the emulator extracts only those density matrices corresponding to acquisition pulses defined within the pulse sequence. The default engine is ``QutipEngine``; ``DynamiqsEngine`` is also available for users who want to run the same emulator workflow through Dynamiqs' JAX-based solvers.
+
+The simulation engine can be selected when defining the emulator instrument in a platform:
+
+.. code-block:: python
+
+    from qibolab._core.instruments.emulator.engine import DynamiqsEngine
+    from qibolab.instruments.emulator import EmulatorController
+
+    emulator = EmulatorController(
+        address="0.0.0.0",
+        channels=channels,
+        engine=DynamiqsEngine(device="gpu", precision="single"),
+    )
+
+GPU execution is available through the third-party engine APIs, and the engines fail early with an import or device-selection error instead of silently running on CPU when the optional accelerator packages are missing.
+
+For Dynamiqs, set ``DynamiqsEngine(device="gpu")`` and install a CUDA-enabled JAX runtime. On CUDA 12 machines this is a single extra package staying within the JAX range supported by Dynamiqs:
+
+.. code-block:: bash
+
+    pip install qibolab[emulator] "jax[cuda12]"
+
+``DynamiqsEngine`` also exposes ``precision`` (``"single"`` is strongly recommended on consumer GPUs, whose double-precision throughput is severely limited) and ``method``: the default ``"adaptive"`` Tsit5 solver with ``rtol``/``atol`` control, or ``"fixed"``, a Rouchon solver with a constant ``fixed_step_dt`` that guarantees the same finest time resolution targeted by the QuTiP engine.
+
+For QuTiP, set ``QutipEngine(device="gpu")``. The default data layer is `qutip-jax <https://github.com/qutip/qutip-jax>`_ (``pip install qutip-jax``), in which case the evolution runs through the diffrax integrator entirely on the accelerator, preserving the engine's maximum-step bound. The experimental `qutip-cupy <https://github.com/qutip/qutip-cupy>`_ data layer (not released on PyPI) can be selected with ``QutipEngine(device="gpu", gpu_dtype="cupyd")``; there the ODE integration remains on the CPU and only the operator algebra is offloaded.
+
+As a rule of thumb from the benchmarks in ``benchmarks/emulator_gpu.md``: single evolutions of the small bundled platforms are fastest on the QuTiP CPU engine; GPU execution pays off for batched parameter scans (the typical calibration workload) already at moderate system sizes, and for single evolutions of large Hilbert spaces, especially in single precision. The repository includes two benchmark helpers reproducing those tables:
+
+.. code-block:: bash
+
+    # end-to-end emulator benchmark on the bundled platforms
+    python benchmarks/emulator_gpu.py --engine dynamiqs --device gpu --precision single
+    # solver-level size sweep, batched amplitude scan, and accuracy validation
+    python benchmarks/engine_sweep.py single --engine dynamiqs --device gpu --cases 3x3,3x4,3x5
+    python benchmarks/engine_sweep.py batched --engine dynamiqs --device gpu --case 3x3
+    python benchmarks/engine_sweep.py validate --case 3x2 --device gpu
 
 Since the simulator operates at the level of density matrices, it does not reproduce in-phase and quadrature (I-Q) measurement signals as in real experimental setups. Instead, it computes the measurement probabilities :math:`p_m = \bra{m} \rho \ket{m}` for each computational basis state :math:`\ket{m}`. Consequently, while the emulator supports all experiment types, in signal-based experiments (i.e., when :paramref:`AcquisitionType.INTEGRATION` is selected), the signal magnitude corresponds directly to these probabilities, whereas the signal phase carries no physical meaning.
 

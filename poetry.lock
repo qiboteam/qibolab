@@ -102,6 +102,7 @@ files = [
     {file = "asttokens-3.0.1-py3-none-any.whl", hash = "sha256:15a3ebc0f43c2d0a50eeafea25e19046c68398e487b9f1f5b517f7c0f40f976a"},
     {file = "asttokens-3.0.1.tar.gz", hash = "sha256:71a4ee5de0bde6a31d64f6b13f2293ac190344478f081c3d1bccfcf5eacb0cb7"},
 ]
+markers = {main = "extra == \"emulator\""}
 
 [package.extras]
 astroid = ["astroid (>=2,<5)"]
@@ -390,7 +391,7 @@ version = "2.0.0"
 description = "Foreign Function Interface for Python calling C code."
 optional = false
 python-versions = ">=3.9"
-groups = ["dev", "docs", "tests"]
+groups = ["docs", "tests"]
 files = [
     {file = "cffi-2.0.0-cp310-cp310-macosx_10_13_x86_64.whl", hash = "sha256:0cf2d91ecc3fcc0625c2c530fe004f82c110405f101548512cce44322fa8ac44"},
     {file = "cffi-2.0.0-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:f73b96c41e3b2adedc34a7356e64c8eb96e03a3782b535e043a986276ce12a49"},
@@ -477,7 +478,6 @@ files = [
     {file = "cffi-2.0.0-cp39-cp39-win_amd64.whl", hash = "sha256:b882b3df248017dba09d6b16defe9b5c407fe32fc7c65a9c69798e6175601be9"},
     {file = "cffi-2.0.0.tar.gz", hash = "sha256:44d1b5909021139fe36001ae048dbdde8214afa20200eda0f64c068cac5d5529"},
 ]
-markers = {dev = "platform_python_implementation != \"PyPy\""}
 
 [package.dependencies]
 pycparser = {version = "*", markers = "implementation_name != \"PyPy\""}
@@ -1045,7 +1045,7 @@ version = "48.0.1"
 description = "cryptography is a package which provides cryptographic recipes and primitives to Python developers."
 optional = false
 python-versions = "!=3.9.0,!=3.9.1,>=3.9"
-groups = ["dev", "docs", "tests"]
+groups = ["docs", "tests"]
 files = [
     {file = "cryptography-48.0.1-cp311-abi3-macosx_10_9_universal2.whl", hash = "sha256:3e4a1a3232eef2e6c732827d5722db29a0cc8b27af2a4d865b094cf954be9ca1"},
     {file = "cryptography-48.0.1-cp311-abi3-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:32143b24adb918f078134e1e230f1eb8cc04886b92c28b5f0041aaf3e5699225"},
@@ -1203,6 +1203,7 @@ files = [
     {file = "decorator-5.2.1-py3-none-any.whl", hash = "sha256:d316bb415a2d9e2d2b3abcc4084c6502fc09240e292cd76a76afc106a1c8e04a"},
     {file = "decorator-5.2.1.tar.gz", hash = "sha256:65f266143752f734b0a7cc83c46f4618af75b8c5911b00ccb61d0ac9b6da0360"},
 ]
+markers = {main = "extra == \"emulator\""}
 
 [[package]]
 name = "defusedxml"
@@ -1339,6 +1340,7 @@ files = [
     {file = "exceptiongroup-1.3.1-py3-none-any.whl", hash = "sha256:a7a39a3bd276781e98394987d3a5701d0c4edffb633bb7a5144577f82c773598"},
     {file = "exceptiongroup-1.3.1.tar.gz", hash = "sha256:8b412432c6055b0b7d14c310000ae93352ed6754f70fa8f7c34141f91c4e3219"},
 ]
+markers = {main = "python_version == \"3.10\" and extra == \"emulator\"", dev = "python_version == \"3.10\"", docs = "python_version == \"3.10\"", tests = "python_version == \"3.10\""}
 
 [package.dependencies]
 typing-extensions = {version = ">=4.6.0", markers = "python_version < \"3.13\""}
@@ -1357,6 +1359,7 @@ files = [
     {file = "executing-2.2.1-py2.py3-none-any.whl", hash = "sha256:760643d3452b4d777d295bb167ccc74c64a81df23fb5e08eff250c425a4b2017"},
     {file = "executing-2.2.1.tar.gz", hash = "sha256:3632cc370565f6648cc328b32435bd120a1e4ebb20c77e3fdde9a13cd1e533c4"},
 ]
+markers = {main = "extra == \"emulator\""}
 
 [package.extras]
 tests = ["asttokens (>=2.1.0)", "coverage", "coverage-enable-subprocess", "ipython", "littleutils", "pytest", "rich ; python_version >= \"3.11\""]
@@ -1783,6 +1786,7 @@ files = [
     {file = "ipython-8.39.0-py3-none-any.whl", hash = "sha256:bb3c51c4fa8148ab1dea07a79584d1c854e234ea44aa1283bcb37bc75054651f"},
     {file = "ipython-8.39.0.tar.gz", hash = "sha256:4110ae96012c379b8b6db898a07e186c40a2a1ef5d57a7fa83166047d9da7624"},
 ]
+markers = {main = "extra == \"emulator\""}
 
 [package.dependencies]
 colorama = {version = "*", markers = "sys_platform == \"win32\""}
@@ -1946,6 +1950,7 @@ files = [
     {file = "jedi-0.19.2-py2.py3-none-any.whl", hash = "sha256:a8ef22bde8490f57fe5c7681a3c83cb58874daf72b4784de3cce5b6ef6edb5b9"},
     {file = "jedi-0.19.2.tar.gz", hash = "sha256:4770dc3de41bde3966b02eb84fbcf557fb33cce26ad23da12c742fb50ecb11f0"},
 ]
+markers = {main = "extra == \"emulator\""}
 
 [package.dependencies]
 parso = ">=0.8.4,<0.9.0"
@@ -2495,6 +2500,7 @@ files = [
     {file = "matplotlib_inline-0.2.1-py3-none-any.whl", hash = "sha256:d56ce5156ba6085e00a9d54fead6ed29a9c47e215cd1bba2e976ef39f5710a76"},
     {file = "matplotlib_inline-0.2.1.tar.gz", hash = "sha256:e1ee949c340d771fc39e241ea75683deb94762c8fa5f2927ec57c83c4dffa9fe"},
 ]
+markers = {main = "extra == \"emulator\""}
 
 [package.dependencies]
 traitlets = "*"
@@ -3245,6 +3251,7 @@ files = [
     {file = "parso-0.8.6-py2.py3-none-any.whl", hash = "sha256:2c549f800b70a5c4952197248825584cb00f033b29c692671d3bf08bf380baff"},
     {file = "parso-0.8.6.tar.gz", hash = "sha256:2b9a0332696df97d454fa67b81618fd69c35a7b90327cbe6ba5c92d2c68a7bfd"},
 ]
+markers = {main = "extra == \"emulator\""}
 
 [package.extras]
 qa = ["flake8 (==5.0.4)", "types-setuptools (==67.2.0.1)", "zuban (==0.5.1)"]
@@ -3281,6 +3288,7 @@ files = [
     {file = "pexpect-4.9.0-py2.py3-none-any.whl", hash = "sha256:7236d1e080e4936be2dc3e326cec0af72acf9212a7e1d060210e70a47e253523"},
     {file = "pexpect-4.9.0.tar.gz", hash = "sha256:ee7d41123f3c9911050ea2c2dac107568dc43b2d3b0c7557a33212c398ead30f"},
 ]
+markers = {main = "sys_platform != \"win32\" and sys_platform != \"emscripten\" and extra == \"emulator\"", dev = "sys_platform != \"win32\" and sys_platform != \"emscripten\"", docs = "sys_platform != \"win32\" and sys_platform != \"emscripten\"", tests = "sys_platform != \"win32\" and sys_platform != \"emscripten\""}
 
 [package.dependencies]
 ptyprocess = ">=0.5"
@@ -3434,6 +3442,7 @@ files = [
     {file = "prompt_toolkit-3.0.52-py3-none-any.whl", hash = "sha256:9aac639a3bbd33284347de5ad8d68ecc044b91a762dc39b7c21095fcd6a19955"},
     {file = "prompt_toolkit-3.0.52.tar.gz", hash = "sha256:28cde192929c8e7321de85de1ddbe736f1375148b02f2e17edd840042b1be855"},
 ]
+markers = {main = "extra == \"emulator\""}
 
 [package.dependencies]
 wcwidth = "*"
@@ -3485,6 +3494,7 @@ files = [
     {file = "ptyprocess-0.7.0-py2.py3-none-any.whl", hash = "sha256:4b41f3967fce3af57cc7e94b888626c18bf37a083e3651ca8feeb66d492fef35"},
     {file = "ptyprocess-0.7.0.tar.gz", hash = "sha256:5c5d0a3b48ceee0b48485e0c26037c0acd7d29765ca3fbb5cb3831d347423220"},
 ]
+markers = {main = "sys_platform != \"win32\" and sys_platform != \"emscripten\" and extra == \"emulator\"", dev = "sys_platform != \"win32\" and sys_platform != \"emscripten\"", docs = "sys_platform != \"win32\" and sys_platform != \"emscripten\"", tests = "sys_platform != \"win32\" and sys_platform != \"emscripten\""}
 
 [[package]]
 name = "pudb"
@@ -3520,6 +3530,7 @@ files = [
     {file = "pure_eval-0.2.3-py3-none-any.whl", hash = "sha256:1db8e35b67b3d218d818ae653e27f06c3aa420901fa7b081ca98cbedc874e0d0"},
     {file = "pure_eval-0.2.3.tar.gz", hash = "sha256:5f4e983f40564c576c7c8635ae88db5956bb2229d7e9237d03b3c0b0190eaf42"},
 ]
+markers = {main = "extra == \"emulator\""}
 
 [package.extras]
 tests = ["pytest"]
@@ -3637,12 +3648,12 @@ version = "3.0"
 description = "C parser in Python"
 optional = false
 python-versions = ">=3.10"
-groups = ["dev", "docs", "tests"]
+groups = ["docs", "tests"]
+markers = "implementation_name != \"PyPy\""
 files = [
     {file = "pycparser-3.0-py3-none-any.whl", hash = "sha256:b727414169a36b7d524c1c3e31839a521725078d7b2ff038656844266160a992"},
     {file = "pycparser-3.0.tar.gz", hash = "sha256:600f49d217304a5902ac3c37e1281c9fe94e4d0489de643a9504c5cdfdfc6b29"},
 ]
-markers = {dev = "implementation_name != \"PyPy\" and platform_python_implementation != \"PyPy\"", docs = "implementation_name != \"PyPy\"", tests = "implementation_name != \"PyPy\""}
 
 [[package]]
 name = "pydantic"
@@ -3811,6 +3822,7 @@ files = [
     {file = "pygments-2.20.0-py3-none-any.whl", hash = "sha256:81a9e26dd42fd28a23a2d169d86d7ac03b46e2f8b59ed4698fb4785f946d0176"},
     {file = "pygments-2.20.0.tar.gz", hash = "sha256:6757cd03768053ff99f3039c1a36d6c0aa0b263438fcab17520b30a303a82b5f"},
 ]
+markers = {main = "extra == \"emulator\""}
 
 [package.extras]
 windows-terminal = ["colorama (>=0.4.6)"]
@@ -5106,6 +5118,7 @@ files = [
     {file = "stack_data-0.6.3-py3-none-any.whl", hash = "sha256:d5558e0c25a4cb0853cddad3d77da9891a08cb85dd9f9f91b9f8cd66e511e695"},
     {file = "stack_data-0.6.3.tar.gz", hash = "sha256:836a778de4fec4dcd1dcd89ed8abff8a221f58308462e1c4aa2a3cf30148f0b9"},
 ]
+markers = {main = "extra == \"emulator\""}
 
 [package.dependencies]
 asttokens = ">=2.1.0"
@@ -5293,6 +5306,7 @@ files = [
     {file = "traitlets-5.14.3-py3-none-any.whl", hash = "sha256:b74e89e397b1ed28cc831db7aea759ba6640cb3de13090ca145426688ff1ac4f"},
     {file = "traitlets-5.14.3.tar.gz", hash = "sha256:9ed0579d3502c94b4b3732ac120375cda96f923114522847de4b3bb98b96b6b7"},
 ]
+markers = {main = "extra == \"emulator\""}
 
 [package.extras]
 docs = ["myst-parser", "pydata-sphinx-theme", "sphinx"]
@@ -5597,6 +5611,7 @@ files = [
     {file = "wcwidth-0.6.0-py3-none-any.whl", hash = "sha256:1a3a1e510b553315f8e146c54764f4fb6264ffad731b3d78088cdb1478ffbdad"},
     {file = "wcwidth-0.6.0.tar.gz", hash = "sha256:cdc4e4262d6ef9a1a57e018384cbeb1208d8abbc64176027e2c2455c81313159"},
 ]
+markers = {main = "extra == \"emulator\""}
 
 [[package]]
 name = "webencodings"

@@ -1,189 +1,159 @@
-"""Dynamiqs engine for platform emulation."""
+"""Dynamiqs simulation engine."""
 
 from collections.abc import Iterable
 from dataclasses import dataclass
 from functools import cached_property
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import numpy as np
-from scipy.interpolate import BSpline
 
-from .abstract import Operator, OperatorEvolution, SimulationEngine
-from .qutip import (
+from .abstract import (
     HAMILTONIAN_FILENAME,
     INTEGRATION_MIN_TIME_STEP,
     INTEGRATION_MULTIPLIER,
     STATE_FILENAME,
+    Operator,
+    OperatorEvolution,
+    SimulationEngine,
+    _spline_function,
 )
 
 __all__ = ["DynamiqsEngine"]
 
 
-@dataclass(frozen=True)
+@dataclass
 class DynamiqsOperator:
-    """QuTiP-compatible wrapper over a Dynamiqs qarray."""
+    """Compatibility wrapper for Dynamiqs operators.
 
-    raw: Any
+    The emulator combines operators with QuTiP semantics, where ``*`` is the
+    matrix product. Dynamiqs reserves ``*`` for scalar/element-wise
+    multiplication and uses ``@`` for the matrix product, so the wrapper
+    dispatches ``*`` between two operators to ``@`` on the underlying qarrays.
+    """
 
-    @property
-    def n(self) -> int:
-        """Dimension of the Hilbert space."""
-        return max(self.raw.shape[-2:])
-
-    @property
-    def dims(self):
-        """Hilbert space dimensions."""
-        return self.raw.dims
-
-    @property
-    def shape(self):
-        """Operator shape."""
-        return self.raw.shape
+    qarray: Any
 
     def dag(self) -> "DynamiqsOperator":
-        """Return the adjoint of the operator."""
-        return type(self)(self.raw.dag())
+        return type(self)(self.qarray.dag())
 
     def full(self) -> np.ndarray:
-        """Return a dense NumPy representation."""
-        import dynamiqs as dq
+        return np.asarray(self.qarray.to_jax())
 
-        return dq.to_numpy(self.raw)
-
-    def __array__(self, dtype=None):
-        array = self.full()
-        return array.astype(dtype) if dtype is not None else array
-
-    @staticmethod
-    def _unwrap(other: Any) -> Any:
-        return other.raw if isinstance(other, DynamiqsOperator) else other
-
-    @staticmethod
-    def _is_zero(other: Any) -> bool:
-        return isinstance(other, (int, float, complex)) and other == 0
-
-    def __add__(self, other: Any) -> "DynamiqsOperator":
-        if self._is_zero(other):
+    def __add__(self, other):
+        if isinstance(other, int) and other == 0:
             return self
-        return type(self)(self.raw + self._unwrap(other))
+        return type(self)(self.qarray + _unwrap(other))
 
-    def __radd__(self, other: Any) -> "DynamiqsOperator":
-        if self._is_zero(other):
+    def __radd__(self, other):
+        if isinstance(other, int) and other == 0:
             return self
-        return type(self)(self._unwrap(other) + self.raw)
+        return type(self)(_unwrap(other) + self.qarray)
 
-    def __sub__(self, other: Any) -> "DynamiqsOperator":
-        return type(self)(self.raw - self._unwrap(other))
+    def __sub__(self, other):
+        return type(self)(self.qarray - _unwrap(other))
 
-    def __rsub__(self, other: Any) -> "DynamiqsOperator":
-        return type(self)(self._unwrap(other) - self.raw)
+    def __rsub__(self, other):
+        return type(self)(_unwrap(other) - self.qarray)
 
-    def __neg__(self) -> "DynamiqsOperator":
-        return type(self)(-self.raw)
+    def __mul__(self, other):
+        other = _unwrap(other)
+        if _is_qarray(other):
+            return type(self)(self.qarray @ other)
+        return type(self)(self.qarray * other)
 
-    def __mul__(self, other: Any) -> "DynamiqsOperator":
-        if isinstance(other, DynamiqsOperator):
-            return type(self)(self.raw @ other.raw)
-        return type(self)(self.raw * other)
+    def __rmul__(self, other):
+        other = _unwrap(other)
+        if _is_qarray(other):
+            return type(self)(other @ self.qarray)
+        return type(self)(other * self.qarray)
 
-    def __rmul__(self, other: Any) -> "DynamiqsOperator":
-        if isinstance(other, DynamiqsOperator):
-            return type(self)(other.raw @ self.raw)
-        return type(self)(other * self.raw)
+    def __matmul__(self, other):
+        return type(self)(self.qarray @ _unwrap(other))
 
-    def __matmul__(self, other: Any) -> "DynamiqsOperator":
-        return type(self)(self.raw @ self._unwrap(other))
+    def __rmatmul__(self, other):
+        return type(self)(_unwrap(other) @ self.qarray)
 
-    def __rmatmul__(self, other: Any) -> "DynamiqsOperator":
-        return type(self)(self._unwrap(other) @ self.raw)
+    def __truediv__(self, other):
+        return type(self)(self.qarray / other)
 
-    def __truediv__(self, other: Any) -> "DynamiqsOperator":
-        return type(self)(self.raw / other)
+    def __neg__(self):
+        return type(self)(-self.qarray)
 
 
-@dataclass(frozen=True)
+@dataclass
 class DynamiqsEvolutionResult:
-    """QuTiP-compatible result wrapper for Dynamiqs evolutions."""
+    """Evolution result exposing states compatible with Qibolab."""
 
-    raw: Any
-    states: list[DynamiqsOperator]
+    result: Any
 
-
-def unwrap(operator: Any) -> Any:
-    """Return the native Dynamiqs object for wrapped operators."""
-    return operator.raw if isinstance(operator, DynamiqsOperator) else operator
-
-
-def _bspline_prefactor(spline: BSpline):
-    """Convert a SciPy B-spline into a JAX-compatible scalar function."""
-    import jax.numpy as jnp
-
-    knots = jnp.asarray(spline.t)
-    coefficients = jnp.asarray(spline.c)
-    degree = spline.k
-
-    def safe_divide(numerator, denominator):
-        return jnp.where(denominator == 0, 0, numerator / denominator)
-
-    def prefactor(time):
-        basis = ((knots[:-1] <= time) & (time < knots[1:])).astype(coefficients.dtype)
-
-        for order in range(1, degree + 1):
-            size = knots.size - 1 - order
-            left = safe_divide(
-                time - knots[:size],
-                knots[order : order + size] - knots[:size],
-            )
-            right = safe_divide(
-                knots[order + 1 : order + 1 + size] - time,
-                knots[order + 1 : order + 1 + size] - knots[1 : 1 + size],
-            )
-            basis = left * basis[:size] + right * basis[1 : size + 1]
-
-        value = basis @ coefficients[: basis.size]
-        return jnp.where(time == knots[-1], coefficients[-1], value)
-
-    return prefactor
+    @property
+    def states(self) -> list[DynamiqsOperator]:
+        return [DynamiqsOperator(state) for state in self.result.states]
 
 
 class DynamiqsEngine(SimulationEngine):
     """Dynamiqs simulation engine."""
 
+    precision: Literal["single", "double"] = "double"
+    """Floating point precision used by Dynamiqs/JAX."""
+    device: Literal["cpu", "gpu", "tpu"] = "cpu"
+    """Device used by Dynamiqs/JAX arrays."""
+    device_index: int = 0
+    """Index of the selected JAX device."""
+    matmul_precision: Literal["low", "high", "highest"] = "highest"
+    """Matrix multiplication precision used by JAX on accelerators."""
+    method: Literal["adaptive", "fixed"] = "adaptive"
+    """Integration method.
+
+    ``adaptive`` uses the Tsit5 solver with `rtol`/`atol` step control, where
+    the sub-resolution steps are inferred by the solver itself. ``fixed`` uses
+    the Rouchon3 master-equation solver with a constant step `fixed_step_dt`,
+    providing a guaranteed time resolution analogous to the QuTiP engine's
+    ``max_step`` option.
+    """
+    rtol: float = 1e-8
+    """Relative tolerance of the adaptive integrator."""
+    atol: float = 1e-8
+    """Absolute tolerance of the adaptive integrator."""
+    fixed_step_dt: float = INTEGRATION_MIN_TIME_STEP
+    """ns, integration step of the fixed-step integrator.
+
+    Defaults to the finest resolution targeted by the QuTiP engine, which is
+    enough to resolve the lab-frame qubit oscillations of the bundled
+    platforms with the third-order Rouchon solver.
+    """
+
     @cached_property
     def engine(self):
-        """Return the Dynamiqs engine."""
+        """Return the dynamiqs engine."""
         import dynamiqs as dq
 
-        dq.set_precision("double")
+        dq.set_precision(self.precision)
+        dq.set_device(self.device, self.device_index)
+        dq.set_matmul_precision(self.matmul_precision)
         return dq
 
-    def _wrap(self, operator: Any) -> DynamiqsOperator:
-        return DynamiqsOperator(operator)
+    def _method(self, time: np.ndarray):
+        """Build the integration method honoring the engine configuration."""
+        if self.method == "fixed":
+            return self.engine.method.Rouchon3(dt=self.fixed_step_dt)
+        # mirror the QuTiP engine `nsteps` bound: total duration over the
+        # finest resolution, scaled by the same safety multiplier
+        duration = max(time[-1] - time[0], INTEGRATION_MIN_TIME_STEP)
+        max_steps = int(duration / INTEGRATION_MIN_TIME_STEP * INTEGRATION_MULTIPLIER)
+        return self.engine.method.Tsit5(
+            rtol=self.rtol, atol=self.atol, max_steps=max(max_steps, 100_000)
+        )
 
-    def _time_hamiltonian(
-        self, hamiltonian: Operator, time_hamiltonian: OperatorEvolution | None
-    ):
-        hamiltonian = self.engine.constant(unwrap(hamiltonian))
-        if time_hamiltonian is None:
-            return hamiltonian
+    def dump_results(self, hamiltonian: Any, sim_results: Any, dump_dir: Path) -> None:
+        """Save the Hamiltonian and simulation results to files with incremented naming.
 
-        for operator, time in time_hamiltonian.operators:
-            hamiltonian += self.engine.modulated(
-                _bspline_prefactor(time),
-                unwrap(operator),
-            )
-
-        return hamiltonian
-
-    def dump_results(
-        self,
-        hamiltonian: Any,
-        sim_results: Any,
-        time: np.ndarray,
-        dump_dir: Path,
-    ) -> None:
-        """Save the Hamiltonian and simulation results to NumPy files."""
+        Dynamiqs time-dependent Hamiltonians hold JAX callables that cannot be
+        pickled, so instead of the QuTiP engine's ``qsave`` format the engine
+        stores plain NumPy archives: the Hamiltonian evaluated at the saved
+        times and the density matrices at the saved times.
+        """
         dump_dir.mkdir(parents=True, exist_ok=True)
 
         count_1 = sum(
@@ -198,19 +168,41 @@ class DynamiqsEngine(SimulationEngine):
         )
         count = max(count_1, count_2)
 
-        hamiltonian_values = np.stack(
-            [self.engine.to_numpy(hamiltonian(t)) for t in time]
-        )
+        times = np.asarray(sim_results.tsave)
+        hamiltonians = np.stack([np.asarray(hamiltonian(t).to_jax()) for t in times])
+        states = np.asarray(sim_results.states.to_jax())
         np.savez(
             dump_dir / f"{HAMILTONIAN_FILENAME}_{count}.npz",
-            time=time,
-            hamiltonian=hamiltonian_values,
+            times=times,
+            hamiltonians=hamiltonians,
         )
-        np.savez(
-            dump_dir / f"{STATE_FILENAME}_{count}.npz",
-            time=np.asarray(sim_results.tsave),
-            states=self.engine.to_numpy(sim_results.states),
-        )
+        np.savez(dump_dir / f"{STATE_FILENAME}_{count}.npz", times=times, states=states)
+
+    def load_results(
+        self, dump_dir: Path, count: int | None = None
+    ) -> tuple[dict, dict]:
+        """Load the Hamiltonian and simulation results saved by :meth:`dump_results`.
+
+        Returns two dictionaries with ``times`` and ``hamiltonians`` / ``states``
+        arrays. If `count` is not given, the latest dump is loaded.
+        """
+        dump_dir = Path(dump_dir)
+        if count is None:
+            count_1 = sum(
+                1
+                for file in dump_dir.iterdir()
+                if file.is_file() and HAMILTONIAN_FILENAME in file.name
+            )
+            count_2 = sum(
+                1
+                for file in dump_dir.iterdir()
+                if file.is_file() and STATE_FILENAME in file.name
+            )
+            count = max(count_1, count_2) - 1
+
+        hamiltonians = dict(np.load(dump_dir / f"{HAMILTONIAN_FILENAME}_{count}.npz"))
+        states = dict(np.load(dump_dir / f"{STATE_FILENAME}_{count}.npz"))
+        return hamiltonians, states
 
     def evolve(
         self,
@@ -223,33 +215,22 @@ class DynamiqsEngine(SimulationEngine):
         **kwargs,
     ) -> DynamiqsEvolutionResult:
         """Evolve the system."""
+
         time = np.asarray(list(time), dtype=float)
-        time_diff = np.diff(time)
-        nsteps = int(
-            max(time_diff, default=INTEGRATION_MIN_TIME_STEP)
-            / INTEGRATION_MIN_TIME_STEP
-            * INTEGRATION_MULTIPLIER
-        )
-        method = kwargs.pop(
-            "method",
-            self.engine.method.Tsit5(
-                rtol=1e-8,
-                atol=1e-8,
-                max_steps=max(nsteps, 100000),
-            ),
-        )
-        options = kwargs.pop(
-            "options",
-            self.engine.Options(progress_meter=False),
-        )
 
-        hamiltonian = self._time_hamiltonian(hamiltonian, time_hamiltonian)
-        collapse_operators = [unwrap(op) for op in (collapse_operators or [])]
+        hamiltonian = self.engine.constant(_unwrap(hamiltonian))
+        if time_hamiltonian is not None:
+            for operator, coefficient in time_hamiltonian.operators:
+                hamiltonian += self.engine.modulated(
+                    _spline_function(coefficient), _unwrap(operator)
+                )
 
-        sim_results = self.engine.mesolve(
+        method = kwargs.pop("method", self._method(time))
+        options = kwargs.pop("options", self.engine.Options(progress_meter=False))
+        result = self.engine.mesolve(
             hamiltonian,
-            collapse_operators,
-            self.engine.todm(unwrap(initial_state)),
+            [_unwrap(op) for op in collapse_operators or []],
+            _unwrap(initial_state),
             time,
             method=method,
             options=options,
@@ -259,69 +240,80 @@ class DynamiqsEngine(SimulationEngine):
         if save_evolution is not None:
             self.dump_results(
                 hamiltonian=hamiltonian,
-                sim_results=sim_results,
-                time=time,
+                sim_results=result,
                 dump_dir=save_evolution,
             )
 
-        states = [self._wrap(sim_results.states[i]) for i in range(len(time))]
-        return DynamiqsEvolutionResult(raw=sim_results, states=states)
+        return DynamiqsEvolutionResult(result)
 
-    def create(self, n: int) -> DynamiqsOperator:
+    def create(self, n: int) -> Operator:
         """Create operator for n levels system."""
-        return self._wrap(self.engine.create(n))
+        return DynamiqsOperator(self.engine.create(n))
 
-    def destroy(self, n: int) -> DynamiqsOperator:
+    def destroy(self, n: int) -> Operator:
         """Destroy operator for n levels system."""
-        return self._wrap(self.engine.destroy(n))
+        return DynamiqsOperator(self.engine.destroy(n))
 
-    def identity(self, n: int) -> DynamiqsOperator:
+    def identity(self, n: int) -> Operator:
         """Identity operator for n levels system."""
-        return self._wrap(self.engine.eye(n))
+        return DynamiqsOperator(self.engine.eye(n))
 
-    def tensor(self, operators: list[Operator]) -> DynamiqsOperator:
+    def tensor(self, operators: list[Operator]) -> Operator:
         """Tensor product of a list of operators."""
-        return self._wrap(self.engine.tensor(*(unwrap(op) for op in operators)))
+        return DynamiqsOperator(self.engine.tensor(*[_unwrap(op) for op in operators]))
 
     def expand(
-        self, op: Operator, dims: list[int], targets: int | list[int]
-    ) -> DynamiqsOperator:
+        self, op: Operator, targets: int | list[int], dims: list[int]
+    ) -> Operator:
         """Expand operator in larger Hilbert space."""
-        dims = list(dims)
-        targets = [targets] if isinstance(targets, int) else list(targets)
-        target_dims = [dims[target] for target in targets]
-        untouched = [i for i in range(len(dims)) if i not in targets]
-        untouched_dims = [dims[target] for target in untouched]
-
-        operator = self.engine.to_numpy(unwrap(op)).reshape(
-            np.prod(target_dims, dtype=int),
-            np.prod(target_dims, dtype=int),
-        )
-
-        if untouched_dims:
-            compact = np.kron(operator, np.eye(np.prod(untouched_dims, dtype=int)))
-        else:
-            compact = operator
-
-        order = targets + untouched
-        position = {target: i for i, target in enumerate(order)}
-        shape = [dims[i] for i in order] + [dims[i] for i in order]
-        permutation = [position[i] for i in range(len(dims))] + [
-            len(dims) + position[i] for i in range(len(dims))
-        ]
-        expanded = (
-            compact.reshape(shape)
-            .transpose(permutation)
-            .reshape(
-                np.prod(dims, dtype=int),
-                np.prod(dims, dtype=int),
+        # The current emulator calls this method with QuTiP's argument order:
+        # ``expand_operator(op, dims, targets)``.
+        dimensions = list(targets)
+        target_subsystems = [dims] if isinstance(dims, int) else list(dims)
+        op_array = np.asarray(_unwrap(op).to_jax())
+        return DynamiqsOperator(
+            self.engine.asqarray(
+                _expand_operator(op_array, targets=target_subsystems, dims=dimensions),
+                dims=tuple(dimensions),
             )
         )
 
-        return self._wrap(self.engine.asqarray(expanded, dims=tuple(dims)))
-
-    def basis(self, dim: int | list[int], state: int | list[int]) -> DynamiqsOperator:
+    def basis(self, dim: int | list[int], state: int | list[int]) -> Operator:
         """Basis operator for n levels system."""
-        if isinstance(dim, list):
-            dim = tuple(dim)
-        return self._wrap(self.engine.basis(dim, state))
+        return DynamiqsOperator(self.engine.basis(dim, state))
+
+
+def _unwrap(operator):
+    return operator.qarray if isinstance(operator, DynamiqsOperator) else operator
+
+
+def _is_qarray(operator) -> bool:
+    return hasattr(operator, "to_jax") and hasattr(operator, "dag")
+
+
+def _expand_operator(op: np.ndarray, targets: list[int], dims: list[int]) -> np.ndarray:
+    """Dense equivalent of qutip.expand_operator for small emulator systems."""
+    nsubsystems = len(dims)
+    target_dims = [dims[target] for target in targets]
+    expected_shape = 2 * (int(np.prod(target_dims)),)
+    if op.shape != expected_shape:
+        raise ValueError(
+            f"Operator shape {op.shape} is incompatible with {target_dims}."
+        )
+
+    tensor = op.reshape(target_dims + target_dims)
+    identities = [np.eye(dim, dtype=op.dtype) for dim in dims]
+    identity_targets = [i for i in range(nsubsystems) if i not in targets]
+
+    expanded = tensor
+    input_axes = dict(zip(targets, range(len(targets)), strict=True))
+    output_axes = dict(zip(targets, range(len(targets), 2 * len(targets)), strict=True))
+    for target in identity_targets:
+        expanded = np.tensordot(expanded, identities[target], axes=0)
+        input_axes[target] = expanded.ndim - 2
+        output_axes[target] = expanded.ndim - 1
+
+    permutation = [input_axes[i] for i in range(nsubsystems)] + [
+        output_axes[i] for i in range(nsubsystems)
+    ]
+    return np.transpose(expanded, permutation).reshape(2 * (int(np.prod(dims)),))
