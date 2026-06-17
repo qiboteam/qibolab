@@ -219,28 +219,42 @@ class Cluster(Controller):
             processed_sequences, sweepers, options, qcm_channels, qrm_channels, configs
         )
 
+        sweepers_ = normalize_sweepers(
+            sweepers,
+            lo_configs(self._los, configs),
+            {
+                ch: cfg.offset
+                for ch, cfg in configs.items()
+                if isinstance(cfg, DcConfig)
+            },
+        )
+
+        # configure the modules
+        _module_configs = self._configure_modules(configs)
+
         # Execute each batch sequentially, and concatenate results
         log = Logger(configs)
         results = {}
         for ps in batched_seqs:
-            # full reset of the cluster, to erase leftover configurations and sequencer
-            # synchronization registration
-            # TODO: don't reset unnecessarily. In RB with depths 2**np.arange(11) the
-            # reset alone takes 14% of total execution time
             for module in self._modules.values():
-                module.stop_sequencer()
+                # Disconnect outputs because `self.configure_sequencers` creates new
+                # connections between the indexed sequencer and various inputs/outputs.
+                # Existing connections would otherwise cause the operation to fail.
+                module.disconnect_outputs()
+                if module.is_qrm_type:
+                    module.disconnect_inputs()
+                for seq in module.sequencers:
+                    # Disable synchronization. This is needed because different
+                    # sequences may use different sequencers, and if a previous sequence
+                    # used a sequencer that is not used in the current one, it can cause
+                    # an indefinite wait during `wait_sync`.
+                    if seq.sync_en():
+                        seq.sync_en(False)
+
             psres = []
             for shots in batch_shots(ps, sweepers, options):
                 options_ = options.model_copy(update={"nshots": shots})
-                sweepers_ = normalize_sweepers(
-                    sweepers,
-                    lo_configs(self._los, configs),
-                    {
-                        ch: cfg.offset
-                        for ch, cfg in configs.items()
-                        if isinstance(cfg, DcConfig)
-                    },
-                )
+
                 # first compile pulses and sweepers into Qblox sequences
                 assert_channels_exclusion(ps, self._probes)
                 sequences_ = compile(
@@ -250,15 +264,18 @@ class Cluster(Controller):
                     self.sampling_rate,
                     merged_vzs=not phase_sweeper_present,
                 )
+
                 for channelid, seq in sequences_.items():
                     slot = PortAddress.from_path(self.channels[channelid].path).slot
                     validate_sequence(seq, self._modules[slot].is_qrm_type)
+
                 log.sequences(sequences_)
 
-                # then configure modules and sequencers
-                # (including sequences upload)
-                sequencers, _ = self.configure(
-                    configs, options_.acquisition_type, sequences=sequences_
+                # then configure sequencers (including sequences upload)
+                sequencers, _sequencer_configs = self.configure_sequencers(
+                    configs=configs,
+                    acquisition=options_.acquisition_type,
+                    sequences=sequences_,
                 )
                 log.status(self.cluster, sequencers)
 
@@ -284,33 +301,49 @@ class Cluster(Controller):
             results |= concat_shots(psres, options)
         return results
 
-    def configure(
+    def _configure_modules(self, configs: Configs) -> dict[SlotId, config.ModuleConfig]:
+        """Configure module settings (e.g. LOs, Mixers).
+
+        Returns a dictionary mapping slots to their respective ModuleConfig.
+        """
+        modcfgs = {}
+        for slot, chs in self._channels_by_module.items():
+            module = self._modules[slot]
+            ids = {id for id, _ in chs}
+            channels = {id: ch for id, ch in self.channels.items() if id in ids}
+            los = config.module.los(self._los, configs, ids)
+            mixers = config.module.mixers(self._mixers, configs, ids)
+            modcfg = modcfgs[slot] = config.ModuleConfig.build(
+                channels, configs, los, mixers
+            )
+            modcfg.apply(module)
+        return modcfgs
+
+    def configure_sequencers(
         self,
         configs: Configs,
         acquisition: AcquisitionType = AcquisitionType.INTEGRATION,
         sequences: dict[ChannelId, Q1Sequence] | None = None,
-    ) -> tuple[SequencerMap, ClusterConfigs]:
-        """Configure modules and sequencers.
+    ) -> tuple[SequencerMap, dict[SlotId, dict[int, config.SequencerConfig]]]:
+        """Configure sequencers.
 
-        The return value consists of the association map from channels
-        to sequencers, for each module.
+        The return value consists of the association map from channels to sequencers,
+        for each module. And the sequencer configurations.
 
-        For configuration testing purpose, it is possible to also configure modules and
-        sequencers with no sequence provided. In which case, it will attempt to assign
-        sequencers to all available channels (as opposed to just those involved in the
-        experiment, and thus in the sequences).
-        For the sake of simplifying the usage of this function, a default acquisition
-        type is provided (:attr:`AcquisitionType.INTEGRATION`). The only true
-        alternative to this value is :attr:`AcquisitionType.RAW`, since further
-        configurations are required to operate in scope mode.
+        For configuration testing purpose, it is possible to also configure sequencers
+        with no sequence provided. In which case, it will attempt to assign sequencers
+        to all available channels (as opposed to just those involved in the experiment,
+        and thus in the sequences). For the sake of simplifying the usage of this
+        function, a default acquisition type is provided
+        (:attr:`AcquisitionType.INTEGRATION`). The only true alternative to this value
+        is :attr:`AcquisitionType.RAW`, since further configurations are required to
+        operate in scope mode.
         """
         sequencers = defaultdict(dict)
         exec_mode = sequences is not None
         sequences_ = defaultdict(lambda: None, sequences if exec_mode else {})
 
-        modcfgs = {}
         seqcfgs = {}
-
         for slot, chs in self._channels_by_module.items():
             module = self._modules[slot]
 
@@ -318,29 +351,17 @@ class Cluster(Controller):
             # not be outnumbered
             assert len(module.sequencers) >= len(chs)
 
-            ids = {id for id, _ in chs}
-            channels = {id: ch for id, ch in self.channels.items() if id in ids}
-            los = config.module.los(self._los, configs, ids)
-            mixers = config.module.mixers(self._mixers, configs, ids)
-            # compute module configurations, and apply them
-            modcfg = modcfgs[slot] = config.ModuleConfig.build(
-                channels, configs, los, mixers
-            )
-            modcfg.apply(module)
-            seqcfgs[slot] = {}
-
             # configure all sequencers, and store association to channels
-            rf = module.is_rf_type
+            seqcfgs[slot] = {}
             for idx, ((ch, address), sequencer) in enumerate(
                 zip(chs, module.sequencers)
             ):
-                # only configure and register sequencer for active channels
-                # for passive channels the sequencer operations are not relevant, e.g. a
-                # flux channel with no registered pulse will still set an offset, but
-                # this will happen at port level, and it is consumed in the
-                # `ModuleConfig` above
-                # if not in execution mode, cnfigure all channels, to test the
-                # configuration itself
+                # Only configure and register sequencer for active channels. For passive
+                # channels the sequencer operations are not relevant, e.g. a flux
+                # channel with no registered pulse will still set an offset, but this
+                # will happen at port level, and it is consumed in the `ModuleConfig` if
+                # not in execution mode, configure all channels, to test the
+                # configuration itself.
                 if exec_mode and ch not in sequences:
                     continue
 
@@ -350,14 +371,28 @@ class Cluster(Controller):
                     self.channels,
                     configs,
                     acquisition,
-                    rf,
+                    module.is_rf_type,
                     sequence=sequences_[ch],
                 )
                 seqcfg.apply(sequencer)
                 # populate channel-to-sequencer mapping
                 sequencers[slot][ch] = idx
 
-        return sequencers, ClusterConfigs(modules=modcfgs, sequencers=seqcfgs)
+        return sequencers, seqcfgs
+
+    def configure(
+        self,
+        configs: Configs,
+        acquisition: AcquisitionType = AcquisitionType.INTEGRATION,
+        sequences: dict[ChannelId, Q1Sequence] | None = None,
+    ) -> tuple[SequencerMap, ClusterConfigs]:
+        """
+        .. deprecated:: 0.2.16
+            Use `configure_sequencers` and/or `_configure_modules` instead.
+        """
+        modules_configs = self._configure_modules(configs)
+        sequencers, seqcfgs = self.configure_sequencers(configs, acquisition, sequences)
+        return sequencers, ClusterConfigs(modules=modules_configs, sequencers=seqcfgs)
 
     def _execute(
         self,
