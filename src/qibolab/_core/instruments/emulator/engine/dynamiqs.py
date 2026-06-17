@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 import numpy as np
+from scipy.interpolate import make_interp_spline
 
 from .abstract import (
     HAMILTONIAN_FILENAME,
@@ -20,6 +21,8 @@ from .abstract import (
 )
 
 __all__ = ["DynamiqsEngine"]
+
+SPLINE_INTERP_ORDER = 3
 
 
 @dataclass
@@ -204,6 +207,16 @@ class DynamiqsEngine(SimulationEngine):
         states = dict(np.load(dump_dir / f"{STATE_FILENAME}_{count}.npz"))
         return hamiltonians, states
 
+    def save_operators(self, operators, dump_dir: Path) -> None:
+        """Persist static operators once per experiment."""
+        np.savez(
+            dump_dir / "operators.npz",
+            **{
+                f"operator_{index}": np.asarray(_unwrap(operator).to_jax())
+                for index, operator in enumerate(operators)
+            },
+        )
+
     def evolve(
         self,
         hamiltonian: Operator,
@@ -220,7 +233,14 @@ class DynamiqsEngine(SimulationEngine):
 
         hamiltonian = self.engine.constant(_unwrap(hamiltonian))
         if time_hamiltonian is not None:
-            for operator, coefficient in time_hamiltonian.operators:
+            times = time_hamiltonian.times
+            coefficients = [
+                make_interp_spline(times, coefficient, k=SPLINE_INTERP_ORDER)
+                for coefficient in time_hamiltonian.coefficients
+            ]
+            for operator, coefficient in zip(
+                time_hamiltonian.operators, coefficients, strict=True
+            ):
                 hamiltonian += self.engine.modulated(
                     _spline_function(coefficient), _unwrap(operator)
                 )
