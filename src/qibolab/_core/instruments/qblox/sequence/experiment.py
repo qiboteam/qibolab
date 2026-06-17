@@ -37,7 +37,7 @@ from .waveforms import WaveformIndices
 __all__ = []
 
 
-def _play_pulse(pulse: Pulse, waveforms: WaveformIndices) -> Line:
+def _play_waveforms(pulse: Pulse, waveforms: WaveformIndices) -> Line:
     uid = pulse.id
     w0 = waveforms[(uid, 0)]
     w1 = waveforms[(uid, 1)]
@@ -59,6 +59,18 @@ def _play_duration_swept(registers: dict[ParamRole, Register]) -> list[Instructi
     ]
 
 
+def _play_pulse(
+    pulse: Pulse,
+    waveforms: WaveformIndices,
+    duration_sweep: dict[ParamRole, Register],
+) -> list[Instruction] | list[Line]:
+    return (
+        [_play_waveforms(pulse, waveforms)]
+        if len(duration_sweep) == 0
+        else _play_duration_swept(duration_sweep)
+    )
+
+
 def _process_pulse(
     pulse: Pulse, params: set[Param], waveforms: WaveformIndices, merged_vzs: bool
 ):
@@ -70,15 +82,15 @@ def _process_pulse(
     accumulated phase deltas in Registers.phase_delta and must be applied with
     SetPhDelta before playing the pulse.
     """
+    duration_sweep = {
+        p.role: p.reg for p in params if p.role.value[1] is Parameter.duration
+    }
     if merged_vzs:
         assert pulse.relative_phase == 0.0
-        return [_play_pulse(pulse, waveforms)]
+        return _play_pulse(pulse, waveforms, duration_sweep)
     else:
         phase = int(convert(pulse.relative_phase, Parameter.relative_phase))
         minus_phase = int(convert(-pulse.relative_phase, Parameter.relative_phase))
-        duration_sweep = {
-            p.role: p.reg for p in params if p.role.value[1] is Parameter.duration
-        }
         return (
             (
                 [
@@ -92,11 +104,7 @@ def _process_pulse(
                 else []
             )
             + ([SetPhDelta(value=Registers.phase_delta.value)])
-            + (
-                [_play_pulse(pulse, waveforms)]
-                if len(duration_sweep) == 0
-                else _play_duration_swept(duration_sweep)
-            )
+            + _play_pulse(pulse, waveforms, duration_sweep)
             + ([Move(source=minus_phase, destination=Registers.phase_delta.value)])
         )
 
@@ -155,7 +163,7 @@ def _process_readout(
 ):
     acq = acquisitions[pulse.id]
     return [
-        _play_pulse(pulse.probe, waveforms).update(
+        _play_waveforms(pulse.probe, waveforms).update(
             {"duration": int(pulse.time_of_flight)}
         ),
         Acquire(
