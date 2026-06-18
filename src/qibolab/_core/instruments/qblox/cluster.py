@@ -236,8 +236,6 @@ class Cluster(Controller):
         log = Logger(configs)
         results = {}
         for ps in batched_seqs:
-            self._clear_module_configuration_for_new_sequence()
-
             psres = []
             for shots in batch_shots(ps, sweepers, options):
                 options_ = options.model_copy(update={"nshots": shots})
@@ -288,7 +286,7 @@ class Cluster(Controller):
             results |= concat_shots(psres, options)
         return results
 
-    def _clear_module_configuration_for_new_sequence(self) -> None:
+    def _disconnect_and_desync_sequencers(self) -> None:
         """Clear the relevant module settings before applying a new sequence."""
         for module in self._modules.values():
             # Disconnect outputs because `self.configure_sequencers` creates new
@@ -378,6 +376,7 @@ class Cluster(Controller):
                     module.is_rf_type,
                     sequence=sequences_[ch],
                 )
+                self._disconnect_and_desync_sequencers()
                 seqcfg.apply(sequencer)
                 # populate channel-to-sequencer mapping
                 sequencers[slot][ch] = idx
