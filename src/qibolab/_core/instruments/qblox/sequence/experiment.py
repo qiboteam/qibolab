@@ -2,6 +2,7 @@ from qibolab._core.pulses.pulse import (
     Acquisition,
     Align,
     Delay,
+    LongPulse,
     Pulse,
     Readout,
     VirtualZ,
@@ -17,6 +18,7 @@ from ..q1asm.ast_ import (
     Move,
     Play,
     Register,
+    SetAwgOffs,
     SetPhDelta,
     UpdParam,
     Wait,
@@ -57,6 +59,81 @@ def _play_duration_swept(registers: dict[ParamRole, Register]) -> list[Instructi
         ),
         Wait(duration=registers[ParamRole.DURATION]),
     ]
+
+
+def _process_longpulse(pulse: LongPulse, params: set[Param], merged_vzs: bool):
+    """Emit Q1ASM for a LongPulse.
+
+    Uses ``set_awg_offs`` to produce a continuous CW tone without storing
+    any per-duration waveforms.  The signal chain on the RF module is:
+
+        output = (waveform * gain + offset)
+
+    Timing:  ``upd_param(4)`` starts the tone (4 ns), then ``wait(dur - 4)``
+    holds it.  The DURATION sweep register already holds ``total_duration - 4``
+    (set by ``_longpulse_duration``).  After the wait, ``set_awg_offs(0, 0)``
+    is latched and applied by the next real-time instruction.
+    """
+    uid = pulse.id
+    duration_sweep = {
+        p.role: p.reg for p in params if p.role.value[1] is Parameter.duration
+    }
+    amplitude_sweep = {
+        p.role: p.reg for p in params if p.role.value[1] is Parameter.amplitude
+    }
+
+    if merged_vzs:
+        assert pulse.relative_phase == 0.0
+        phase_pre: list[Instruction] = []
+        phase_post: list[Instruction] = []
+    else:
+        phase = int(convert(pulse.relative_phase, Parameter.relative_phase))
+        minus_phase = int(convert(-pulse.relative_phase, Parameter.relative_phase))
+        phase_pre = (
+            [
+                Add(
+                    a=Registers.phase_delta.value,
+                    b=phase,
+                    destination=Registers.phase_delta.value,
+                )
+            ]
+            if phase != 0
+            else []
+        ) + [SetPhDelta(value=Registers.phase_delta.value)]
+        phase_post = [Move(source=minus_phase, destination=Registers.phase_delta.value)]
+
+    if duration_sweep:
+        hold: list[Instruction] = [Wait(duration=duration_sweep[ParamRole.DURATION])]
+    else:
+        hold = [Wait(duration=int(pulse.duration) - 4)] if pulse.duration > 4 else []
+
+    if amplitude_sweep:
+        pseudo_pulse = [
+            SetAwgOffs(value_0=amplitude_sweep[ParamRole.AMPLITUDE], value_1=0),
+            Line(
+                instruction=UpdParam(duration=4),
+                comment=f"longpulse id: 0x{uid.hex[:5]}",
+            ),
+        ]
+    else:
+        pseudo_pulse = [
+            SetAwgOffs(
+                value_0=int(convert(pulse.amplitude, Parameter.amplitude)), value_1=0
+            ),
+            Line(
+                instruction=UpdParam(duration=4),
+                comment=f"longpulse id: 0x{uid.hex[:5]}",
+            ),
+        ]
+
+    return (
+        phase_pre
+        + pseudo_pulse
+        + hold
+        + phase_post
+        + [SetAwgOffs(value_0=0, value_1=0)]
+        # Line(instruction=UpdParam(duration=4))] # This may be neeed if this is the last pulse in the sequence, otherwise it will never turn off the tone.
+    )
 
 
 def _process_pulse(
@@ -175,6 +252,8 @@ def play(
     """Process the individual pulse in experiment."""
     pulse = parpulse[0]
     params = parpulse[1]
+    if isinstance(pulse, LongPulse):
+        return _process_longpulse(pulse, params, merged_vzs)
     if isinstance(pulse, Pulse):
         return _process_pulse(pulse, params, waveforms, merged_vzs)
     if isinstance(pulse, Delay):

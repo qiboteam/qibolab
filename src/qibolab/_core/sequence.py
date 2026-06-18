@@ -12,7 +12,7 @@ from pydantic_core import core_schema
 from qibolab._core.pulses.pulse import PulseId, VirtualZ
 
 from .identifier import ChannelId
-from .pulses import Acquisition, Align, Delay, Pulse, PulseLike, Readout
+from .pulses import Acquisition, Align, Delay, LongPulse, Pulse, PulseLike, Readout
 
 __all__ = ["PulseSequence"]
 
@@ -284,7 +284,8 @@ class PulseSequence(UserList[_Element]):
                 el
                 for els in (
                     [(ch, ev)]
-                    if not isinstance(ev, Pulse) or np.isclose(ev.relative_phase, 0)
+                    if not isinstance(ev, (Pulse, LongPulse))
+                    or np.isclose(ev.relative_phase, 0)
                     else [
                         (ch, VirtualZ(phase=ev.relative_phase)),
                         (ch, ev.model_copy(update={"relative_phase": 0})),

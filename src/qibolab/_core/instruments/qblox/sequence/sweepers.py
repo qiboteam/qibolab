@@ -14,6 +14,7 @@ from qibolab._core.instruments.qblox.q1asm.ast_ import (
 )
 from qibolab._core.instruments.qblox.sequence.asm import Registers
 from qibolab._core.pulses.pulse import (
+    LongPulse,
     Pulse,
     PulseId,
     PulseLike,
@@ -59,7 +60,7 @@ class ParamRole(Enum):
     def unique(cls, sweep: Sweeper) -> bool:
         return sweep.parameter is not Parameter.duration or (
             sweep.pulses is not None
-            and not any(isinstance(p, Pulse) for p in sweep.pulses)
+            and not any(isinstance(p, (Pulse, LongPulse)) for p in sweep.pulses)
         )
 
     @property
