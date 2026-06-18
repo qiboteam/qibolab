@@ -10,14 +10,12 @@ import numpy as np
 from scipy.interpolate import make_interp_spline
 
 from .abstract import (
-    HAMILTONIAN_FILENAME,
     INTEGRATION_MIN_TIME_STEP,
     INTEGRATION_MULTIPLIER,
-    STATE_FILENAME,
     Operator,
     OperatorEvolution,
     SimulationEngine,
-    _spline_function,
+    jax_interpolation,
 )
 
 __all__ = ["DynamiqsEngine"]
@@ -149,74 +147,6 @@ class DynamiqsEngine(SimulationEngine):
             rtol=self.rtol, atol=self.atol, max_steps=max(max_steps, 100_000)
         )
 
-    def dump_results(self, hamiltonian: Any, sim_results: Any, dump_dir: Path) -> None:
-        """Save the Hamiltonian and simulation results to files with incremented naming.
-
-        Dynamiqs time-dependent Hamiltonians hold JAX callables that cannot be
-        pickled, so instead of the QuTiP engine's ``qsave`` format the engine
-        stores plain NumPy archives: the Hamiltonian evaluated at the saved
-        times and the density matrices at the saved times.
-        """
-        dump_dir.mkdir(parents=True, exist_ok=True)
-
-        count_1 = sum(
-            1
-            for file in dump_dir.iterdir()
-            if file.is_file() and HAMILTONIAN_FILENAME in file.name
-        )
-        count_2 = sum(
-            1
-            for file in dump_dir.iterdir()
-            if file.is_file() and STATE_FILENAME in file.name
-        )
-        count = max(count_1, count_2)
-
-        times = np.asarray(sim_results.tsave)
-        hamiltonians = np.stack([np.asarray(hamiltonian(t).to_jax()) for t in times])
-        states = np.asarray(sim_results.states.to_jax())
-        np.savez(
-            dump_dir / f"{HAMILTONIAN_FILENAME}_{count}.npz",
-            times=times,
-            hamiltonians=hamiltonians,
-        )
-        np.savez(dump_dir / f"{STATE_FILENAME}_{count}.npz", times=times, states=states)
-
-    def load_results(
-        self, dump_dir: Path, count: int | None = None
-    ) -> tuple[dict, dict]:
-        """Load the Hamiltonian and simulation results saved by :meth:`dump_results`.
-
-        Returns two dictionaries with ``times`` and ``hamiltonians`` / ``states``
-        arrays. If `count` is not given, the latest dump is loaded.
-        """
-        dump_dir = Path(dump_dir)
-        if count is None:
-            count_1 = sum(
-                1
-                for file in dump_dir.iterdir()
-                if file.is_file() and HAMILTONIAN_FILENAME in file.name
-            )
-            count_2 = sum(
-                1
-                for file in dump_dir.iterdir()
-                if file.is_file() and STATE_FILENAME in file.name
-            )
-            count = max(count_1, count_2) - 1
-
-        hamiltonians = dict(np.load(dump_dir / f"{HAMILTONIAN_FILENAME}_{count}.npz"))
-        states = dict(np.load(dump_dir / f"{STATE_FILENAME}_{count}.npz"))
-        return hamiltonians, states
-
-    def save_operators(self, operators, dump_dir: Path) -> None:
-        """Persist static operators once per experiment."""
-        np.savez(
-            dump_dir / "operators.npz",
-            **{
-                f"operator_{index}": np.asarray(_unwrap(operator).to_jax())
-                for index, operator in enumerate(operators)
-            },
-        )
-
     def evolve(
         self,
         hamiltonian: Operator,
@@ -242,7 +172,7 @@ class DynamiqsEngine(SimulationEngine):
                 time_hamiltonian.operators, coefficients, strict=True
             ):
                 hamiltonian += self.engine.modulated(
-                    _spline_function(coefficient), _unwrap(operator)
+                    jax_interpolation(coefficient), _unwrap(operator)
                 )
 
         method = kwargs.pop("method", self._method(time))
