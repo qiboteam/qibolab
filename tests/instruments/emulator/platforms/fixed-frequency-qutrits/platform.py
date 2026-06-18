@@ -42,7 +42,7 @@ def create() -> Hardware:
             address="0.0.0.0",
             channels=channels,
             sampling_rate_=2,
-            save_dir=None,
+            save_dir="./emulator_dumping_test_1",
         ),
     }
 
