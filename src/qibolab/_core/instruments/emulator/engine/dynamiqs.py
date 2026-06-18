@@ -302,6 +302,10 @@ class DynamiqsEngine(SimulationEngine):
         """Basis operator for n levels system."""
         return DynamiqsOperator(self.engine.basis(dim, state))
 
+    def save_operators(self) -> None:
+        """Persist the static operators once per experiment."""
+        return
+
 
 def _unwrap(operator):
     return operator.qarray if isinstance(operator, DynamiqsOperator) else operator
