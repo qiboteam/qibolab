@@ -236,19 +236,7 @@ class Cluster(Controller):
         log = Logger(configs)
         results = {}
         for ps in batched_seqs:
-            for module in self._modules.values():
-                # Disconnect outputs because `self.configure_sequencers` creates new
-                # connections between the indexed sequencer and various inputs/outputs.
-                # Existing connections would otherwise cause the operation to fail.
-                module.disconnect_outputs()
-                if module.is_qrm_type:
-                    module.disconnect_inputs()
-                for seq in module.sequencers:
-                    # Disable synchronization. This is needed because different
-                    # sequences may use different sequencers, and if a previous sequence
-                    # used a sequencer that is not used in the current one, it can cause
-                    # an indefinite wait during `wait_sync`.
-                    seq.sync_en(False)
+            self._clear_module_configuration_for_new_sequence()
 
             psres = []
             for shots in batch_shots(ps, sweepers, options):
@@ -299,6 +287,23 @@ class Cluster(Controller):
             # update results - concatenating shots, if needed
             results |= concat_shots(psres, options)
         return results
+
+    def _clear_module_configuration_for_new_sequence(self) -> None:
+        """Clear the relevant module settings before applying a new sequence."""
+        for module in self._modules.values():
+            # Disconnect outputs because `self.configure_sequencers` creates new
+            # connections between the indexed sequencer and various inputs/outputs.
+            # Existing connections would otherwise cause the operation to fail.
+            module.disconnect_outputs()
+            if module.is_qrm_type:
+                module.disconnect_inputs()
+
+            for seq in module.sequencers:
+                # Disable synchronization. This is needed because different
+                # sequences may use different sequencers, and if a previous sequence
+                # used a sequencer that is not used in the current one, it can cause
+                # an indefinite wait during `wait_sync`.
+                seq.sync_en(False)
 
     def _configure_modules(self, configs: Configs) -> dict[SlotId, config.ModuleConfig]:
         """Configure module settings (e.g. LOs, Mixers).
