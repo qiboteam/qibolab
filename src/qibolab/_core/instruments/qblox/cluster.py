@@ -248,8 +248,7 @@ class Cluster(Controller):
                     # sequences may use different sequencers, and if a previous sequence
                     # used a sequencer that is not used in the current one, it can cause
                     # an indefinite wait during `wait_sync`.
-                    if seq.sync_en():
-                        seq.sync_en(False)
+                    seq.sync_en(False)
 
             psres = []
             for shots in batch_shots(ps, sweepers, options):
