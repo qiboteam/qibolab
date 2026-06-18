@@ -2,16 +2,14 @@ from collections.abc import Iterable
 from functools import cached_property
 from importlib import import_module
 from pathlib import Path
-from typing import Any, Literal
+from typing import Literal
 
 import numpy as np
 from scipy.interpolate import make_interp_spline
 
 from .abstract import (
-    HAMILTONIAN_FILENAME,
     INTEGRATION_MIN_TIME_STEP,
     INTEGRATION_MULTIPLIER,
-    STATE_FILENAME,
     Operator,
     OperatorEvolution,
     SimulationEngine,
@@ -95,7 +93,6 @@ class QutipEngine(SimulationEngine):
         """Persist the static operators once per experiment."""
         self.engine.qsave(operators, str(dump_dir / "operators"))
 
-
     def evolve(
         self,
         hamiltonian: Operator,
@@ -135,9 +132,10 @@ class QutipEngine(SimulationEngine):
             }
 
         if time_hamiltonian is not None:
-<<<<<<< emulator-gpu-1414
+            times = time_hamiltonian.times
             coefficients = [
-                coefficient for _, coefficient in time_hamiltonian.operators
+                make_interp_spline(times, coefficient, k=SPLINE_INTERP_ORDER)
+                for coefficient in time_hamiltonian.coefficients
             ]
             if "method" in options:
                 # diffrax jits over the coefficients, and the spline objects
@@ -150,22 +148,12 @@ class QutipEngine(SimulationEngine):
                 ]
             hamiltonian = [self._to_device(hamiltonian)] + [
                 [self._to_device(operator), coefficient]
-                for (operator, _), coefficient in zip(
+                for operator, coefficient in zip(
                     time_hamiltonian.operators, coefficients, strict=True
                 )
             ]
         else:
             hamiltonian = self._to_device(hamiltonian)
-=======
-            times = time_hamiltonian.times
-            pairs = [
-                [op, make_interp_spline(times, coeff, k=SPLINE_INTERP_ORDER)]
-                for op, coeff in zip(
-                    time_hamiltonian.operators, time_hamiltonian.coefficients
-                )
-            ]
-            hamiltonian = [hamiltonian] + pairs
->>>>>>> main
 
         sim_results = self.engine.mesolve(
             hamiltonian,

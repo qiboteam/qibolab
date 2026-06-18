@@ -123,7 +123,9 @@ def _driven_evolution(engine, **kwargs):
         * np.cos(2 * np.pi * 0.2 * times)
     )
     evolution = OperatorEvolution(
-        operators=[[a + a.dag(), make_interp_spline(times, coefficient, k=3)]]
+        operators=[a + a.dag()],
+        coefficients=np.stack([coefficient]),
+        times=times,
     )
     result = engine.evolve(
         hamiltonian=hamiltonian,
