@@ -1,12 +1,12 @@
 """Abstract engine for platform emulation."""
 
 from abc import ABC, abstractmethod
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from typing import Protocol
 
 import numpy as np
 from numpy.typing import NDArray
-from scipy.interpolate import BSpline, PPoly
 
 from qibolab._core.serialize import Model
 
@@ -21,6 +21,11 @@ HAMILTONIAN_FILENAME = "System_Hamiltonian"
 SWEEP_SIMULATION_FILENAME = "Time_Coefficients_and_Results"
 SIMULATOR_CONFIG = "Simulator_Configs"
 
+SPLINE_INTERP_ORDER = 3
+"""Polynomial order used for interpolating the pulses with a spline function."""
+
+INTEGRATION_MAX_TIME_STEP = 0.02
+"""ns, min resolution of the integrator"""
 INTEGRATION_MULTIPLIER = 200
 """factor for computing max number of steps for the ode solver"""
 INTEGRATION_MIN_TIME_STEP = 5e-3
@@ -80,7 +85,7 @@ class SimulationEngine(Model, ABC):
         time: list[float],
         collapse_operators: list[Operator] = None,
         **kwargs,
-    ) -> EvolutionResult:
+    ) -> tuple[EvolutionResult, dict]:
         """Evolve the system."""
 
     @abstractmethod
@@ -110,27 +115,18 @@ class SimulationEngine(Model, ABC):
         """Basis operator for n levels system."""
 
 
-def _spline_function(spline: BSpline):
+def jax_interpolation(
+    spline_x: NDArray, spline_y: NDArray
+) -> Callable[[NDArray], Iterable[float]]:
     """Convert a SciPy spline into a JAX-traceable piecewise polynomial.
 
-    SciPy ``BSpline.__call__`` cannot be traced by JAX, so the spline is
-    converted once into its piecewise-polynomial representation and evaluated
-    with a Horner scheme on the JAX side, preserving the cubic interpolation
+    SciPy ``BSpline.__call__`` cannot be traced by JAX, so the points and coefficients are
+    evaluated with a Horner scheme on the JAX side, preserving the cubic interpolation
     of the QuTiP engine exactly.
     """
-    import jax.numpy as jnp
 
-    polynomial = PPoly.from_spline(spline)
-    breaks = jnp.asarray(polynomial.x)
-    coefficients = jnp.asarray(polynomial.c)
+    from diffrax import CubicInterpolation, backward_hermite_coefficients
 
-    def evaluate(t):
-        index = jnp.searchsorted(breaks, t, side="right") - 1
-        index = jnp.clip(index, 0, breaks.size - 2)
-        shifted_t = t - breaks[index]
-        value = coefficients[0, index]
-        for coefficient in coefficients[1:]:
-            value = value * shifted_t + coefficient[index]
-        return value
+    spline_c = backward_hermite_coefficients(spline_x, spline_y)
 
-    return evaluate
+    return CubicInterpolation(spline_x, spline_c).evaluate

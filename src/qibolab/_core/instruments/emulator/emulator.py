@@ -93,31 +93,32 @@ class EmulatorController(Controller):
             sequence_dir = self.save_dir / f"sequence_{self._sequence_counter}"
             sequence_dir.mkdir(parents=True, exist_ok=True)
 
-        # list of file coefficients; NOTE: the first element is always the simulation timesteps array
-        time_coefficients: list[NDArray] = np.stack(
-            [evolution.times] + [c for _, c in evolution.operators]
-        )
-        if not self._static_dump_flag:
-            # list of file operators of the pulse sequence; NOTE: the first element is always the time independent hamiltonian
-            operators: list[NDArray] = np.stack(
-                [static_ham.full()] + [op.full() for op, _ in evolution.operators]
+            # list of file coefficients; NOTE: the first element is always the simulation timesteps array
+            time_coefficients: list[NDArray] = np.stack(
+                [evolution.times] + [c for _, c in evolution.operators]
             )
-            np.save(sequence_dir / (HAMILTONIAN_FILENAME + ".npy"), operators)
+            if not self._static_dump_flag:
+                # list of file operators of the pulse sequence; NOTE: the first element is always the time independent hamiltonian
+                operators: list[NDArray] = np.stack(
+                    [static_ham.full()] + [op.full() for op, _ in evolution.operators]
+                )
+                np.save(sequence_dir / (HAMILTONIAN_FILENAME + ".npy"), operators)
 
-            json_filename = sequence_dir / (SIMULATOR_CONFIG + ".json")
-            with open(json_filename, "w") as f:
-                json.dump(simulation_config, f)
+                json_filename = sequence_dir / (SIMULATOR_CONFIG + ".json")
+                with open(json_filename, "w") as f:
+                    json.dump(simulation_config, f)
 
-            # saving only once per sequence the sweeper-independent operators
-            self._static_dump_flag = True
+                # saving only once per sequence the sweeper-independent operators
+                self._static_dump_flag = True
 
-        np.savez(
-            sequence_dir / (SWEEP_SIMULATION_FILENAME + f"_{self._sweep_counter}.npz"),
-            time_coeffs=time_coefficients,
-            results=states,
-            sim_config=simulation_config,
-        )
-        self._sweep_counter += 1
+            np.savez(
+                sequence_dir
+                / (SWEEP_SIMULATION_FILENAME + f"_{self._sweep_counter}.npz"),
+                time_coeffs=time_coefficients,
+                results=states,
+                sim_config=simulation_config,
+            )
+            self._sweep_counter += 1
 
     def play(
         self,
