@@ -1,46 +1,34 @@
+import json
 from collections.abc import Iterable
 from functools import cached_property
-from importlib import import_module
 from pathlib import Path
-from typing import Literal
 
 import numpy as np
+from scipy.interpolate import make_interp_spline
 
 from .abstract import (
-    INTEGRATION_MIN_TIME_STEP,
-    INTEGRATION_MULTIPLIER,
+    HAMILTONIAN_FILENAME,
+    SIMULATOR_CONFIG,
+    SWEEP_SIMULATION_FILENAME,
     Operator,
     OperatorEvolution,
     SimulationEngine,
-    _spline_function,
 )
 
 __all__ = ["QutipEngine"]
 
+SPLINE_INTERP_ORDER = 3
+"""Polynomial order used for interpolating the pulses with a spline function."""
 INTEGRATION_MAX_TIME_STEP = 0.02
 """ns, min resolution of the integrator"""
-
-GPU_DTYPE_PLUGINS = {"jax": "qutip_jax", "jaxdia": "qutip_jax", "cupyd": "qutip_cupy"}
-"""QuTiP data-layer dtypes usable on GPU and the plugin packages providing them."""
-JAX_GPU_DTYPES = {"jax", "jaxdia"}
-"""QuTiP GPU dtypes backed by JAX."""
-
-SPLINE_INTERP_ORDER = 3
+INTEGRATION_MULTIPLIER = 200
+"""factor for computing max number of steps for the ode solver"""
+INTEGRATION_MIN_TIME_STEP = 5e-3
+"""ns, max resolution of the integrator"""
 
 
 class QutipEngine(SimulationEngine):
     """Qutip simulation engine."""
-
-    device: Literal["cpu", "gpu"] = "cpu"
-    """Device used by QuTiP operators."""
-    gpu_dtype: str = "jax"
-    """QuTiP data-layer dtype used for GPU arrays.
-
-    ``jax``/``jaxdia`` use the qutip-jax plugin (recommended, available on
-    PyPI) together with the diffrax integrator, so the whole evolution stays
-    on the accelerator. ``cupyd`` uses the experimental qutip-cupy plugin
-    (not released on PyPI), where the ODE integration remains on the CPU.
-    """
 
     @cached_property
     def engine(self):
@@ -48,49 +36,7 @@ class QutipEngine(SimulationEngine):
         # TODO: maybe it can be improved
         import qutip as qt
 
-        if self.device == "gpu":
-            plugin = GPU_DTYPE_PLUGINS.get(self.gpu_dtype)
-            if plugin is None:
-                raise ValueError(
-                    f"Unknown gpu_dtype {self.gpu_dtype!r}; "
-                    f"supported values: {sorted(GPU_DTYPE_PLUGINS)}."
-                )
-            try:
-                import_module(plugin)
-            except ImportError as exc:
-                raise ImportError(
-                    f"QutipEngine(device='gpu', gpu_dtype={self.gpu_dtype!r}) "
-                    f"requires the optional {plugin.replace('_', '-')} package "
-                    "and a working CUDA-enabled backend."
-                ) from exc
-            if self.gpu_dtype in JAX_GPU_DTYPES:
-                self._require_jax_gpu_backend()
-
         return qt
-
-    def _require_jax_gpu_backend(self) -> None:
-        """Validate that qutip-jax is connected to an accelerator backend."""
-        import jax
-
-        devices = jax.devices()
-        if not any(device.platform == "gpu" for device in devices):
-            available = (
-                ", ".join(f"{device.platform}:{device}" for device in devices) or "none"
-            )
-            raise ImportError(
-                f"QutipEngine(device='gpu', gpu_dtype={self.gpu_dtype!r}) requires "
-                "a CUDA-enabled JAX backend; available JAX devices: "
-                f"{available}. Install a CUDA-enabled JAX runtime, for example "
-                "`jax[cuda12]`, or use device='cpu'."
-            )
-
-    def _to_device(self, op: Operator) -> Operator:
-        """Move a QuTiP operator to the selected data layer."""
-        return op.to(self.gpu_dtype) if self.device == "gpu" else op
-
-    def save_operators(self, operators, dump_dir: Path) -> None:
-        """Persist the static operators once per experiment."""
-        self.engine.qsave(operators, str(dump_dir / "operators"))
 
     def evolve(
         self,
@@ -99,92 +45,86 @@ class QutipEngine(SimulationEngine):
         time: Iterable[float],
         time_hamiltonian: OperatorEvolution = None,
         collapse_operators: list[Operator] = None,
-        save_evolution: Path | None = None,
         **kwargs,
     ):
         """Evolve the system."""
 
-        # force the qutip engine (and, on GPU, its data-layer plugin) to be
-        # imported and registered before any operator is built: ``_to_device``
-        # below calls ``op.to(self.gpu_dtype)``, which only works once the
-        # qutip-jax/qutip-cupy plugin has registered that dtype; this also
-        # validates ``gpu_dtype`` early instead of part-way through the evolution
-        _ = self.engine
         time_diff = np.diff(time)
         nsteps = max(time_diff) / INTEGRATION_MIN_TIME_STEP * INTEGRATION_MULTIPLIER
         # not every SciPy solvers accepts as parameters min_step, that's why we
         # define nsteps instead
         options = {"max_step": INTEGRATION_MAX_TIME_STEP, "nsteps": nsteps}
-        if self.device == "gpu" and self.gpu_dtype in ("jax", "jaxdia"):
-            # the default scipy integrators would transfer the state between
-            # device and host on every step; the diffrax integrator provided
-            # by qutip-jax keeps the whole evolution on the accelerator, with
-            # the same maximum-step bound enforced through its controller
-            from diffrax import PIDController
-
-            options = {
-                "method": "diffrax",
-                "stepsize_controller": PIDController(
-                    rtol=1e-6, atol=1e-8, dtmax=INTEGRATION_MAX_TIME_STEP
-                ),
-                "max_steps": int(nsteps),
-            }
 
         if time_hamiltonian is not None:
-            times = time_hamiltonian.times
-            coefficients = [
-                make_interp_spline(times, coefficient, k=SPLINE_INTERP_ORDER)
-                for coefficient in time_hamiltonian.coefficients
+            evo_times = time_hamiltonian.times
+            hamiltonian = [hamiltonian] + [
+                [op, make_interp_spline(x=evo_times, y=c, k=SPLINE_INTERP_ORDER)]
+                for op, c in time_hamiltonian.operators
             ]
-            if "method" in options:
-                # diffrax jits over the coefficients, and the spline objects
-                # are not traceable by JAX; convert them with the shared spline
-                # helper so the coefficients become jittable functions
-                from jax import jit
-
-                coefficients = [
-                    jit(_spline_function(coefficient)) for coefficient in coefficients
-                ]
-            hamiltonian = [self._to_device(hamiltonian)] + [
-                [self._to_device(operator), coefficient]
-                for operator, coefficient in zip(
-                    time_hamiltonian.operators, coefficients, strict=True
-                )
-            ]
-        else:
-            hamiltonian = self._to_device(hamiltonian)
 
         sim_results = self.engine.mesolve(
             hamiltonian,
-            self._to_device(initial_state),
+            initial_state,
             time,
-            [self._to_device(op) for op in collapse_operators or []],
+            collapse_operators,
             options=options,
             **kwargs,
         )
 
-        return sim_results
+        return sim_results, options
 
     def create(self, n: int) -> Operator:
         """Create operator for n levels system."""
-        return self._to_device(self.engine.create(n))
+        return self.engine.create(n)
 
     def destroy(self, n: int) -> Operator:
         """Destroy operator for n levels system."""
-        return self._to_device(self.engine.destroy(n))
+        return self.engine.destroy(n)
 
     def identity(self, n: int) -> Operator:
         """Identity operator for n levels system."""
-        return self._to_device(self.engine.qeye(n))
+        return self.engine.qeye(n)
 
     def tensor(self, operators: list[Operator]) -> Operator:
         """Tensor product of a list of operators."""
-        return self._to_device(self.engine.tensor(*operators))
+        return self.engine.tensor(*operators)
 
     def expand(self, op: Operator, targets: int | list[int], dims: list[int]):
         """Expand operator in larger Hilbert space."""
-        return self._to_device(self.engine.expand_operator(op, targets, dims))
+        return self.engine.expand_operator(op, targets, dims)
 
     def basis(self, dim: int, state: int) -> Operator:
         """Basis operator for n levels system."""
-        return self._to_device(self.engine.basis(dimensions=dim, n=state))
+        return self.engine.basis(dimensions=dim, n=state)
+
+
+def load_simulation(
+    simulation_path: Path | str, sequence_index: int, sweep_index: int
+) -> tuple[OperatorEvolution, np.typing.NDArray, np.typing.NDArray, dict]:
+    """Load a saved Qutip simulation from disk given a specific pulse sequence and a specific index of the parameter sweep to load
+    (used to select the correct time-coefficients and state files).
+    """
+
+    if isinstance(simulation_path, str):
+        simulation_path = Path(simulation_path)
+
+    simulated_sequence_path = simulation_path / f"sequence_{sequence_index}"
+    if not simulated_sequence_path.is_dir():
+        raise NotADirectoryError()
+
+    hamiltonians = np.load(simulated_sequence_path / (HAMILTONIAN_FILENAME + ".npy"))
+    sweep_sim = np.load(
+        simulated_sequence_path / (SWEEP_SIMULATION_FILENAME + f"_{sweep_index}.npz")
+    )
+    result_states = sweep_sim["results"]
+    time_coeffs = sweep_sim["time_coeffs"]
+
+    with open(simulated_sequence_path / (SIMULATOR_CONFIG + ".json")) as f:
+        sim_configs = json.load(f)
+
+    system = [hamiltonians[0]] + [
+        [ham, coeffs] for ham, coeffs in zip(hamiltonians[1:], time_coeffs[1:])
+    ]
+    timesteps = time_coeffs[0]
+
+    return system, result_states, timesteps, sim_configs
