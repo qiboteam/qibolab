@@ -259,7 +259,7 @@ class Cluster(Controller):
                 log.sequences(sequences_)
 
                 # then configure sequencers (including sequences upload)
-                sequencers, _sequencer_configs = self.configure_sequencers(
+                sequencers, _sequencer_configs = self._configure_sequencers(
                     configs=configs,
                     acquisition=options_.acquisition_type,
                     sequences=sequences_,
@@ -323,7 +323,7 @@ class Cluster(Controller):
             modcfg.apply(module)
         return modcfgs
 
-    def configure_sequencers(
+    def _configure_sequencers(
         self,
         configs: Configs,
         acquisition: AcquisitionType = AcquisitionType.INTEGRATION,
@@ -395,7 +395,9 @@ class Cluster(Controller):
             Use `configure_sequencers` and/or `_configure_modules` instead.
         """
         modules_configs = self._configure_modules(configs)
-        sequencers, seqcfgs = self.configure_sequencers(configs, acquisition, sequences)
+        sequencers, seqcfgs = self._configure_sequencers(
+            configs, acquisition, sequences
+        )
         return sequencers, ClusterConfigs(modules=modules_configs, sequencers=seqcfgs)
 
     def _execute(
