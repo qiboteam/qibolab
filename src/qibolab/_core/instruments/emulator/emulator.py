@@ -1,5 +1,6 @@
 """Emulator controller."""
 
+import json
 from collections import defaultdict
 from collections.abc import Iterable
 from functools import reduce
@@ -9,7 +10,6 @@ from typing import cast
 
 import numpy as np
 from numpy.typing import NDArray
-from scipy.interpolate import BSpline
 
 from qibolab._core.components import Config
 from qibolab._core.components.configs import AcquisitionConfig
@@ -26,6 +26,11 @@ from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import ParallelSweepers
 
 from .engine import Operator, OperatorEvolution, QutipEngine, SimulationEngine
+from .engine.abstract import (
+    HAMILTONIAN_FILENAME,
+    SIMULATOR_CONFIG,
+    SWEEP_SIMULATION_FILENAME,
+)
 from .hamiltonians import (
     HamiltonianConfig,
     Modulated,
@@ -33,8 +38,6 @@ from .hamiltonians import (
 )
 from .results import acquisitions, index, results
 
-SPLINE_INTERP_ORDER = 3
-"""Polynomial order used for interpolating the pulses with a spline function."""
 NYQUIST_FREQUENCY = 20
 """GHz, Nyquist frequency used for computing the solution and resolve qubit oscillations."""
 SAMPLING_INTERVAL = 1 / (2 * NYQUIST_FREQUENCY)
@@ -55,12 +58,20 @@ class EmulatorController(Controller):
     """Flag for saving the full system evolution computed from the simulation
     backend. In order to set it True modify `platform.py` file in the platform folder."""
 
+    # internal, should not be modified
+    _static_dump_flag: bool = 0
+    """It indicates whether I've already dumped all the static components."""
+    _sequence_counter: int = 0
+    """It keeps count on how the sequence number we are simulating."""
+    _sweep_counter: int = 0
+    """It keeps count on how the sweeper number we are simulating."""
+
     @property
     def sampling_rate(self) -> float:
         return self.sampling_rate_
 
     @sampling_rate.setter
-    def sampling_rate(self, value: float):
+    def sampling_rate(self, value: float) -> float:
         self.sampling_rate_ = value
 
     def connect(self):
@@ -69,22 +80,44 @@ class EmulatorController(Controller):
     def disconnect(self):
         """Dummy disconnect method."""
 
-    def _dump_simulation(self, sequence, configs, states, coefficients):
+    def _dump_simulation(
+        self,
+        static_ham: Operator,
+        evolution: OperatorEvolution,
+        states: NDArray,
+        simulation_config: dict,
+    ) -> None:
         """Write operators (once), time coefficients (n-d), density matrices (n-d)."""
-        self.save_dir.mkdir(parents=True, exist_ok=True)
 
-        # operators: run-invariant, so build them once here (outside the sweep loop)
-        config = cast(HamiltonianConfig, configs["hamiltonian"])
-        static = config.hamiltonian(config=configs, engine=self.engine)
-        evolution = self._pulse_hamiltonian(sequence, configs)
-        time_ops = (
-            [pair[0] for pair in evolution.operators] if evolution is not None else []
+        if self.save_dir is not None:
+            sequence_dir = self.save_dir / f"sequence_{self._sequence_counter}"
+            sequence_dir.mkdir(parents=True, exist_ok=True)
+
+        # list of file coefficients; NOTE: the first element is always the simulation timesteps array
+        time_coefficients: list[NDArray] = np.stack(
+            [evolution.times] + [c for _, c in evolution.operators]
         )
-        operators = [static] + time_ops
+        if not self._static_dump_flag:
+            # list of file operators of the pulse sequence; NOTE: the first element is always the time independent hamiltonian
+            operators: list[NDArray] = np.stack(
+                [static_ham.full()] + [op.full() for op, _ in evolution.operators]
+            )
+            np.save(sequence_dir / (HAMILTONIAN_FILENAME + ".npy"), operators)
 
-        self.engine.save_operators(operators, self.save_dir)
-        np.save(self.save_dir / "time_coefficients.npy", coefficients)
-        np.save(self.save_dir / "density_matrices.npy", states)
+            json_filename = sequence_dir / (SIMULATOR_CONFIG + ".json")
+            with open(json_filename, "w") as f:
+                json.dump(simulation_config, f)
+
+            # saving only once per sequence the sweeper-independent operators
+            self._static_dump_flag = True
+
+        np.savez(
+            sequence_dir / (SWEEP_SIMULATION_FILENAME + f"_{self._sweep_counter}.npz"),
+            time_coeffs=time_coefficients,
+            results=states,
+            sim_config=simulation_config,
+        )
+        self._sweep_counter += 1
 
     def play(
         self,
@@ -122,9 +155,10 @@ class EmulatorController(Controller):
         Executes a sweep of the quantum sequence and processes the results
         into a structured results object containing quantum states and measurement data.
         """
-        sweep_states, sweep_coefficients = self._sweep(sequence, configs, sweepers)
-        if self.save_dir is not None:
-            self._dump_simulation(sequence, configs, sweep_states, sweep_coefficients)
+        sweep_states = self._sweep(sequence, configs, sweepers)
+        self._sequence_counter += 1
+        self._static_dump_flag = False
+        self._sweep_counter = 0
         hamiltonian = cast(HamiltonianConfig, configs["hamiltonian"])
         return results(
             # states in computational basis
@@ -155,7 +189,6 @@ class EmulatorController(Controller):
             return self._evolve(sequence, configs, updates)
 
         state_slices: list[NDArray] = []
-        coeff_slices = []
         parsweep = sweepers[0]
         # execute once for each parallel value
         for values in zip(*(s.values for s in parsweep)):
@@ -167,12 +200,10 @@ class EmulatorController(Controller):
                 if sweeper.channels is not None:
                     for channel in sweeper.channels:
                         updates[channel].update({sweeper.parameter.name: value})
-            states, coeffs = self._sweep(sequence, configs, sweepers[1:], updates)
-            state_slices.append(states)
-            coeff_slices.append(coeffs)
+            state_slices.append(self._sweep(sequence, configs, sweepers[1:], updates))
 
         # stack all slices in a single array, along the current outermost dimension
-        return np.stack(state_slices), np.stack(coeff_slices)
+        return np.stack(state_slices)
 
     def _evolve(
         self, sequence: PulseSequence, configs: dict[str, Config], updates: dict
@@ -194,7 +225,7 @@ class EmulatorController(Controller):
         measurement_times[measurement_times < SAMPLING_INTERVAL] = SAMPLING_INTERVAL
         tlist_, index = np.unique(measurement_times, return_inverse=True)
 
-        results = self.engine.evolve(
+        results, simulation_configs = self.engine.evolve(
             hamiltonian=hamiltonian,
             initial_state=config.initial_state(self.engine),
             time=np.concatenate(([0], tlist_)),
@@ -202,14 +233,13 @@ class EmulatorController(Controller):
             time_hamiltonian=time_hamiltonian,
         )
         states = np.stack([s.full() for s in results.states[1:]])[index]
-        coefficients = (
-            time_hamiltonian.coefficients if time_hamiltonian is not None else None
-        )
-        return states, coefficients
+
+        self._dump_simulation(hamiltonian, time_hamiltonian, states, simulation_configs)
+        return states
 
     def _pulse_hamiltonian(
         self, sequence: PulseSequence, configs: dict[str, Config]
-    ) -> OperatorEvolution | None:
+    ) -> OperatorEvolution:
         """Construct Hamiltonian time dependent term for qutip simulation."""
 
         # processed sampling rate; field `sampling_rate` of the `EmulatorController`
@@ -217,23 +247,16 @@ class EmulatorController(Controller):
         # the oscillation and correctly solve the system evolution, hence we
         # set a nyquist frequency to define the timesteps in order to compute the solution
         times = tlist(sequence)
-        channels, raw_coefficients = [], []
+        channels: list[tuple[Operator, NDArray]] = []
         for operator, waveforms in hamiltonians(
             sequence, configs, self.engine, self.sampling_rate
         ):
-            raw = channel_coefficients(
+            wf_coeffs = channel_coefficients(
                 waveforms, sampling_rate=self.sampling_rate, times=times
             )
-            channels.append(operator)
-            raw_coefficients.append(raw)
+            channels.append((operator, wf_coeffs))
 
-        return (
-            OperatorEvolution(
-                operators=channels, coefficients=np.stack(raw_coefficients), times=times
-            )
-            if len(channels) > 0
-            else None
-        )
+        return OperatorEvolution(operators=channels, times=times)
 
 
 def update_sequence(sequence: PulseSequence, updates: dict) -> PulseSequence:
@@ -306,7 +329,7 @@ def channel_coefficients(
     waveforms: Iterable[Modulated],
     sampling_rate: int,
     times: NDArray,
-) -> BSpline:
+) -> NDArray:
     """
     Generate a B-spline interpolation of waveforms over a time evolution.
     This function processes a sequence of pulses, accumulating their waveforms
@@ -335,5 +358,4 @@ def channel_coefficients(
         cumulative_phase += pulse.phase
         cumulative_time = next_pulse_time
 
-    # return pulse_waveforms
     return pulse_waveforms
