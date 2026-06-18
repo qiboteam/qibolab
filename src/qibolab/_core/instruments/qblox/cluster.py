@@ -288,6 +288,8 @@ class Cluster(Controller):
 
     def _disconnect_and_desync_sequencers(self) -> None:
         """Clear the relevant module settings before applying a new sequence."""
+        # see FAQ in docs for disconnect_outputs() and disconnect_inputs()
+        # https://docs.qblox.com/en/v2025.12.0/products/qblox_instruments/faq.html
         for module in self._modules.values():
             # Disconnect outputs because `self.configure_sequencers` creates new
             # connections between the indexed sequencer and various inputs/outputs.
