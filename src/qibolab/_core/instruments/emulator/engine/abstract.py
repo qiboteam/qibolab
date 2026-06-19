@@ -7,6 +7,7 @@ from typing import Protocol
 
 import numpy as np
 from numpy.typing import NDArray
+from scipy.interpolate import BSpline, PPoly
 
 from qibolab._core.serialize import Model
 
@@ -115,18 +116,27 @@ class SimulationEngine(Model, ABC):
         """Basis operator for n levels system."""
 
 
-def jax_interpolation(
-    spline_x: NDArray, spline_y: NDArray
-) -> Callable[[NDArray], Iterable[float]]:
+def jax_interpolation(spline: BSpline) -> Callable[[NDArray], Iterable[float]]:
     """Convert a SciPy spline into a JAX-traceable piecewise polynomial.
 
     SciPy ``BSpline.__call__`` cannot be traced by JAX, so the points and coefficients are
     evaluated with a Horner scheme on the JAX side, preserving the cubic interpolation
     of the QuTiP engine exactly.
     """
+    # TODO: maybe can be replaced by diffrax interpolation methods
+    import jax.numpy as jnp
 
-    from diffrax import CubicInterpolation, backward_hermite_coefficients
+    polynomial = PPoly.from_spline(spline)
+    breaks = jnp.asarray(polynomial.x)
+    coefficients = jnp.asarray(polynomial.c)
 
-    spline_c = backward_hermite_coefficients(spline_x, spline_y)
+    def evaluate(t):
+        index = jnp.searchsorted(breaks, t, side="right") - 1
+        index = jnp.clip(index, 0, breaks.size - 2)
+        shifted_t = t - breaks[index]
+        value = coefficients[0, index]
+        for coefficient in coefficients[1:]:
+            value = value * shifted_t + coefficient[index]
+        return value
 
-    return CubicInterpolation(spline_x, spline_c).evaluate
+    return evaluate
