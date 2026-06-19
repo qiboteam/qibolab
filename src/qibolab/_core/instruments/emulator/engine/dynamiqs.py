@@ -3,7 +3,6 @@
 from collections.abc import Iterable
 from dataclasses import dataclass
 from functools import cached_property
-from pathlib import Path
 from typing import Any, Literal
 
 import numpy as np
@@ -154,7 +153,6 @@ class DynamiqsEngine(SimulationEngine):
         time: Iterable[float],
         time_hamiltonian: OperatorEvolution = None,
         collapse_operators: list[Operator] = None,
-        save_evolution: Path | None = None,
         **kwargs,
     ) -> DynamiqsEvolutionResult:
         """Evolve the system."""
@@ -164,15 +162,10 @@ class DynamiqsEngine(SimulationEngine):
         hamiltonian = self.engine.constant(_unwrap(hamiltonian))
         if time_hamiltonian is not None:
             times = time_hamiltonian.times
-            coefficients = [
-                make_interp_spline(times, coefficient, k=SPLINE_INTERP_ORDER)
-                for coefficient in time_hamiltonian.coefficients
-            ]
-            for operator, coefficient in zip(
-                time_hamiltonian.operators, coefficients, strict=True
-            ):
+            for operator, coefficient in time_hamiltonian.operators:
+                spline = make_interp_spline(times, coefficient, k=SPLINE_INTERP_ORDER)
                 hamiltonian += self.engine.modulated(
-                    jax_interpolation(coefficient), _unwrap(operator)
+                    jax_interpolation(spline), _unwrap(operator)
                 )
 
         method = kwargs.pop("method", self._method(time))
@@ -187,14 +180,7 @@ class DynamiqsEngine(SimulationEngine):
             **kwargs,
         )
 
-        if save_evolution is not None:
-            self.dump_results(
-                hamiltonian=hamiltonian,
-                sim_results=result,
-                dump_dir=save_evolution,
-            )
-
-        return DynamiqsEvolutionResult(result)
+        return DynamiqsEvolutionResult(result), {"engine": "dynamiqs"}
 
     def create(self, n: int) -> Operator:
         """Create operator for n levels system."""
