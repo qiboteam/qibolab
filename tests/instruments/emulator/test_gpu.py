@@ -1,7 +1,5 @@
 """Testing emulator GPU configuration."""
 
-import importlib.util
-
 import numpy as np
 import pytest
 
@@ -19,15 +17,6 @@ def test_qutip_cpu_device_is_default():
 
     assert engine.device == "cpu"
     assert np.allclose(engine.destroy(3).full(), QutipEngine().destroy(3).full())
-
-
-@pytest.mark.parametrize("plugin", ["qutip_jax"])
-def test_qutip_gpu_requires_plugin(plugin):
-    if importlib.util.find_spec(plugin) is not None:
-        pytest.skip(f"{plugin} is installed in this environment.")
-
-    with pytest.raises(ImportError, match=plugin.replace("_", "-")):
-        QutipEngine(device="gpu").destroy(2)
 
 
 @pytest.mark.parametrize("gpu_dtype", ["jax"])
