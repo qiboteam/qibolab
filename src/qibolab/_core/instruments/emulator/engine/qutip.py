@@ -1,8 +1,10 @@
 from collections.abc import Callable, Iterable
 from functools import cached_property
+from typing import Literal
 
 import numpy as np
 from numpy.typing import NDArray
+from scipy.interpolate import make_interp_spline
 
 from .abstract import (
     INTEGRATION_MAX_TIME_STEP,
@@ -21,36 +23,26 @@ __all__ = ["QutipEngine"]
 class QutipEngine(SimulationEngine):
     """Qutip simulation engine."""
 
+    device: Literal["cpu", "gpu"] = "cpu"
+
     @cached_property
     def engine(self):
         """Return the qutip engine."""
         # TODO: maybe it can be improved
         import qutip as qt
 
-        return qt
-
-    @cached_property
-    def device(self) -> str:
-
-        import jax
-
-        devices = jax.devices()
-        if any(device.platform == "gpu" for device in devices):
-            return "gpu"
-        else:
-            return "cpu"
-
-    @cached_property
-    def accelerator_engine(self):
-
         if self.device == "gpu":
             import jax
 
-            return jax
-        else:
-            import scipy.interpolate
+            devices = jax.devices()
+            if self.device == "gpu" and any(
+                device.platform == "gpu" for device in devices
+            ):
+                import qutip_jax  # noqa: F401
+            else:
+                object.__setattr__(self, "device", "cpu")
 
-            return scipy.interpolate
+        return qt
 
     def _to_device(self, op: Operator) -> Operator:
         """Move a QuTiP operator to the selected data layer."""
@@ -60,12 +52,13 @@ class QutipEngine(SimulationEngine):
         self, x: NDArray, y: NDArray
     ) -> Callable[[NDArray], Iterable[float]]:
 
+        spline = make_interp_spline(x, y, k=SPLINE_INTERP_ORDER)
         if self.device == "gpu":
-            return self.accelerator_engine.jit(jax_interpolation(x, y))
+            import jax
+
+            return jax.jit(jax_interpolation(spline))
         else:
-            return self.accelerator_engine.make_interp_spline(
-                x, y, k=SPLINE_INTERP_ORDER
-            )
+            return spline
 
     def evolve(
         self,
@@ -83,7 +76,6 @@ class QutipEngine(SimulationEngine):
         # below calls ``op.to(self.gpu_dtype)``, which only works once the
         # qutip-jax/qutip-cupy plugin has registered that dtype; this also
         # validates ``gpu_dtype`` early instead of part-way through the evolution
-        _ = self.engine
         time_diff = np.diff(time)
         nsteps = max(time_diff) / INTEGRATION_MIN_TIME_STEP * INTEGRATION_MULTIPLIER
 
