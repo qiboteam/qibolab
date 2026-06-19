@@ -1,5 +1,7 @@
+import json
 from collections.abc import Callable, Iterable
 from functools import cached_property
+from pathlib import Path
 from typing import Literal
 
 import numpy as np
@@ -7,10 +9,13 @@ from numpy.typing import NDArray
 from scipy.interpolate import make_interp_spline
 
 from .abstract import (
+    HAMILTONIAN_FILENAME,
     INTEGRATION_MAX_TIME_STEP,
     INTEGRATION_MIN_TIME_STEP,
     INTEGRATION_MULTIPLIER,
+    SIMULATOR_CONFIG,
     SPLINE_INTERP_ORDER,
+    SWEEP_SIMULATION_FILENAME,
     Operator,
     OperatorEvolution,
     SimulationEngine,
@@ -141,3 +146,35 @@ class QutipEngine(SimulationEngine):
     def basis(self, dim: int, state: int) -> Operator:
         """Basis operator for n levels system."""
         return self._to_device(self.engine.basis(dimensions=dim, n=state))
+
+
+def load_simulation(
+    simulation_path: Path | str, sequence_index: int, sweep_index: int
+) -> tuple[OperatorEvolution, np.typing.NDArray, np.typing.NDArray, dict]:
+    """Load a saved Qutip simulation from disk given a specific pulse sequence and a specific index of the parameter sweep to load
+    (used to select the correct time-coefficients and state files).
+    """
+
+    if isinstance(simulation_path, str):
+        simulation_path = Path(simulation_path)
+
+    simulated_sequence_path = simulation_path / f"sequence_{sequence_index}"
+    if not simulated_sequence_path.is_dir():
+        raise NotADirectoryError()
+
+    hamiltonians = np.load(simulated_sequence_path / (HAMILTONIAN_FILENAME + ".npy"))
+    sweep_sim = np.load(
+        simulated_sequence_path / (SWEEP_SIMULATION_FILENAME + f"_{sweep_index}.npz")
+    )
+    result_states = sweep_sim["results"]
+    time_coeffs = sweep_sim["time_coeffs"]
+
+    with open(simulated_sequence_path / (SIMULATOR_CONFIG + ".json")) as f:
+        sim_configs = json.load(f)
+
+    system = [hamiltonians[0]] + [
+        [ham, coeffs] for ham, coeffs in zip(hamiltonians[1:], time_coeffs[1:])
+    ]
+    timesteps = time_coeffs[0]
+
+    return system, result_states, timesteps, sim_configs
