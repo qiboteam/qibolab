@@ -416,6 +416,34 @@
                         }
                     ]
                 ],
+                "CR": [
+                    [
+                        "0/drive1",
+                        {
+                            "kind": "pulse",
+                            "duration": 56.95794434760026,
+                            "amplitude": 0.1,
+                            "envelope": {
+                                "kind": "rectangular"
+                            },
+                            "relative_phase": 6.268132788666496,
+                            "chirp": null
+                        }
+                    ],
+                    [
+                        "1/drive",
+                        {
+                            "kind": "pulse",
+                            "duration": 56.95794434760026,
+                            "amplitude": 0.0,
+                            "envelope": {
+                                "kind": "rectangular"
+                            },
+                            "relative_phase": 1.4847118315619126,
+                            "chirp": null
+                        }
+                    ]
+                ],
                 "iSWAP": null
             }
         }
