@@ -107,6 +107,7 @@ class TwoQubitNatives(NativeContainer):
 
     CZ: Annotated[Native | None, {"symmetric": True}] = None
     CNOT: Annotated[Native | None, {"symmetric": False}] = None
+    CR: Annotated[Native | None, {"symmetric": False}] = None
     iSWAP: Annotated[Native | None, {"symmetric": True}] = None
 
     @property

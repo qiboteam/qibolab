@@ -295,33 +295,27 @@
                         "0/drive1",
                         {
                             "kind": "pulse",
-                            "duration": 56.0,
+                            "duration": 56.95794434760026,
                             "amplitude": 0.1,
                             "envelope": {
                                 "kind": "rectangular"
                             },
-                            "relative_phase": 0.0,
+                            "relative_phase": 6.268132788666496,
                             "chirp": null
                         }
                     ],
                     [
                         "1/drive",
                         {
-                            "kind": "pulse",
-                            "duration": 56.0,
-                            "amplitude": 0.0,
-                            "envelope": {
-                                "kind": "rectangular"
-                            },
-                            "relative_phase": 0.0,
-                            "chirp": null
+                            "kind": "delay",
+                            "duration": 56.95794434760026
                         }
                     ],
                     [
                         "0/drive",
                         {
                             "kind": "delay",
-                            "duration": 56.0
+                            "duration": 56.95794434760026
                         }
                     ],
                     [
@@ -357,33 +351,27 @@
                         "0/drive1",
                         {
                             "kind": "pulse",
-                            "duration": 56.0,
-                            "amplitude": 0.1,
+                            "duration": 56.95794434760026,
+                            "amplitude": -0.1,
                             "envelope": {
                                 "kind": "rectangular"
                             },
-                            "relative_phase": 3.141592653589793,
+                            "relative_phase": 6.268132788666496,
                             "chirp": null
                         }
                     ],
                     [
                         "1/drive",
                         {
-                            "kind": "pulse",
-                            "duration": 56.0,
-                            "amplitude": 0.0,
-                            "envelope": {
-                                "kind": "rectangular"
-                            },
-                            "relative_phase": 3.141592653589793,
-                            "chirp": null
+                            "kind": "delay",
+                            "duration": 56.95794434760026
                         }
                     ],
                     [
                         "0/drive",
                         {
                             "kind": "delay",
-                            "duration": 56.0
+                            "duration": 56.95794434760026
                         }
                     ],
                     [
@@ -413,6 +401,34 @@
                         {
                             "kind": "delay",
                             "duration": 20.0
+                        }
+                    ]
+                ],
+                "CR": [
+                    [
+                        "0/drive1",
+                        {
+                            "kind": "pulse",
+                            "duration": 56.95794434760026,
+                            "amplitude": 0.1,
+                            "envelope": {
+                                "kind": "rectangular"
+                            },
+                            "relative_phase": 6.268132788666496,
+                            "chirp": null
+                        }
+                    ],
+                    [
+                        "1/drive",
+                        {
+                            "kind": "pulse",
+                            "duration": 56.95794434760026,
+                            "amplitude": 0.0,
+                            "envelope": {
+                                "kind": "rectangular"
+                            },
+                            "relative_phase": 1.4847118315619126,
+                            "chirp": null
                         }
                     ]
                 ],
