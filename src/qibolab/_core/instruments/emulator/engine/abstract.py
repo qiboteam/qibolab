@@ -107,7 +107,7 @@ class SimulationEngine(Model, ABC):
 
     @abstractmethod
     def expand(
-        self, op: Operator, targets: int | list[int], dims: list[int]
+        self, op: Operator, dims: list[int], targets: int | list[int]
     ) -> Operator:
         """Expand operator in larger Hilbert space."""
 

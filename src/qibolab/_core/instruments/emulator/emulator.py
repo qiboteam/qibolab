@@ -25,7 +25,13 @@ from qibolab._core.pulses import (
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import ParallelSweepers
 
-from .engine import Operator, OperatorEvolution, QutipEngine, SimulationEngine
+from .engine import (
+    Operator,
+    OperatorEvolution,
+    QutipEngine,
+    SimulationEngine,
+    TimeDependentOperator,
+)
 from .engine.abstract import (
     HAMILTONIAN_FILENAME,
     SIMULATOR_CONFIG,
@@ -248,14 +254,19 @@ class EmulatorController(Controller):
         # the oscillation and correctly solve the system evolution, hence we
         # set a nyquist frequency to define the timesteps in order to compute the solution
         times = tlist(sequence)
-        channels: list[tuple[Operator, NDArray]] = []
-        for operator, waveforms in hamiltonians(
-            sequence, configs, self.engine, self.sampling_rate
-        ):
-            wf_coeffs = channel_coefficients(
-                waveforms, sampling_rate=self.sampling_rate, times=times
+        channels: list[TimeDependentOperator] = [
+            TimeDependentOperator(
+                (
+                    operator,
+                    channel_coefficients(
+                        waveforms, sampling_rate=self.sampling_rate, times=times
+                    ),
+                )
             )
-            channels.append((operator, wf_coeffs))
+            for operator, waveforms in hamiltonians(
+                sequence, configs, self.engine, self.sampling_rate
+            )
+        ]
 
         return OperatorEvolution(operators=channels, times=times)
 
@@ -295,7 +306,9 @@ def hamiltonian(
 ) -> tuple[Operator, list[Modulated]]:
     n = hamiltonian.transmon_levels
     op = engine.expand(
-        config.operator(n=n, engine=engine), hamiltonian.dims, hilbert_space_index
+        op=config.operator(n=n, engine=engine),
+        targets=hilbert_space_index,
+        dims=hamiltonian.dims,
     )
     waveforms = (
         waveform(pulse, config, hamiltonian.qubits[hilbert_space_index], sampling_rate)
