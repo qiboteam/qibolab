@@ -139,9 +139,9 @@ class QutipEngine(SimulationEngine):
         """Tensor product of a list of operators."""
         return self._to_device(self.engine.tensor(*operators))
 
-    def expand(self, op: Operator, targets: int | list[int], dims: list[int]):
+    def expand(self, op: Operator, dims: list[int], targets: int | list[int]):
         """Expand operator in larger Hilbert space."""
-        return self._to_device(self.engine.expand_operator(op, targets, dims))
+        return self._to_device(self.engine.expand_operator(op, dims, targets))
 
     def basis(self, dim: int, state: int) -> Operator:
         """Basis operator for n levels system."""

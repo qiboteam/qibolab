@@ -199,13 +199,13 @@ class DynamiqsEngine(SimulationEngine):
         return DynamiqsOperator(self.engine.tensor(*[_unwrap(op) for op in operators]))
 
     def expand(
-        self, op: Operator, targets: int | list[int], dims: list[int]
+        self, op: Operator, dims: list[int], targets: int | list[int]
     ) -> Operator:
         """Expand operator in larger Hilbert space."""
         # The current emulator calls this method with QuTiP's argument order:
         # ``expand_operator(op, dims, targets)``.
-        dimensions = list(targets)
-        target_subsystems = [dims] if isinstance(dims, int) else list(dims)
+        dimensions = list(dims)
+        target_subsystems = [targets] if isinstance(targets, int) else list(targets)
         op_array = np.asarray(_unwrap(op).to_jax())
         return DynamiqsOperator(
             self.engine.asqarray(
