@@ -280,6 +280,7 @@ def tlist(sequence: PulseSequence) -> NDArray:
     or Readout operation, it is excluded from the duration calculation.
     """
 
+    # TODO: maybe this can be a fragility in the case of 0 duration pulses.
     end = max(sequence.duration, SAMPLING_INTERVAL)
     return np.arange(0, end, SAMPLING_INTERVAL)
 
@@ -343,11 +344,16 @@ def channel_coefficients(
     cumulative_phase = 0
     cumulative_time = 0
     for pulse in waveforms:
-        next_pulse_time = cumulative_time + pulse.duration
-        pulse_times_idx = (times >= cumulative_time) & (times < next_pulse_time)
+        times_ = times - cumulative_time  # local times
+        # in this mask we take into account finite sampling rate with might mismatch with timestep of the emulator
+        # (i.e. float time durations and int sampling_rate)
+        pulse_times_idx = (times_ >= 0) & (
+            times_ < int(pulse.duration * sampling_rate) / sampling_rate
+        )
         times_samples = np.floor(
             (times[pulse_times_idx] - cumulative_time) * sampling_rate
         ).astype(int)
+
         # in case of virtual operations (such as VirtualZ or in general
         # zero-duration pulses), we apply the phase jump without
         # affecting the waveform
@@ -357,6 +363,6 @@ def channel_coefficients(
             )
 
         cumulative_phase += pulse.phase
-        cumulative_time = next_pulse_time
+        cumulative_time += pulse.duration
 
     return pulse_waveforms

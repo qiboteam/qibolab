@@ -85,12 +85,12 @@ class Pulse(_PulseLike):
 
     def i(self, sampling_rate: float) -> Waveform:
         """Compute the envelope of the waveform i component."""
-        samples = np.ceil(self.duration * sampling_rate).astype(int)
+        samples = int(self.duration * sampling_rate)
         return self.amplitude * self.envelope.i(samples)
 
     def q(self, sampling_rate: float) -> Waveform:
         """Compute the envelope of the waveform q component."""
-        samples = np.ceil(self.duration * sampling_rate).astype(int)
+        samples = int(self.duration * sampling_rate)
         return self.amplitude * self.envelope.q(samples)
 
     def envelopes(self, sampling_rate: float) -> IqWaveform:
