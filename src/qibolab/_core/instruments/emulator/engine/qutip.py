@@ -1,4 +1,5 @@
 import json
+import os
 from collections.abc import Callable, Iterable
 from functools import cached_property
 from pathlib import Path
@@ -19,10 +20,10 @@ from .abstract import (
     Operator,
     OperatorEvolution,
     SimulationEngine,
-    jax_interpolation,
+    TimeDependentOperator,
 )
 
-__all__ = ["QutipEngine"]
+__all__ = ["QutipEngine", "load_simulation"]
 
 
 class QutipEngine(SimulationEngine):
@@ -61,6 +62,9 @@ class QutipEngine(SimulationEngine):
         if self.device == "gpu":
             import jax
 
+            from .gpu_interpolation import jax_interpolation
+
+            # TODO: check if there is a more efficient implementation for jax_interpolation
             return jax.jit(jax_interpolation(spline))
         else:
             return spline
@@ -149,14 +153,25 @@ class QutipEngine(SimulationEngine):
 
 
 def load_simulation(
-    simulation_path: Path | str, sequence_index: int, sweep_index: int
-) -> tuple[OperatorEvolution, np.typing.NDArray, np.typing.NDArray, dict]:
-    """Load a saved Qutip simulation from disk given a specific pulse sequence and a specific index of the parameter sweep to load
-    (used to select the correct time-coefficients and state files).
-    """
+    simulation_path: os.PathLike | Path | str, sequence_index: int, sweep_index: int
+) -> tuple[OperatorEvolution, np.typing.NDArray, dict]:
+    """Load simulation results from disk.
 
-    if isinstance(simulation_path, str):
-        simulation_path = Path(simulation_path)
+    Args:
+        simulation_path: Path to the simulation directory.
+        sequence_index: Index of the sequence to load.
+        sweep_index: Index of the sweep to load.
+
+    Returns:
+        A tuple containing:
+            - system: List with Hamiltonian and time-dependent operators.
+            - result_states: Array of simulated result states.
+            - sim_configs: Dictionary of simulation configuration parameters.
+
+    Raises:
+        NotADirectoryError: If the sequence directory does not exist.
+    """
+    simulation_path = Path(simulation_path)
 
     simulated_sequence_path = simulation_path / f"sequence_{sequence_index}"
     if not simulated_sequence_path.is_dir():
@@ -172,9 +187,11 @@ def load_simulation(
     with open(simulated_sequence_path / (SIMULATOR_CONFIG + ".json")) as f:
         sim_configs = json.load(f)
 
-    system = [hamiltonians[0]] + [
-        [ham, coeffs] for ham, coeffs in zip(hamiltonians[1:], time_coeffs[1:])
+    system = [Operator(hamiltonians[0])] + [
+        TimeDependentOperator([ham, coeffs])
+        for ham, coeffs in zip(hamiltonians[1:], time_coeffs[1:])
     ]
     timesteps = time_coeffs[0]
+    system_evo = OperatorEvolution(operators=system, times=timesteps)
 
-    return system, result_states, timesteps, sim_configs
+    return system_evo, result_states, sim_configs

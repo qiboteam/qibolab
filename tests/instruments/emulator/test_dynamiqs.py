@@ -10,10 +10,11 @@ from qibolab import AcquisitionType, AveragingMode, create_platform
 from qibolab._core.instruments.emulator.emulator import EmulatorController
 from qibolab._core.instruments.emulator.engine import DynamiqsEngine, QutipEngine
 from qibolab._core.instruments.emulator.engine.abstract import OperatorEvolution
+from qibolab._core.instruments.emulator.engine.gpu_interpolation import (
+    jax_interpolation,
+)
 
 pytest.importorskip("dynamiqs")
-
-from qibolab._core.instruments.emulator.engine.abstract import jax_interpolation
 
 PLATFORMS_DIR = Path(__file__).parent / "platforms"
 PLATFORM_NAMES = sorted(p.name for p in PLATFORMS_DIR.iterdir() if p.is_dir())
