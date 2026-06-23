@@ -257,6 +257,7 @@ class Cluster(Controller):
                 log.sequences(sequences_)
 
                 # then configure sequencers (including sequences upload)
+                self._disconnect_and_desync_sequencers()
                 sequencers, _sequencer_configs = self._configure_sequencers(
                     configs=configs,
                     acquisition=options_.acquisition_type,
@@ -291,9 +292,9 @@ class Cluster(Controller):
         # see FAQ in docs for disconnect_outputs() and disconnect_inputs()
         # https://docs.qblox.com/en/v2025.12.0/products/qblox_instruments/faq.html
         for module in self._modules.values():
-            # Disconnect outputs because `self.configure_sequencers` creates new
-            # connections between the indexed sequencer and various inputs/outputs.
-            # Existing connections would otherwise cause the operation to fail.
+            # Disconnect outputs because `SequencerConfig.apply` creates new connections
+            # between the indexed sequencer and various inputs/outputs. Existing
+            # connections would otherwise cause the operation to fail.
             module.disconnect_outputs()
             if module.is_qrm_type:
                 module.disconnect_inputs()
@@ -378,7 +379,6 @@ class Cluster(Controller):
                     module.is_rf_type,
                     sequence=sequences_[ch],
                 )
-                self._disconnect_and_desync_sequencers()
                 seqcfg.apply(sequencer)
                 # populate channel-to-sequencer mapping
                 sequencers[slot][ch] = idx
