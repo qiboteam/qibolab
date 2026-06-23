@@ -14,8 +14,8 @@ from .abstract import (
     Operator,
     OperatorEvolution,
     SimulationEngine,
-    jax_interpolation,
 )
+from .gpu_interpolation import jax_interpolation
 
 __all__ = ["DynamiqsEngine"]
 
@@ -220,6 +220,8 @@ class DynamiqsEngine(SimulationEngine):
 
     def save_operators(self) -> None:
         """Persist the static operators once per experiment."""
+        # TODO: this function is now deprecated since the saving is upstream in emulator.py;
+        # however is necessary to define the load_function for loading results in dynamiqs.
         return
 
 

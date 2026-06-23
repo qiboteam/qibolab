@@ -1,13 +1,11 @@
 """Abstract engine for platform emulation."""
 
 from abc import ABC, abstractmethod
-from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from typing import Protocol
 
 import numpy as np
 from numpy.typing import NDArray
-from scipy.interpolate import BSpline, PPoly
 
 from qibolab._core.serialize import Model
 
@@ -114,29 +112,3 @@ class SimulationEngine(Model, ABC):
     @abstractmethod
     def basis(self, n: int, state: int) -> Operator:
         """Basis operator for n levels system."""
-
-
-def jax_interpolation(spline: BSpline) -> Callable[[NDArray], Iterable[float]]:
-    """Convert a SciPy spline into a JAX-traceable piecewise polynomial.
-
-    SciPy ``BSpline.__call__`` cannot be traced by JAX, so the points and coefficients are
-    evaluated with a Horner scheme on the JAX side, preserving the cubic interpolation
-    of the QuTiP engine exactly.
-    """
-    # TODO: maybe can be replaced by diffrax interpolation methods
-    import jax.numpy as jnp
-
-    polynomial = PPoly.from_spline(spline)
-    breaks = jnp.asarray(polynomial.x)
-    coefficients = jnp.asarray(polynomial.c)
-
-    def evaluate(t):
-        index = jnp.searchsorted(breaks, t, side="right") - 1
-        index = jnp.clip(index, 0, breaks.size - 2)
-        shifted_t = t - breaks[index]
-        value = coefficients[0, index]
-        for coefficient in coefficients[1:]:
-            value = value * shifted_t + coefficient[index]
-        return value
-
-    return evaluate

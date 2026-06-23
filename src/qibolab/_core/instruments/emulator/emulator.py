@@ -1,6 +1,7 @@
 """Emulator controller."""
 
 import json
+import os
 from collections import defaultdict
 from collections.abc import Iterable
 from functools import reduce
@@ -10,6 +11,7 @@ from typing import cast
 
 import numpy as np
 from numpy.typing import NDArray
+from pydantic import model_validator
 
 from qibolab._core.components import Config
 from qibolab._core.components.configs import AcquisitionConfig
@@ -60,17 +62,18 @@ class EmulatorController(Controller):
     """Sampling rate used during simulation."""
     engine: SimulationEngine = QutipEngine()
     """SimulationEngine. Default is QutipEngine."""
-    save_dir: Path | None = None
+    save_dir: os.PathLike | str | Path | None = None
     """Flag for saving the full system evolution computed from the simulation
     backend. In order to set it True modify `platform.py` file in the platform folder."""
 
-    # internal, should not be modified
-    _static_dump_flag: bool = 0
-    """It indicates whether I've already dumped all the static components."""
-    _sequence_counter: int = 0
-    """It keeps count on how the sequence number we are simulating."""
-    _sweep_counter: int = 0
-    """It keeps count on how the sweeper number we are simulating."""
+    @model_validator(mode="after")
+    def validate_save_dir(self):
+        if self.save_dir is not None:
+            # converting every possible output as a pathlib.Path object
+            object.__setattr__(self, "save_dir", Path(self.save_dir))
+            if self.save_dir.exists():
+                raise FileExistsError("The given data folder already exists.")
+        return self
 
     @property
     def sampling_rate(self) -> float:
@@ -88,6 +91,7 @@ class EmulatorController(Controller):
 
     def _dump_simulation(
         self,
+        sequence_idx,
         static_ham: Operator,
         evolution: OperatorEvolution,
         states: NDArray,
@@ -96,35 +100,42 @@ class EmulatorController(Controller):
         """Write operators (once), time coefficients (n-d), density matrices (n-d)."""
 
         if self.save_dir is not None:
-            sequence_dir = self.save_dir / f"sequence_{self._sequence_counter}"
+            sequence_dir = self.save_dir / f"sequence_{sequence_idx}"
             sequence_dir.mkdir(parents=True, exist_ok=True)
 
             # list of file coefficients; NOTE: the first element is always the simulation timesteps array
             time_coefficients: list[NDArray] = np.stack(
                 [evolution.times] + [c for _, c in evolution.operators]
             )
-            if not self._static_dump_flag:
+
+            # solver configuration file path
+            json_filename = sequence_dir / (SIMULATOR_CONFIG + ".json")
+            static_hamiltonian_filename = sequence_dir / (HAMILTONIAN_FILENAME + ".npy")
+
+            # check if the the sweeper-independent data for the current sequence have already been dumped
+            if not static_hamiltonian_filename.exists():
                 # list of file operators of the pulse sequence; NOTE: the first element is always the time independent hamiltonian
-                operators: list[NDArray] = np.stack(
+                operators = np.stack(
                     [static_ham.full()] + [op.full() for op, _ in evolution.operators]
                 )
-                np.save(sequence_dir / (HAMILTONIAN_FILENAME + ".npy"), operators)
+                np.save(static_hamiltonian_filename, operators)
 
-                json_filename = sequence_dir / (SIMULATOR_CONFIG + ".json")
+            if not json_filename.exists():
                 with open(json_filename, "w") as f:
                     json.dump(simulation_config, f)
 
-                # saving only once per sequence the sweeper-independent operators
-                self._static_dump_flag = True
-
+            # NOTE: this might crash if the process is parallelized, to be review once we enable parallelization
+            sweep_idx = sum(
+                1
+                for file in sequence_dir.iterdir()
+                if file.is_file() and SWEEP_SIMULATION_FILENAME in file.name
+            )
             np.savez(
-                sequence_dir
-                / (SWEEP_SIMULATION_FILENAME + f"_{self._sweep_counter}.npz"),
+                sequence_dir / (SWEEP_SIMULATION_FILENAME + f"_{sweep_idx}.npz"),
                 time_coeffs=time_coefficients,
                 results=states,
                 sim_config=simulation_config,
             )
-            self._sweep_counter += 1
 
     def play(
         self,
@@ -145,7 +156,7 @@ class EmulatorController(Controller):
 
         results_to_process = (
             self._play_sequence(configs, sequence, options, sweepers)
-            for sequence in sequences_
+            for sequence in enumerate(sequences_)
         )
 
         return reduce(or_, results_to_process)
@@ -153,7 +164,7 @@ class EmulatorController(Controller):
     def _play_sequence(
         self,
         configs: dict[str, Config],
-        sequence: PulseSequence,
+        sequence: tuple[int, PulseSequence],
         options: ExecutionParameters,
         sweepers: list[ParallelSweepers],
     ):
@@ -163,21 +174,18 @@ class EmulatorController(Controller):
         into a structured results object containing quantum states and measurement data.
         """
         sweep_states = self._sweep(sequence, configs, sweepers)
-        self._sequence_counter += 1
-        self._static_dump_flag = False
-        self._sweep_counter = 0
         hamiltonian = cast(HamiltonianConfig, configs["hamiltonian"])
         return results(
             # states in computational basis
             states=sweep_states,
-            sequence=sequence,
+            sequence=sequence[1],
             hamiltonian=hamiltonian,
             options=options,
         )
 
     def _sweep(
         self,
-        sequence: PulseSequence,
+        sequence: tuple[int, PulseSequence],
         configs: dict[str, Config],
         sweepers: list[ParallelSweepers],
         updates: dict | None = None,
@@ -213,7 +221,10 @@ class EmulatorController(Controller):
         return np.stack(state_slices)
 
     def _evolve(
-        self, sequence: PulseSequence, configs: dict[str, Config], updates: dict
+        self,
+        sequence_tuple: tuple[int, PulseSequence],
+        configs: dict[str, Config],
+        updates: dict,
     ) -> NDArray:
         """Evolve a pulse sequence on the quantum emulator.
 
@@ -221,6 +232,8 @@ class EmulatorController(Controller):
         the time-dependent Hamiltonian, evolves the initial state with optional collapse
         operators, and returns the resulting measurement data.
         """
+        sequence_identifier, sequence = sequence_tuple
+
         sequence_ = update_sequence(sequence, updates)
         configs_ = update_configs(configs, updates)
         config = cast(HamiltonianConfig, configs_["hamiltonian"])
@@ -241,7 +254,13 @@ class EmulatorController(Controller):
         )
         states = np.stack([s.full() for s in results.states[1:]])[index]
 
-        self._dump_simulation(hamiltonian, time_hamiltonian, states, simulation_configs)
+        self._dump_simulation(
+            sequence_identifier,
+            hamiltonian,
+            time_hamiltonian,
+            states,
+            simulation_configs,
+        )
         return states
 
     def _pulse_hamiltonian(
