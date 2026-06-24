@@ -34,7 +34,7 @@ def label(line: Lineable, label: str) -> Line:
 MAX_PARAM = {
     Parameter.amplitude: 2**15 - 1,
     Parameter.offset: 2**15 - 1,
-    Parameter.relative_phase: 1e9,
+    Parameter.phase: 1e9,
     Parameter.frequency: 2e9,
 }
 """Maximum range for parameters.
@@ -60,11 +60,16 @@ def convert(value: float, kind: Parameter) -> float:
     """Convert sweeper value in assembly units."""
     if kind is Parameter.amplitude:
         return value * MAX_PARAM[kind]
-    if kind is Parameter.relative_phase:
+    if kind in (Parameter.relative_phase, Parameter.phase):
         # TODO: the following is actually redundant, choose what to keep
         # most likely the maximum value, set to 1e9, is something like 2**30 (not sure
         # why not 2**32), and the three % operations are all doing the same
-        return ((value % (2 * np.pi)) / (2 * np.pi)) % 1.0 * MAX_PARAM[kind] % (2**32)
+        return (
+            ((value % (2 * np.pi)) / (2 * np.pi))
+            % 1.0
+            * MAX_PARAM[Parameter.phase]
+            % (2**32)
+        )
     if kind is Parameter.frequency:
         return 4 * value % (2**32)
     if kind is Parameter.offset:
