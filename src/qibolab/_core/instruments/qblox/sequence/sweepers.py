@@ -39,8 +39,10 @@ class ParamRole(Enum):
     "Channel offset."
     AMPLITUDE = auto(), Parameter.amplitude
     "Pulse amplitude."
-    PHASE = auto(), Parameter.relative_phase
+    RELATIVE_PHASE = auto(), Parameter.relative_phase
     "Pulse relative phase."
+    PHASE = auto(), Parameter.phase
+    "Virtual Z phase."
     DURATION = auto(), Parameter.duration
     "Pulse duration."
     PULSE_I = auto(), Parameter.duration
