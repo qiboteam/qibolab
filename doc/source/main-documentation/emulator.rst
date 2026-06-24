@@ -59,3 +59,11 @@ To accurately resolve qubit dynamics and capture all contributions from the time
 At present, state collapse is not implemented in the Qibolab emulator. As a result, this tool is not suitable for simulating mid-circuit measurements, and should be restricted to circuits in which all measurements occur simultaneously at the end of the computation. In physical systems, mid-circuit measurement induces wavefunction collapse; if the measured qubit is entangled with others, this process introduces correlations that condition the state of the remaining system. The current emulator does not account for such measurement-induced correlations, leading to intrinsically inaccurate results in these scenarios.
 
 An additional limitation arises from the handling of measurement ordering. In certain experimental protocols, the temporal order of measurements may vary across parameter sweeps, while the :paramref:`PulseSequence` object remains fixed and does not reflect such reordering. This discrepancy may introduce inconsistencies during the execution of :func:`qibolab._core.instruments.emulator.results.results`, which assumes alignment between the time-ordering structure and the acquisition pulses defined in the pulse sequence. If this alignment is violated, acquisition events may be incorrectly matched to simulation time steps, ultimately resulting in invalid outputs.
+
+
+Additionally, Qibolab emulator implements a confusion matrix for simulating mislabeling of the qubits states. At the time being we are assuming an uncorrelated model, in which the total confusion matrix is simply the Kroneker product between single qubits confusion matrix, which indeed does not take into account correlations between qubits due to quantum effects.
+
+This confusion matrix is applied directly to the states probabilities computed from the solution density matrix; then, if we call :math:`M_i` the matrix corresponding to the i-th qubit and :math:`P_{raw}` the output probability vector of the pde solver, we'll have that the 'corrected' probability vector :math:`P_{corr}` is:
+.. math::
+
+  P_{corr} = \left( \bigotimes_i M_i \right) P_{raw}

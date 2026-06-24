@@ -11,8 +11,6 @@ In the results processing also, when simulating SINGLESHOTS, we'll add two dimen
 - M_unique, which is the number of unique measurement times
 """
 
-from collections.abc import Iterable
-
 import numpy as np
 from numpy.typing import NDArray
 
@@ -24,8 +22,7 @@ from ...execution_parameters import (
 from ...identifier import ChannelId, Result
 from ...pulses import Acquisition, Align, PulseId, Readout
 from ...sequence import PulseSequence
-from .engine import Operator
-from .hamiltonians import HamiltonianConfig
+from .hamiltonians import HamiltonianConfig, Qubit
 
 
 def ndchoice(probabilities: NDArray, samples: int) -> NDArray:
@@ -112,24 +109,6 @@ def index(ch: ChannelId, hconfig: HamiltonianConfig) -> int:
     return hconfig.hilbert_space_index(target)
 
 
-def select_acquisitions(
-    states: list[Operator], acquisitions: Iterable[float], times: NDArray
-) -> NDArray:
-    """
-    Select and organize quantum state acquisitions based on acquisition times.
-
-    This function filters quantum states corresponding to specified acquisition times
-    and maps them to unique acquisition values. It uses binary search to find the
-    nearest state index for each acquisition time.
-
-    It returns a NumPy array containing the full density matrices
-    of the selected quantum states, indexed by the original acquisition order.
-    """
-    acq, index_pos = np.unique(list(acquisitions), return_inverse=True)
-    samples = np.minimum(np.searchsorted(times, acq), times.size - 1)
-    return np.stack([states[n].full() for n in samples])[index_pos]
-
-
 def _cyclic_results(
     state_probs: NDArray,
     sequence: PulseSequence,
@@ -156,10 +135,10 @@ def _cyclic_results(
     ]
     permuted_states_computational_idx = states_computational_idx[qubit_indices]
 
-    # applying a mask to select for each measurement the states that are outside the computational subspace, which are classified as 1
-    mask = permuted_states_computational_idx >= 1
+    # applying a mask to select for each measurement the 1 state
+    mask = permuted_states_computational_idx == 1
 
-    # res is a (M, *S, ...) array
+    # res is a (M, *S) array
     res = np.moveaxis(np.sum(np.where(mask, state_probs, 0), axis=-1), -1, 0)
 
     if options.acquisition_type is AcquisitionType.INTEGRATION:
@@ -214,19 +193,39 @@ def _singleshot_results(
     ]
 
     # we use inverse_map to expand back the sampled results
-    # res is a (M, M, Nshots, *S, ...) array
+    # res is a (M, M, Nshots, *S) array
     res = np.stack(np.unravel_index(sampled[inverse_map], hamiltonian.dims))[
         qubit_indices
     ]
-    # using np.einsum, so res is a (M, Nshots, *S, ...) array
+    # using np.einsum, so res is a (M, Nshots, *S) array
     res = np.einsum(res, np.array([0, 0] + [...]), np.array([0] + [...]))
-    res = np.clip(res, 0, 1)
 
     if options.acquisition_type is AcquisitionType.INTEGRATION:
         zeros = np.zeros(res.shape) if np.ndim(res) != 0 else 0.0
         res = np.stack((res, zeros), axis=-1)
 
     return dict(zip(acq_id, res))
+
+
+def add_confusion_matrix(
+    qubit_list: list[Qubit], matrix_a: np.ndarray | None = None
+) -> np.ndarray:
+    """Function for applying single qubit confusion matrix from the set of qubit present in the system."""
+
+    if matrix_a is None:
+        matrix_a = qubit_list[0].confusion_matrix
+
+    qubit_list.pop(0)
+    if len(qubit_list) != 0:
+        next_q = qubit_list[0]
+        matrix_b = (
+            next_q.confusion_matrix
+            if next_q.confusion_matrix is not None
+            else np.eye(next_q.transmon_levels)
+        )
+        matrix_a = add_confusion_matrix(qubit_list, np.kron(matrix_a, matrix_b))
+
+    return matrix_a
 
 
 def results(
@@ -252,6 +251,13 @@ def results(
         else _cyclic_results
     )
 
+    # apply the confusion matrix to the probability tensor
+    # TODO: add also 2 qubit contributions to confusion matrix that spoils the tensor product
+    probabilities = np.einsum(
+        "ij,...j",
+        add_confusion_matrix(list(hamiltonian.qubits.values())),
+        probabilities,
+    )
     return results(
         state_probs=probabilities,
         sequence=sequence,
