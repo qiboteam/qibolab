@@ -22,10 +22,15 @@ def random_states(space: tuple[int, ...], sweeps: tuple[int, ...] = (), nacq: in
 
 
 def test_marginalize_probability_preserves_sweep_axes():
-    probabilities = np.arange(1, 25).reshape(2, 12)
+    probabilities = np.arange(1, 49).reshape(2, 2, 12)
 
-    marginalized = _marginalize_probability(probabilities, [2, 3, 2], 1)
-    expected = probabilities.reshape(2, 2, 3, 2).sum(axis=(1, 3))
+    marginalized = _marginalize_probability(probabilities, [2, 3, 2], [1, 2])
+    expected = np.stack(
+        (
+            probabilities[:, 0].reshape(2, 2, 3, 2).sum(axis=(1, 3))[..., 1:].sum(-1),
+            probabilities[:, 1].reshape(2, 2, 3, 2).sum(axis=(1, 2))[..., 1:].sum(-1),
+        )
+    )
 
     np.testing.assert_allclose(marginalized, expected)
 

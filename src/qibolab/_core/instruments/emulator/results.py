@@ -113,13 +113,20 @@ def index(ch: ChannelId, hconfig: HamiltonianConfig) -> int:
 
 
 def _marginalize_probability(
-    probabilities: NDArray, dims: list[int], index: int
+    probabilities: NDArray, dims: list[int], indices: Iterable[int]
 ) -> NDArray:
-    """Marginalize full-system probabilities to a single Hilbert-space component."""
-    leading = probabilities.shape[:-1]
-    probabilities = probabilities.reshape(*leading, *dims)
-    axes = tuple(len(leading) + i for i in range(len(dims)) if i != index)
-    return probabilities.sum(axis=axes)
+    """Marginalize full-system probabilities to measured Hilbert-space components."""
+    res = []
+    for measurement, index in enumerate(indices):
+        distribution = probabilities[..., measurement, :]
+        leading = distribution.shape[:-1]
+        distribution = distribution.reshape(*leading, *dims)
+        axes = tuple(len(leading) + i for i in range(len(dims)) if i != index)
+        marginalized = distribution.sum(axis=axes)
+        # States outside the ground state are classified as 1.
+        res.append(marginalized[..., 1:].sum(axis=-1))
+
+    return np.stack(res)
 
 
 def select_acquisitions(
@@ -160,14 +167,7 @@ def _cyclic_results(
     ]
 
     # res is a (M, *S, ...) array
-    res = np.stack(
-        [
-            _marginalize_probability(
-                state_probs[..., measurement, :], hamiltonian.dims, qubit_index
-            )[..., 1:].sum(axis=-1)
-            for measurement, qubit_index in enumerate(qubit_indices)
-        ]
-    )
+    res = _marginalize_probability(state_probs, hamiltonian.dims, qubit_indices)
 
     if options.acquisition_type is AcquisitionType.INTEGRATION:
         res = np.random.normal(res, scale=0.001)
