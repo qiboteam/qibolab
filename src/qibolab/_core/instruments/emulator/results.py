@@ -123,7 +123,8 @@ def _marginalize_probability(
         distribution = distribution.reshape(*leading, *dims)
         axes = tuple(len(leading) + i for i in range(len(dims)) if i != index)
         marginalized = distribution.sum(axis=axes)
-        # States outside the ground state are classified as 1.
+        # States outside the ground state are classified as 1. This sum is done
+        # before stacking because measured subsystems may have different dimensions.
         res.append(marginalized[..., 1:].sum(axis=-1))
 
     return np.stack(res)
