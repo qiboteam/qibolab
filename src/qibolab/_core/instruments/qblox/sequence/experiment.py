@@ -130,7 +130,7 @@ def _process_virtualz(pulse: VirtualZ, params: set[Param], merged_vzs: bool):
     params are provided, take the value from the corresponding register.
     """
     if merged_vzs:
-        return [SetPhDelta(value=int(convert(pulse.phase, Parameter.relative_phase)))]
+        return [SetPhDelta(value=int(convert(pulse.phase, Parameter.phase)))]
     else:
         return [
             Add(
