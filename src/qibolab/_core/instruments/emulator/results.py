@@ -112,6 +112,24 @@ def index(ch: ChannelId, hconfig: HamiltonianConfig) -> int:
     return hconfig.hilbert_space_index(target)
 
 
+def _marginalize_probability(
+    probabilities: NDArray, dims: list[int], indices: Iterable[int]
+) -> NDArray:
+    """Marginalize full-system probabilities to measured Hilbert-space components."""
+    res = []
+    for measurement, index in enumerate(indices):
+        distribution = probabilities[..., measurement, :]
+        leading = distribution.shape[:-1]
+        distribution = distribution.reshape(*leading, *dims)
+        axes = tuple(len(leading) + i for i in range(len(dims)) if i != index)
+        marginalized = distribution.sum(axis=axes)
+        # States outside the ground state are classified as 1. This sum is done
+        # before stacking because measured subsystems may have different dimensions.
+        res.append(marginalized[..., 1:].sum(axis=-1))
+
+    return np.stack(res)
+
+
 def select_acquisitions(
     states: list[Operator], acquisitions: Iterable[float], times: NDArray
 ) -> NDArray:
@@ -142,25 +160,15 @@ def _cyclic_results(
     measurement subspaces and applying configured post-processing.
     """
 
-    # Through the entire function state_probs has dimensions:
-    # (*S, M *H_dim)
-    states_computational_idx = np.stack(
-        np.unravel_index(np.arange(state_probs.shape[-1]), hamiltonian.dims)
-    )
-
-    acq_id = acquisitions(sequence).keys()
+    acq_id = list(acquisitions(sequence).keys())
     # from every acquisition pulse id we get the corresponding channel, and from the channel we get the
-    # corresponding qubit index, which is then used to correctly permute the rows of states_computational_idx.
+    # corresponding Hilbert-space index to marginalize.
     qubit_indices = [
         index(sequence.pulse_channels(ro_id)[0], hamiltonian) for ro_id in acq_id
     ]
-    permuted_states_computational_idx = states_computational_idx[qubit_indices]
-
-    # applying a mask to select for each measurement the states that are outside the computational subspace, which are classified as 1
-    mask = permuted_states_computational_idx >= 1
 
     # res is a (M, *S, ...) array
-    res = np.moveaxis(np.sum(np.where(mask, state_probs, 0), axis=-1), -1, 0)
+    res = _marginalize_probability(state_probs, hamiltonian.dims, qubit_indices)
 
     if options.acquisition_type is AcquisitionType.INTEGRATION:
         res = np.random.normal(res, scale=0.001)
