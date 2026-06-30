@@ -16,14 +16,15 @@ from collections.abc import Iterable
 import numpy as np
 from numpy.typing import NDArray
 
+from qibolab._core.identifier import ChannelId, Result
+from qibolab._core.pulses import Acquisition, Align, PulseId, Readout
+from qibolab._core.sequence import PulseSequence
+
 from ...execution_parameters import (
     AcquisitionType,
     AveragingMode,
     ExecutionParameters,
 )
-from ...identifier import ChannelId, Result
-from ...pulses import Acquisition, Align, PulseId, Readout
-from ...sequence import PulseSequence
 from .engine import Operator
 from .hamiltonians import HamiltonianConfig
 
@@ -153,7 +154,7 @@ def _cyclic_results(
     sequence: PulseSequence,
     hamiltonian: HamiltonianConfig,
     options: ExecutionParameters,
-) -> dict[int, Result]:
+) -> dict[PulseId, Result]:
     """Process measurement results from a cyclic quantum simulation, where the output for each measurement is
     excited state population.
     Computes readout results by projecting quantum state probabilities onto
@@ -183,7 +184,7 @@ def _singleshot_results(
     sequence: PulseSequence,
     hamiltonian: HamiltonianConfig,
     options: ExecutionParameters,
-) -> dict[int, Result]:
+) -> dict[PulseId, Result]:
     """Extract measurement results from simulated quantum state probabilities.
     Performs single-shot measurement extraction from state probabilities by sampling
     according to the specified number of shots and mapping readout operations to their
@@ -214,7 +215,7 @@ def _singleshot_results(
     # the shape now is: (M_unique, Nshots, *S, *H_dim)
     sampled = np.moveaxis(sampled, 1, 0)
 
-    acq_id = acquisitions(sequence).keys()
+    acq_id = list(acquisitions(sequence).keys())
     # from every acquisition pulse id we get the corresponding channel, and from the channel we get the
     # corresponding qubit index, which is then used to correctly permute the rows of states_computational_idx.
     qubit_indices = [
