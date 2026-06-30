@@ -8,6 +8,7 @@ from qibolab._core.execution_parameters import (
 from qibolab._core.instruments.emulator.results import (
     _cyclic_results,
     _marginalize_probability,
+    _sampled_measurements,
 )
 from qibolab._core.pulses import Acquisition
 
@@ -63,6 +64,27 @@ def test_cyclic_integration_results_marginalize_probabilities(monkeypatch):
 
     np.testing.assert_allclose(results[acq0.id], [0.40, 0.0])
     np.testing.assert_allclose(results[acq1.id], [0.85, 0.0])
+
+
+def test_sampled_measurements_groups_acquisitions_by_sample():
+    sampled = np.array(
+        [
+            [[0, 1], [4, 5]],
+            [[2, 3], [1, 0]],
+        ]
+    )
+    inverse_map = np.array([0, 0, 1])
+
+    measured = _sampled_measurements(
+        sampled=sampled,
+        dims=[2, 3],
+        inverse_map=inverse_map,
+        indices=[0, 1, 1],
+    )
+
+    np.testing.assert_allclose(measured[0], [[0, 0], [1, 1]])
+    np.testing.assert_allclose(measured[1], [[0, 1], [1, 2]])
+    np.testing.assert_allclose(measured[2], [[2, 0], [1, 0]])
 
 
 class _Sequence:
