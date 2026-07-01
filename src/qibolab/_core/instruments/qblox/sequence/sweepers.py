@@ -39,8 +39,10 @@ class ParamRole(Enum):
     "Channel offset."
     AMPLITUDE = auto(), Parameter.amplitude
     "Pulse amplitude."
-    PHASE = auto(), Parameter.relative_phase
+    RELATIVE_PHASE = auto(), Parameter.relative_phase
     "Pulse relative phase."
+    PHASE = auto(), Parameter.phase
+    "Virtual Z phase."
     DURATION = auto(), Parameter.duration
     "Pulse duration."
     PULSE_I = auto(), Parameter.duration
@@ -212,6 +214,9 @@ _SWEEP_UPDATE: dict[Parameter, _Update] = {
         ),
         reset=None,
     ),
+    # The phase is handled in _process_virtualz, where the relative phase is added to
+    # the accumulated phase delta
+    Parameter.phase: _Update(update=None, reset=None),
     Parameter.duration: _Update(update=None, reset=None),
 }
 
