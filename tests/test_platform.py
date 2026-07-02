@@ -151,6 +151,16 @@ def test_duplicated_acquisition():
         _ = platform.execute([sequence, sequence.copy()])
 
 
+def test_unknown_channel_raises_helpful_error():
+    platform = create_platform("dummy")
+    sequence = PulseSequence([("missing/channel", Delay(duration=10))])
+
+    with pytest.raises(
+        ValueError, match=r"Unknown channel\(s\) in pulse sequence: missing/channel"
+    ):
+        _ = platform.execute([sequence])
+
+
 def test_update_configs(platform):
     drive_name = "q0/drive"
     pump_name = "twpa_pump"
