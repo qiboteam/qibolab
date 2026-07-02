@@ -252,13 +252,12 @@ class Platform:
                 "The acquisitions' identifiers have to be unique across all sequences."
             )
 
-        available_channels = self.channels
         missing_channels = sorted(
             {
                 channel
                 for sequence in sequences
                 for channel in sequence.channels
-                if channel not in available_channels
+                if channel not in self.channels
             }
         )
         if missing_channels:
