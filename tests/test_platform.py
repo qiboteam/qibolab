@@ -158,7 +158,7 @@ def test_unknown_channel_raises_helpful_error():
     with pytest.raises(
         ValueError, match=r"Unknown channel\(s\) in pulse sequence: missing/channel"
     ):
-        _ = platform.execute([sequence])
+        platform.execute([sequence])
 
 
 def test_update_configs(platform):
