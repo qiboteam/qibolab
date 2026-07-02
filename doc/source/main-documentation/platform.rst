@@ -182,6 +182,19 @@ E.g. a :class:`.DcChannel` is distinguished from an :class:`.IqChannel`
 because of modulation, which potentially requires to coordinate the operation of such a
 channel with an external mixer (identified by :attr:`.IqChannel.mixer`).
 
+.. note::
+
+  Qibolab enforces strict channel validation during :meth:`.Platform.execute`.
+  If a pulse sequence references a channel that is not declared in the platform,
+  execution fails with an error.
+
+  This is a deliberate design choice: pulses with undeclared channels are not silently
+  ignored, because that can hide mistakes in the platform setup and produce misleading
+  experimental outcomes.
+
+  If a workflow needs a channel-like placeholder with no physical output, this should be
+  introduced through a dummy instrument/channel in the platform.
+
 Configurations
 ~~~~~~~~~~~~~~
 
