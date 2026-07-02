@@ -1,4 +1,11 @@
-from qibolab import ConfigKinds, DcChannel, Hardware, IqChannel, Qubit
+from qibolab import (
+    AcquisitionChannel,
+    ConfigKinds,
+    DcChannel,
+    Hardware,
+    IqChannel,
+    Qubit,
+)
 from qibolab.instruments.emulator import (
     DriveEmulatorConfig,
     EmulatorController,
@@ -17,6 +24,7 @@ def create() -> Hardware:
     for q in range(2):
         qubits[q] = qubit = Qubit.default(q, drive_extra={(1, 2): f"{q}/drive12"})
         channels |= {
+            qubit.acquisition: AcquisitionChannel(probe=qubit.probe),
             qubit.drive: IqChannel(mixer=None, lo=None),
             qubit.flux: DcChannel(),
             qubits[q].drive_extra[1, 2]: IqChannel(mixer=None, lo=None),

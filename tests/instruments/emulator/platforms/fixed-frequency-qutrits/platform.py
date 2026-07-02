@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from qibolab import ConfigKinds, Hardware, IqChannel, Qubit
+from qibolab import AcquisitionChannel, ConfigKinds, Hardware, IqChannel, Qubit
 from qibolab.instruments.emulator import (
     DriveEmulatorConfig,
     EmulatorController,
@@ -19,12 +19,14 @@ def create() -> Hardware:
         0, drive_extra={(1, 2): "0/drive12", 1: "0/drive1"}
     )
     channels |= {
+        qubit.acquisition: AcquisitionChannel(probe=qubit.probe),
         qubit.drive: IqChannel(mixer=None, lo=None),
         qubits[0].drive_extra[1, 2]: IqChannel(mixer=None, lo=None),
         qubits[0].drive_extra[1]: IqChannel(mixer=None, lo=None),
     }
     qubits[1] = qubit = Qubit.default(1, drive_extra={(1, 2): "1/drive12"})
     channels |= {
+        qubit.acquisition: AcquisitionChannel(probe=qubit.probe),
         qubit.drive: IqChannel(mixer=None, lo=None),
         qubits[1].drive_extra[1, 2]: IqChannel(mixer=None, lo=None),
     }

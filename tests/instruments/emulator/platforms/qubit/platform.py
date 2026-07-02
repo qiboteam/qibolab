@@ -1,6 +1,13 @@
 import pathlib
 
-from qibolab import ConfigKinds, DcChannel, IqChannel, Platform, Qubit
+from qibolab import (
+    AcquisitionChannel,
+    ConfigKinds,
+    DcChannel,
+    IqChannel,
+    Platform,
+    Qubit,
+)
 from qibolab.instruments.emulator import (
     DriveEmulatorConfig,
     EmulatorController,
@@ -23,6 +30,7 @@ def create() -> Platform:
         channels |= {
             qubit.drive: IqChannel(mixer=None, lo=None),
             qubit.flux: DcChannel(),
+            qubit.acquisition: AcquisitionChannel(probe=qubit.probe),
         }
 
     # register the instruments
