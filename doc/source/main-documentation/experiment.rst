@@ -91,12 +91,13 @@ To organize pulses into sequences, Qibolab provides the :class:`qibolab.PulseSeq
         relative_phase=0,  # phases are in radians
         envelope=Rectangular(),
     )
+    drive_channel_qubit0 = platform.qubits[0].drive
     sequence = PulseSequence(
         [
-            ("qubit/drive", pulse1),
-            ("qubit/drive", pulse2),
-            ("qubit/drive", pulse3),
-            ("qubit/drive", pulse4),
+            (drive_channel_qubit0, pulse1),
+            (drive_channel_qubit0, pulse2),
+            (drive_channel_qubit0, pulse3),
+            (drive_channel_qubit0, pulse4),
         ],
     )
 
