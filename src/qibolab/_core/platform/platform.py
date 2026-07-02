@@ -252,6 +252,21 @@ class Platform:
                 "The acquisitions' identifiers have to be unique across all sequences."
             )
 
+        available_channels = self.channels
+        missing_channels = sorted(
+            {
+                channel
+                for sequence in sequences
+                for channel in sequence.channels
+                if channel not in available_channels
+            }
+        )
+        if missing_channels:
+            raise ValueError(
+                f"Unknown channel(s) in pulse sequence: {', '.join(missing_channels)}. "
+                "Check that they are declared in the platform initialization script."
+            )
+
         options = self.settings.fill(ExecutionParameters(**options))
 
         time = options.estimate_duration(sequences, sweepers)
