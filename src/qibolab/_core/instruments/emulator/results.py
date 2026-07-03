@@ -134,9 +134,6 @@ def _sampled_measurements(
     sampled: NDArray, dims: list[int], inverse_map: NDArray, indices: list[int]
 ) -> NDArray:
     """Extract measured subsystem states from sampled full-system states."""
-    if len(inverse_map) != len(indices):
-        raise ValueError("Measurement map and indices must have the same length.")
-
     indices = np.asarray(indices)
     res = np.empty((len(indices), *sampled.shape[1:]), dtype=sampled.dtype)
     for sample in np.unique(inverse_map):
