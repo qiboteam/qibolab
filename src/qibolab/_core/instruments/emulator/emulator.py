@@ -140,7 +140,7 @@ class EmulatorController(Controller):
         configs: dict[str, Config],
         sweepers: list[ParallelSweepers],
         updates: dict | None = None,
-    ) -> NDArray:
+    ) -> tuple[NDArray, NDArray | None]:
         """Sweep over sequence.
 
         This function invokes itself recursively, adding an array
@@ -155,7 +155,7 @@ class EmulatorController(Controller):
             return self._evolve(sequence, configs, updates)
 
         state_slices: list[NDArray] = []
-        coeff_slices = []
+        coeff_slices = [] if self.save_dir is not None else None
         parsweep = sweepers[0]
         # execute once for each parallel value
         for values in zip(*(s.values for s in parsweep)):
@@ -169,14 +169,18 @@ class EmulatorController(Controller):
                         updates[channel].update({sweeper.parameter.name: value})
             states, coeffs = self._sweep(sequence, configs, sweepers[1:], updates)
             state_slices.append(states)
-            coeff_slices.append(coeffs)
+            if coeff_slices is not None:
+                coeff_slices.append(coeffs)
 
         # stack all slices in a single array, along the current outermost dimension
-        return np.stack(state_slices), np.stack(coeff_slices)
+        return (
+            np.stack(state_slices),
+            np.stack(coeff_slices) if coeff_slices is not None else None,
+        )
 
     def _evolve(
         self, sequence: PulseSequence, configs: dict[str, Config], updates: dict
-    ) -> NDArray:
+    ) -> tuple[NDArray, NDArray | None]:
         """Evolve a pulse sequence on the quantum emulator.
 
         This method updates the sequence parameters, generates the time grid, constructs

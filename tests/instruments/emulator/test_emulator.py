@@ -4,6 +4,8 @@ import numpy as np
 import pytest
 
 from qibolab._core.execution_parameters import AcquisitionType, AveragingMode
+from qibolab._core.pulses import Delay
+from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import Parameter, Sweeper
 
 NSHOTS = 1000
@@ -50,4 +52,24 @@ def test_sweepers(platform):
     )
     acq_handle = list(seq.channel(platform.qubits[0].acquisition))[-1].id
     res = platform.execute([seq], [[sweeper]], nshots=NSHOTS)
+    assert res[acq_handle].shape == (NSHOTS, 2)
+
+
+def test_duration_sweeper_with_variable_sequence_length(platform):
+    q0 = platform.natives.single_qubit[0]
+    delay = Delay(duration=0)
+    seq = q0.RX() | PulseSequence([(platform.qubits[0].acquisition, delay)]) | q0.MZ()
+    sweeper = Sweeper(
+        parameter=Parameter.duration, values=np.array([0, 2000]), pulses=[delay]
+    )
+    acq_handle = list(seq.channel(platform.qubits[0].acquisition))[-1].id
+
+    res = platform.execute(
+        [seq],
+        [[sweeper]],
+        nshots=NSHOTS,
+        acquisition_type=AcquisitionType.DISCRIMINATION,
+        averaging_mode=AveragingMode.SINGLESHOT,
+    )
+
     assert res[acq_handle].shape == (NSHOTS, 2)
