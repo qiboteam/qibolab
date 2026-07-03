@@ -21,14 +21,14 @@ def create() -> Hardware:
     channels |= {
         qubit.acquisition: AcquisitionChannel(probe=qubit.probe),
         qubit.drive: IqChannel(mixer=None, lo=None),
-        qubits[0].drive_extra[1, 2]: IqChannel(mixer=None, lo=None),
-        qubits[0].drive_extra[1]: IqChannel(mixer=None, lo=None),
+        qubit.drive_extra[1, 2]: IqChannel(mixer=None, lo=None),
+        qubit.drive_extra[1]: IqChannel(mixer=None, lo=None),
     }
     qubits[1] = qubit = Qubit.default(1, drive_extra={(1, 2): "1/drive12"})
     channels |= {
         qubit.acquisition: AcquisitionChannel(probe=qubit.probe),
         qubit.drive: IqChannel(mixer=None, lo=None),
-        qubits[1].drive_extra[1, 2]: IqChannel(mixer=None, lo=None),
+        qubit.drive_extra[1, 2]: IqChannel(mixer=None, lo=None),
     }
 
     dump_dir = "qutip_data"

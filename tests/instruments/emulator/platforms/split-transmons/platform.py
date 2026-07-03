@@ -23,12 +23,12 @@ def create() -> Hardware:
     channels = {}
 
     for q in range(2):
-        qubits[q] = Qubit.default(q, drive_extra={(1, 2): f"{q}/drive12"})
+        qubits[q] = qubit = Qubit.default(q, drive_extra={(1, 2): f"{q}/drive12"})
         channels |= {
-            qubits[q].acquisition: AcquisitionChannel(probe=qubits[q].probe),
-            qubits[q].drive: IqChannel(mixer=None, lo=None),
-            qubits[q].flux: DcChannel(),
-            qubits[q].drive_extra[1, 2]: IqChannel(mixer=None, lo=None),
+            qubit.acquisition: AcquisitionChannel(probe=qubit.probe),
+            qubit.drive: IqChannel(mixer=None, lo=None),
+            qubit.flux: DcChannel(),
+            qubit.drive_extra[1, 2]: IqChannel(mixer=None, lo=None),
         }
     # register the instruments
     instruments = {

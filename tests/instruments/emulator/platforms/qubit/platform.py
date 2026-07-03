@@ -27,11 +27,11 @@ def create() -> Platform:
     channels = {}
 
     for q in range(1):
-        qubits[q] = Qubit.default(q)
+        qubits[q] = qubit = Qubit.default(q)
         channels |= {
-            qubits[q].drive: IqChannel(mixer=None, lo=None),
-            qubits[q].flux: DcChannel(),
-            qubits[q].acquisition: AcquisitionChannel(probe=qubits[q].probe),
+            qubit.drive: IqChannel(mixer=None, lo=None),
+            qubit.flux: DcChannel(),
+            qubit.acquisition: AcquisitionChannel(probe=qubit.probe),
         }
 
     # register the instruments
