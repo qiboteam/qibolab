@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 
 from qibolab._core.execution_parameters import (
     AcquisitionType,
@@ -85,6 +86,16 @@ def test_sampled_measurements_groups_acquisitions_by_sample():
     np.testing.assert_allclose(measured[0], [[0, 0], [1, 1]])
     np.testing.assert_allclose(measured[1], [[0, 1], [1, 2]])
     np.testing.assert_allclose(measured[2], [[2, 0], [1, 0]])
+
+
+def test_sampled_measurements_rejects_mismatched_measurements():
+    with pytest.raises(ValueError, match="same length"):
+        _sampled_measurements(
+            sampled=np.array([0]),
+            dims=[2],
+            inverse_map=np.array([0, 0]),
+            indices=[0],
+        )
 
 
 class _Sequence:

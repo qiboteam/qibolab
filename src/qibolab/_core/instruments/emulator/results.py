@@ -134,13 +134,17 @@ def _sampled_measurements(
     sampled: NDArray, dims: list[int], inverse_map: NDArray, indices: list[int]
 ) -> NDArray:
     """Extract measured subsystem states from sampled full-system states."""
-    res = {}
+    if len(inverse_map) != len(indices):
+        raise ValueError("Measurement map and indices must have the same length.")
+
+    indices = np.asarray(indices)
+    res = np.empty((len(indices), *sampled.shape[1:]), dtype=sampled.dtype)
     for sample in np.unique(inverse_map):
         states = np.stack(np.unravel_index(sampled[sample], dims))
-        for measurement in np.flatnonzero(inverse_map == sample):
-            res[measurement] = states[indices[measurement]]
+        measurements = np.flatnonzero(inverse_map == sample)
+        res[measurements] = states[indices[measurements]]
 
-    return np.stack([res[measurement] for measurement in range(len(indices))])
+    return res
 
 
 def select_acquisitions(
