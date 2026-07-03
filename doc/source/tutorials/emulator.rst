@@ -125,7 +125,15 @@ We are now going to give an example on how to setup the `platform.py` file.
 
 .. testcode::  python
 
-    from qibolab import ConfigKinds, DcChannel, IqChannel, Platform, Qubit, Hardware
+    from qibolab import (
+        AcquisitionChannel,
+        ConfigKinds,
+        DcChannel,
+        Hardware,
+        IqChannel,
+        Platform,
+        Qubit,
+    )
     from qibolab.instruments.emulator import (
         DriveEmulatorConfig,
         EmulatorController,
@@ -144,6 +152,8 @@ We are now going to give an example on how to setup the `platform.py` file.
         for q in range(1):
             qubits[q] = qubit = Qubit.default(q)
             channels |= {
+                qubit.probe: IqChannel(mixer=None, lo=None),
+                qubit.acquisition: AcquisitionChannel(probe=qubit.probe),
                 qubit.drive: IqChannel(mixer=None, lo=None),
                 qubit.flux: DcChannel(),
             }
