@@ -130,6 +130,20 @@ def _marginalize_probability(
     return np.stack(res)
 
 
+def _sampled_measurements(
+    sampled: NDArray, dims: list[int], inverse_map: NDArray, indices: list[int]
+) -> NDArray:
+    """Extract measured subsystem states from sampled full-system states."""
+    indices = np.asarray(indices)
+    res = np.empty((len(indices), *sampled.shape[1:]), dtype=sampled.dtype)
+    for sample in np.unique(inverse_map):
+        states = np.stack(np.unravel_index(sampled[sample], dims))
+        measurements = np.flatnonzero(inverse_map == sample)
+        res[measurements] = states[indices[measurements]]
+
+    return res
+
+
 def select_acquisitions(
     states: list[Operator], acquisitions: Iterable[float], times: NDArray
 ) -> NDArray:
@@ -214,20 +228,15 @@ def _singleshot_results(
     # the shape now is: (M_unique, Nshots, *S, *H_dim)
     sampled = np.moveaxis(sampled, 1, 0)
 
-    acq_id = acquisitions(sequence).keys()
+    acq_id = list(acquisitions(sequence).keys())
     # from every acquisition pulse id we get the corresponding channel, and from the channel we get the
-    # corresponding qubit index, which is then used to correctly permute the rows of states_computational_idx.
+    # corresponding Hilbert-space index to extract from the sampled full-system state.
     qubit_indices = [
         index(sequence.pulse_channels(ro_id)[0], hamiltonian) for ro_id in acq_id
     ]
 
-    # we use inverse_map to expand back the sampled results
-    # res is a (M, M, Nshots, *S, ...) array
-    res = np.stack(np.unravel_index(sampled[inverse_map], hamiltonian.dims))[
-        qubit_indices
-    ]
-    # using np.einsum, so res is a (M, Nshots, *S, ...) array
-    res = np.einsum(res, np.array([0, 0] + [...]), np.array([0] + [...]))
+    # res is a (M, Nshots, *S, ...) array
+    res = _sampled_measurements(sampled, hamiltonian.dims, inverse_map, qubit_indices)
     res = np.clip(res, 0, 1)
 
     if options.acquisition_type is AcquisitionType.INTEGRATION:
