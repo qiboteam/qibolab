@@ -4,7 +4,7 @@ import numpy as np
 
 from qibolab._core.components import (
     AcquisitionConfig,
-    DcConfig,
+    Config,
     OscillatorConfig,
 )
 from qibolab._core.components.filters import ExponentialFilter
@@ -41,7 +41,7 @@ def normalize_feedback(taps: list[float], threshold: float) -> list[float]:
     return new_taps.tolist()
 
 
-class OpxOutputConfig(DcConfig):
+class OpxOutputConfig(Config):
     """DC channel config using QM OPX+."""
 
     kind: Literal["opx-output"] = "opx-output"
@@ -54,11 +54,12 @@ class OpxOutputConfig(DcConfig):
     output_mode: Literal["direct", "amplified"] = "direct"
     sampling_rate: float = DEFAULT_SAMPLING_RATE
     upsampling_mode: Literal["mw", "pulse"] = "mw"
-    feedback_max: float = DEFAULT_FEEDBACK_MAX
-    feedforward_max: float = DEFAULT_FEEDFORWARD_MAX
+    # feedback_max: float = DEFAULT_FEEDBACK_MAX
+    # feedforward_max: float = DEFAULT_FEEDFORWARD_MAX
 
     @property
     def filter(self):
+        return {"feedback": [], "feedforward": []}
         feedback_filters = [
             -i.feedback[1] for i in self.filters if isinstance(i, ExponentialFilter)
         ]
