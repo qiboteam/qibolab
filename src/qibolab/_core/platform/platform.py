@@ -258,7 +258,7 @@ class Platform:
                 channel
                 for sequence in sequences
                 for channel in sequence.channels
-                if channel not in self.channels
+                if channel not in available_channels
             }
         )
         if missing_channels:
