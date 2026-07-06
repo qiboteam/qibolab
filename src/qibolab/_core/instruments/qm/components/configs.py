@@ -1,10 +1,11 @@
 from typing import Any, Literal, Union
 
 import numpy as np
+from pydantic import Field
 
 from qibolab._core.components import (
     AcquisitionConfig,
-    Config,
+    DcConfig,
     OscillatorConfig,
 )
 from qibolab._core.components.filters import ExponentialFilter
@@ -41,7 +42,10 @@ def normalize_feedback(taps: list[float], threshold: float) -> list[float]:
     return new_taps.tolist()
 
 
-class OpxOutputConfig(Config):
+Cluster = Literal["OPX", "OPX+", "OPX1000"]
+
+
+class OpxOutputConfig(DcConfig):
     """DC channel config using QM OPX+."""
 
     kind: Literal["opx-output"] = "opx-output"
@@ -54,23 +58,37 @@ class OpxOutputConfig(Config):
     output_mode: Literal["direct", "amplified"] = "direct"
     sampling_rate: float = DEFAULT_SAMPLING_RATE
     upsampling_mode: Literal["mw", "pulse"] = "mw"
-    # feedback_max: float = DEFAULT_FEEDBACK_MAX
-    # feedforward_max: float = DEFAULT_FEEDFORWARD_MAX
+    cluster: Cluster = Field(exclude=True, default="OPX1000")
+    feedback_max: float = Field(exclude=True, default=DEFAULT_FEEDBACK_MAX)
+    feedforward_max: float = Field(exclude=True, default=DEFAULT_FEEDFORWARD_MAX)
 
     @property
     def filter(self):
-        return {"exponential": [], "feedforward": []}
-        feedback_filters = [
-            -i.feedback[1] for i in self.filters if isinstance(i, ExponentialFilter)
-        ]
+        if self.cluster == "OPX+":
+            feedback_filters = [
+                -i.feedback[1] for i in self.filters if isinstance(i, ExponentialFilter)
+            ]
+            iir = {
+                "feedback": normalize_feedback(feedback_filters, self.feedback_max)
+                if len(feedback_filters) > 0
+                else []
+            }
+        elif self.cluster == "OPX1000":
+            iir = {
+                "exponential": [
+                    (None, None)
+                    for filt in self.filters
+                    if isinstance(filt, ExponentialFilter)
+                ]
+            }
+        else:
+            raise NotImplementedError(f"Cluster type {self.cluster} not yet supported")
+
         return {
-            "feedback": normalize_feedback(feedback_filters, self.feedback_max)
-            if len(feedback_filters) > 0
-            else [],
             "feedforward": normalize_feedforward(self.feedforward, self.feedforward_max)
             if len(self.feedforward) > 0
-            else [],
-        }
+            else []
+        } | iir
 
 
 class OctaveOscillatorConfig(OscillatorConfig):
