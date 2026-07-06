@@ -32,7 +32,7 @@ def from_array(var: Variable, array: npt.NDArray | list):
     ):
         raise Exception("The array must be an array of python variables.")
     # Check array increment
-    if np.isclose(np.std(np.diff(array)), 0):
+    if np.isclose(np.diff(array).std() / np.abs(array).mean(), 0):
         increment = "lin"
     elif np.isclose(np.std(array[1:] / array[:-1]), 0, atol=1e-3):
         increment = "log"
