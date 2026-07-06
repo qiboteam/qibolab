@@ -2,10 +2,15 @@ import importlib.util
 import os
 from pathlib import Path
 
-from ..parameters import Hardware
-from .platform import Platform
+from ..parameters import Hardware, initialize_parameters
+from .platform import PARAMETERS, Platform
 
-__all__ = ["create_platform", "locate_platform"]
+__all__ = [
+    "create_platform",
+    "load_hardware",
+    "locate_platform",
+    "reset_parameters",
+]
 
 PLATFORM = "platform.py"
 PLATFORMS = "QIBOLAB_PLATFORMS"
@@ -35,6 +40,16 @@ def _search(name: str, paths: list[Path]) -> Path:
     )
 
 
+def _search_or_literal(name: str | os.PathLike[str]) -> Path:
+    path_ = None
+    try:
+        path_ = _search(str(name), _platforms_paths())
+    except ValueError:
+        pass
+
+    return Path(name if path_ is None else path_)
+
+
 def _load(platform: Path) -> Platform | Hardware:
     """Load the platform module."""
     module_name = "platform"
@@ -56,6 +71,18 @@ def locate_platform(name: str, paths: list[Path] | None = None) -> Path:
     if paths is None:
         paths = _platforms_paths()
     return _search(name, paths)
+
+
+def load_hardware(name: str | os.PathLike[str]) -> Hardware:
+    """Load the hardware representation from platform.
+
+    It loads the :class:`Hardware` given either a :class:`str` representing its
+    name, or a path to the Python module containing it.
+    """
+    path = _search_or_literal(name)
+    hardware = _load(path)
+    assert isinstance(hardware, Hardware)
+    return hardware
 
 
 def create_platform(name: str) -> Platform:
@@ -90,3 +117,16 @@ def available_platforms() -> list[str]:
         if d.is_dir()
         and Path(f"{os.environ.get(PLATFORMS)}/{d.name}/platform.py") in d.iterdir()
     ]
+
+
+def reset_parameters(
+    name: str | os.PathLike[str],
+    natives: set[str] | None = None,
+    pairs: list[str] | None = None,
+) -> None:
+    """Reset parameters to default values."""
+    hardware = _load(_search_or_literal(name))
+    assert isinstance(hardware, Hardware)
+    parameters = initialize_parameters(hardware, natives=natives, pairs=pairs)
+    parameters_path = _search_or_literal(name) / PARAMETERS
+    parameters_path.write_text(parameters.model_dump_json(indent=2))
