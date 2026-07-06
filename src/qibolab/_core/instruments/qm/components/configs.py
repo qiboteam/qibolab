@@ -1,4 +1,4 @@
-from typing import Literal, Union
+from typing import Any, Literal, Union
 
 import numpy as np
 
@@ -59,7 +59,7 @@ class OpxOutputConfig(Config):
 
     @property
     def filter(self):
-        return {"feedback": [], "feedforward": []}
+        return {"exponential": [], "feedforward": []}
         feedback_filters = [
             -i.feedback[1] for i in self.filters if isinstance(i, ExponentialFilter)
         ]
@@ -82,7 +82,7 @@ class OctaveOscillatorConfig(OscillatorConfig):
 
 
 class QmAcquisitionConfig(AcquisitionConfig):
-    """Acquisition config for QM OPX+."""
+    """Acquisition config for QM."""
 
     kind: Literal["qm-acquisition"] = "qm-acquisition"
 
@@ -93,6 +93,12 @@ class QmAcquisitionConfig(AcquisitionConfig):
     """
     offset: float = 0.0
     """Constant voltage to be applied on the input."""
+
+    def model_post_init(self, context: Any) -> None:
+        # The minimum time-of-flight for QM is 28 ns, so we need to ensure that
+        # the delay is at least 28 ns
+        if self.delay < 28:
+            object.__setattr__(self, "delay", 28)
 
 
 class MwFemOscillatorConfig(OscillatorConfig):
