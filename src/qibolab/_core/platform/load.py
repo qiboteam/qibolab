@@ -8,7 +8,14 @@ from .platform import PARAMETERS, Platform
 __all__ = ["create_platform"]
 
 PLATFORM = "platform.py"
-PLATFORMS = "QIBOLAB_PLATFORMS"
+PLATFORMS_PATH = "QIBOLAB_PLATFORMS"
+"""Environment variable where to store the platforms path.
+
+This is intended to be a ``:``-separated list of paths, which are searched in order for
+folders containing platforms, identified by the presence of a source file named as
+specified by :const:`PLATFORM`.
+The paths appearing before in the list take priority over the following ones.
+"""
 
 
 def _platforms_paths() -> list[Path]:
@@ -16,9 +23,9 @@ def _platforms_paths() -> list[Path]:
 
     Path is specified using the environment variable QIBOLAB_PLATFORMS.
     """
-    paths = os.environ.get(PLATFORMS)
+    paths = os.environ.get(PLATFORMS_PATH)
     if paths is None:
-        raise RuntimeError(f"Platforms path ${PLATFORMS} unset.")
+        raise RuntimeError(f"Platforms path ${PLATFORMS_PATH} unset.")
 
     return [Path(p) for p in paths.split(os.pathsep)]
 
@@ -31,7 +38,7 @@ def _search(name: str, paths: list[Path]) -> Path:
             return platform
 
     raise ValueError(
-        f"Platform {name} not found. Check ${PLATFORMS} environment variable.",
+        f"Platform {name} not found. Check ${PLATFORMS_PATH} environment variable.",
     )
 
 
@@ -110,7 +117,8 @@ def available_platforms() -> list[str]:
         for platforms in _platforms_paths()
         for d in platforms.iterdir()
         if d.is_dir()
-        and Path(f"{os.environ.get(PLATFORMS)}/{d.name}/platform.py") in d.iterdir()
+        and Path(f"{os.environ.get(PLATFORMS_PATH)}/{d.name}/platform.py")
+        in d.iterdir()
     ]
 
 

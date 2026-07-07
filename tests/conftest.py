@@ -8,11 +8,11 @@ import numpy.typing as npt
 import pytest
 
 from qibolab import AcquisitionType, AveragingMode, Platform, create_platform
-from qibolab._core.platform.load import PLATFORMS
+from qibolab._core.platform.load import PLATFORMS_PATH
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import ParallelSweepers, Parameter, Sweeper
 
-ORIGINAL_PLATFORMS = os.environ.get(PLATFORMS, "")
+ORIGINAL_PLATFORMS = os.environ.get(PLATFORMS_PATH, "")
 TESTING_PLATFORM_NAMES = ["dummy"]
 """Platforms used for testing without access to real instruments."""
 
@@ -60,7 +60,7 @@ def pytest_addoption(parser):
 
 def set_platform_profile():
     """Point platforms environment to the ``tests/dummy_qrc`` folder."""
-    os.environ[PLATFORMS] = str(pathlib.Path(__file__).parent / "dummy_qrc")
+    os.environ[PLATFORMS_PATH] = str(pathlib.Path(__file__).parent / "dummy_qrc")
 
 
 @pytest.fixture
@@ -70,7 +70,7 @@ def dummy_qrc():
 
 @pytest.fixture
 def emulators():
-    os.environ[PLATFORMS] = str(pathlib.Path(__file__).parent / "emulators")
+    os.environ[PLATFORMS_PATH] = str(pathlib.Path(__file__).parent / "emulators")
 
 
 @pytest.fixture(scope="module", params=TESTING_PLATFORM_NAMES)
@@ -96,7 +96,7 @@ def connected_platform(request):
     These platforms are defined in the folder specified by
     the ``QIBOLAB_PLATFORMS`` environment variable.
     """
-    os.environ[PLATFORMS] = ORIGINAL_PLATFORMS
+    os.environ[PLATFORMS_PATH] = ORIGINAL_PLATFORMS
     name = request.config.getoption("--device", default="dummy")
     platform = create_platform(name)
     platform.connect()

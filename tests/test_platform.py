@@ -17,7 +17,7 @@ from qibolab._core.dummy.platform import FOLDER, create_dummy_hardware
 from qibolab._core.native import SingleQubitNatives, TwoQubitNatives
 from qibolab._core.parameters import NativeGates, Parameters, update_configs
 from qibolab._core.platform import Platform
-from qibolab._core.platform.load import PLATFORM, PLATFORMS, locate_platform
+from qibolab._core.platform.load import PLATFORM, PLATFORMS_PATH, locate_platform
 from qibolab._core.platform.platform import PARAMETERS
 from qibolab._core.pulses import Delay, Gaussian, Pulse, Rectangular
 from qibolab._core.sequence import PulseSequence
@@ -40,7 +40,7 @@ def dummy_hardware(monkeypatch):
     parameters = initialize_parameters(hardware=create_dummy_hardware())
     path = Path(__file__).parent / "dummy_hardware" / PARAMETERS
     path.write_text(parameters.model_dump_json(indent=4))
-    monkeypatch.setenv(PLATFORMS, str(Path(__file__).parent))
+    monkeypatch.setenv(PLATFORMS_PATH, str(Path(__file__).parent))
     yield
     path.unlink()
 
@@ -92,7 +92,7 @@ def test_locate_platform(tmp_path: Path):
     with pytest.raises(ValueError):
         locate_platform("platform3")
 
-    os.environ[PLATFORMS] = str(some)
+    os.environ[PLATFORMS_PATH] = str(some)
 
     assert locate_platform("platform1") == some / "platform1"
 
@@ -121,7 +121,7 @@ def test_create_platform_multipath(tmp_path: Path):
             )
         )
 
-    os.environ[PLATFORMS] = f"{some}{os.pathsep}{others}"
+    os.environ[PLATFORMS_PATH] = f"{some}{os.pathsep}{others}"
 
     def path(name):
         return tmp_path / Path(create_platform(name).name.replace("-", os.sep))
