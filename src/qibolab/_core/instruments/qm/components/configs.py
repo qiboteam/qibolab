@@ -109,7 +109,8 @@ class QmAcquisitionConfig(AcquisitionConfig):
 
     def model_post_init(self, context: Any) -> None:
         # The minimum time-of-flight for QM is 28 ns, so we need to ensure that
-        # the delay is at least 28 ns
+        # the delay is at least 28 ns (determined from QM error message during
+        # execution)
         if self.delay < 28:
             object.__setattr__(self, "delay", 28)
 
