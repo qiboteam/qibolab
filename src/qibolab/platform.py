@@ -1,3 +1,4 @@
+from qibolab._core.parameters import initialize_parameters
 from qibolab._core.platform.load import (
     PLATFORM,
     PLATFORMS_PATH,
@@ -13,6 +14,7 @@ __all__ = [
     "PLATFORMS_PATH",
     "Platform",
     "create_platform",
+    "initialize_parameters",
     "load_hardware",
     "locate_platform",
     "reset_parameters",

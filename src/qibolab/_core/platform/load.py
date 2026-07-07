@@ -22,6 +22,7 @@ This is only used for the builtin platform-retrieval mechanism.
     :class:`qibolab.Parameters`).
 
 """
+
 PLATFORMS_PATH = "QIBOLAB_PLATFORMS"
 """Environment variable where to store the platforms path.
 
