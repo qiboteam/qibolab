@@ -58,7 +58,7 @@ class OpxOutputConfig(DcConfig):
     feedback_max: float = Field(exclude=True, default=DEFAULT_FEEDBACK_MAX)
     feedforward_max: float = Field(exclude=True, default=DEFAULT_FEEDFORWARD_MAX)
 
-    def filter(self, cluster: str) -> dict[str, list[float]]:
+    def filter(self, cluster: str) -> dict[str, list[float | tuple[float, float]]]:
         if cluster == "opx1":
             feedback_filters = [
                 -i.feedback[1] for i in self.filters if isinstance(i, ExponentialFilter)
