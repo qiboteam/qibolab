@@ -2,8 +2,8 @@ import importlib.util
 import os
 from pathlib import Path
 
-from ..parameters import Hardware, initialize_parameters
-from .platform import PARAMETERS, Platform
+from .components import Hardware
+from .platform import Platform
 
 __all__ = ["create_platform"]
 
@@ -57,7 +57,8 @@ def _search(name: str, paths: list[Path]) -> Path:
     )
 
 
-def _search_or_literal(name: str | os.PathLike[str]) -> Path:
+def evaluate_path(name: str | os.PathLike[str]) -> Path:
+    """Search path based on string, or use it literally."""
     path_ = None
     try:
         path_ = _search(str(name), _platforms_paths())
@@ -65,15 +66,6 @@ def _search_or_literal(name: str | os.PathLike[str]) -> Path:
         pass
 
     return Path(name if path_ is None else path_)
-
-
-def _load(platform: Path) -> Platform | Hardware:
-    """Load the platform module."""
-    module_name = "platform"
-    spec = importlib.util.spec_from_file_location(module_name, platform / PLATFORM)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module.create()
 
 
 def locate_platform(name: str, paths: list[Path] | None = None) -> Path:
@@ -90,14 +82,22 @@ def locate_platform(name: str, paths: list[Path] | None = None) -> Path:
     return _search(name, paths)
 
 
+def load_platform(platform: Path) -> Platform | Hardware:
+    """Load the platform module."""
+    spec = importlib.util.spec_from_file_location("platform", platform / PLATFORM)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.create()
+
+
 def load_hardware(name: str | os.PathLike[str]) -> Hardware:
     """Load the hardware representation from platform.
 
     It loads the :class:`Hardware` given either a :class:`str` representing its
     name, or a path to the Python module containing it.
     """
-    path = _search_or_literal(name)
-    hardware = _load(path)
+    path = evaluate_path(name)
+    hardware = load_platform(path)
     assert isinstance(hardware, Hardware)
     return hardware
 
@@ -118,7 +118,7 @@ def create_platform(name: str) -> Platform:
         return create_dummy()
     path = _search(name, _platforms_paths())
 
-    hardware = _load(path)
+    hardware = load_platform(path)
     if isinstance(hardware, Platform):
         return hardware
 
@@ -132,19 +132,5 @@ def available_platforms() -> list[str]:
         for platforms in _platforms_paths()
         for d in platforms.iterdir()
         if d.is_dir()
-        and Path(f"{os.environ.get(PLATFORMS_PATH)}/{d.name}/platform.py")
-        in d.iterdir()
+        and Path(f"{os.environ.get(PLATFORMS_PATH)}/{d.name}/{PLATFORM}") in d.iterdir()
     ]
-
-
-def reset_parameters(
-    name: str | os.PathLike[str],
-    natives: set[str] | None = None,
-    pairs: list[str] | None = None,
-) -> None:
-    """Reset parameters to default values."""
-    hardware = _load(_search_or_literal(name))
-    assert isinstance(hardware, Hardware)
-    parameters = initialize_parameters(hardware, natives=natives, pairs=pairs)
-    parameters_path = _search_or_literal(name) / PARAMETERS
-    parameters_path.write_text(parameters.model_dump_json(indent=2))

@@ -10,18 +10,16 @@ from ..components import Config
 from ..components.channels import Channel
 from ..execution_parameters import ExecutionParameters
 from ..identifier import ChannelId, QubitId, QubitPairId, Result
-from ..instruments.abstract import Controller
+from ..instruments.abstract import Controller, InstrumentMap
 from ..parameters import (
-    InstrumentMap,
     NativeGates,
     Parameters,
-    QubitMap,
     Settings,
     Update,
     update_configs,
 )
 from ..pulses import PulseId
-from ..qubits import Qubit
+from ..qubits import Qubit, QubitMap
 from ..sequence import PulseSequence
 from ..sweeper import ParallelSweepers
 
