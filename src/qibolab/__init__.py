@@ -1,13 +1,13 @@
 from typing import Any
 
-from . import _core, _version, instruments
+from . import _core, _version, instruments, platform
 from ._core import *
 from ._version import *
 
 __all__ = []
 __all__ += _core.__all__
 __all__ += _version.__all__
-__all__ += ["instruments"]
+__all__ += ["instruments", "platform"]
 
 
 def __getattr__(name: str) -> Any:

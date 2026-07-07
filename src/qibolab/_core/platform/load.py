@@ -5,12 +5,7 @@ from pathlib import Path
 from ..parameters import Hardware, initialize_parameters
 from .platform import PARAMETERS, Platform
 
-__all__ = [
-    "create_platform",
-    "load_hardware",
-    "locate_platform",
-    "reset_parameters",
-]
+__all__ = ["create_platform"]
 
 PLATFORM = "platform.py"
 PLATFORMS = "QIBOLAB_PLATFORMS"
