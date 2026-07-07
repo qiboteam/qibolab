@@ -71,7 +71,7 @@ class OpxOutputConfig(DcConfig):
         elif cluster in {"opx1000", "LF", "MW"}:
             iir = {
                 "exponential": [
-                    (None, None)
+                    (filt.amplitude, filt.tau)
                     for filt in self.filters
                     if isinstance(filt, ExponentialFilter)
                 ]
