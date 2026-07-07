@@ -42,9 +42,6 @@ def normalize_feedback(taps: list[float], threshold: float) -> list[float]:
     return new_taps.tolist()
 
 
-Cluster = Literal["OPX", "OPX+", "OPX1000"]
-
-
 class OpxOutputConfig(DcConfig):
     """DC channel config using QM OPX+."""
 
@@ -58,13 +55,11 @@ class OpxOutputConfig(DcConfig):
     output_mode: Literal["direct", "amplified"] = "direct"
     sampling_rate: float = DEFAULT_SAMPLING_RATE
     upsampling_mode: Literal["mw", "pulse"] = "mw"
-    cluster: Cluster = Field(exclude=True, default="OPX1000")
     feedback_max: float = Field(exclude=True, default=DEFAULT_FEEDBACK_MAX)
     feedforward_max: float = Field(exclude=True, default=DEFAULT_FEEDFORWARD_MAX)
 
-    @property
-    def filter(self):
-        if self.cluster == "OPX+":
+    def filter(self, cluster: str) -> dict[str, list[float]]:
+        if cluster == "opx1":
             feedback_filters = [
                 -i.feedback[1] for i in self.filters if isinstance(i, ExponentialFilter)
             ]
@@ -73,7 +68,7 @@ class OpxOutputConfig(DcConfig):
                 if len(feedback_filters) > 0
                 else []
             }
-        elif self.cluster == "OPX1000":
+        elif cluster in {"opx1000", "LF", "MW"}:
             iir = {
                 "exponential": [
                     (None, None)
@@ -82,7 +77,7 @@ class OpxOutputConfig(DcConfig):
                 ]
             }
         else:
-            raise NotImplementedError(f"Cluster type {self.cluster} not yet supported")
+            raise NotImplementedError(f"Cluster type {cluster} not yet supported")
 
         return {
             "feedforward": normalize_feedforward(self.feedforward, self.feedforward_max)
