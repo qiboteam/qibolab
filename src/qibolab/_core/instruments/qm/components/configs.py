@@ -1,6 +1,7 @@
-from typing import Literal, Union
+from typing import Any, Literal, Union
 
 import numpy as np
+from pydantic import Field
 
 from qibolab._core.components import (
     AcquisitionConfig,
@@ -54,22 +55,35 @@ class OpxOutputConfig(DcConfig):
     output_mode: Literal["direct", "amplified"] = "direct"
     sampling_rate: float = DEFAULT_SAMPLING_RATE
     upsampling_mode: Literal["mw", "pulse"] = "mw"
-    feedback_max: float = DEFAULT_FEEDBACK_MAX
-    feedforward_max: float = DEFAULT_FEEDFORWARD_MAX
+    feedback_max: float = Field(exclude=True, default=DEFAULT_FEEDBACK_MAX)
+    feedforward_max: float = Field(exclude=True, default=DEFAULT_FEEDFORWARD_MAX)
 
-    @property
-    def filter(self):
-        feedback_filters = [
-            -i.feedback[1] for i in self.filters if isinstance(i, ExponentialFilter)
-        ]
+    def filter(self, cluster: str) -> dict[str, list[float | tuple[float, float]]]:
+        if cluster == "opx1":
+            feedback_filters = [
+                -i.feedback[1] for i in self.filters if isinstance(i, ExponentialFilter)
+            ]
+            iir = {
+                "feedback": normalize_feedback(feedback_filters, self.feedback_max)
+                if len(feedback_filters) > 0
+                else []
+            }
+        elif cluster in {"opx1000", "LF", "MW"}:
+            iir = {
+                "exponential": [
+                    (filt.amplitude, filt.tau)
+                    for filt in self.filters
+                    if isinstance(filt, ExponentialFilter)
+                ]
+            }
+        else:
+            raise NotImplementedError(f"Cluster type {cluster} not yet supported")
+
         return {
-            "feedback": normalize_feedback(feedback_filters, self.feedback_max)
-            if len(feedback_filters) > 0
-            else [],
             "feedforward": normalize_feedforward(self.feedforward, self.feedforward_max)
             if len(self.feedforward) > 0
-            else [],
-        }
+            else []
+        } | iir
 
 
 class OctaveOscillatorConfig(OscillatorConfig):
@@ -81,7 +95,7 @@ class OctaveOscillatorConfig(OscillatorConfig):
 
 
 class QmAcquisitionConfig(AcquisitionConfig):
-    """Acquisition config for QM OPX+."""
+    """Acquisition config for QM."""
 
     kind: Literal["qm-acquisition"] = "qm-acquisition"
 
@@ -92,6 +106,13 @@ class QmAcquisitionConfig(AcquisitionConfig):
     """
     offset: float = 0.0
     """Constant voltage to be applied on the input."""
+
+    def model_post_init(self, context: Any) -> None:
+        # The minimum time-of-flight for QM is 28 ns, so we need to ensure that
+        # the delay is at least 28 ns (determined from QM error message during
+        # execution)
+        if self.delay < 28:
+            object.__setattr__(self, "delay", 28)
 
 
 class MwFemOscillatorConfig(OscillatorConfig):
