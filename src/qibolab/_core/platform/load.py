@@ -8,6 +8,20 @@ from .platform import PARAMETERS, Platform
 __all__ = ["create_platform"]
 
 PLATFORM = "platform.py"
+"""Conventional name of the file containing the platform definition.
+
+This is only used for the builtin platform-retrieval mechanism.
+
+.. tip::
+
+    A Qibolab platform can be defined completely dynamically. Or it can be loaded
+    in any other way, from custom-named files.
+    However, in this case, no support for lookup and loading of the platforms is
+    provided, and the user is responsible to instantiate a full :class:`Platform`
+    object, with all the parameters value set as intended (cf.
+    :class:`qibolab.Parameters`).
+
+"""
 PLATFORMS_PATH = "QIBOLAB_PLATFORMS"
 """Environment variable where to store the platforms path.
 
