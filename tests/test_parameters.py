@@ -4,15 +4,10 @@ import pytest
 
 from qibolab._core.components.configs import Config
 from qibolab._core.native import Native, TwoQubitNatives
-from qibolab._core.parameters import (
-    ConfigKinds,
-    Hardware,
-    Parameters,
-    TwoQubitContainer,
-    initialize_parameters,
-)
+from qibolab._core.parameters import ConfigKinds, Parameters, TwoQubitContainer
 from qibolab._core.platform.load import create_platform
 from qibolab._core.pulses.pulse import Pulse, Readout
+from qibolab.platform import Hardware, initialize_parameters
 
 
 def test_two_qubit_container():

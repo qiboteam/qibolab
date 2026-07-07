@@ -9,19 +9,25 @@ import pytest
 from qibo.models import Circuit
 from qibo.result import CircuitResult
 
-from qibolab import create_platform, initialize_parameters
 from qibolab._core.backends import QibolabBackend
 from qibolab._core.components import AcquisitionConfig, IqConfig, OscillatorConfig
 from qibolab._core.dummy import create_dummy
 from qibolab._core.dummy.platform import FOLDER, create_dummy_hardware
 from qibolab._core.native import SingleQubitNatives, TwoQubitNatives
 from qibolab._core.parameters import NativeGates, Parameters, update_configs
-from qibolab._core.platform import Platform
-from qibolab._core.platform.load import PLATFORM, PLATFORMS_PATH, locate_platform
+from qibolab._core.platform import Hardware, Platform
 from qibolab._core.platform.platform import PARAMETERS
 from qibolab._core.pulses import Delay, Gaussian, Pulse, Rectangular
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.serialize import replace
+from qibolab.platform import (
+    PLATFORM,
+    PLATFORMS_PATH,
+    create_platform,
+    initialize_parameters,
+    load_hardware,
+    locate_platform,
+)
 
 nshots = 1024
 
@@ -49,6 +55,12 @@ def test_create_platform_from_hardware(dummy_hardware):
     platform = create_platform("dummy_hardware")
     assert isinstance(platform, Platform)
     assert list(platform.qubits.keys()) == list(range(5))
+
+
+def test_load_hardware(dummy_hardware):
+    hw = load_hardware("dummy_hardware")
+    assert isinstance(hw, Hardware)
+    assert list(hw.qubits.keys()) == list(range(5))
 
 
 def test_platform_basics():
