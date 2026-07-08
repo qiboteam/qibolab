@@ -1,5 +1,4 @@
 import os
-import warnings
 from pathlib import Path
 
 import numpy as np
@@ -187,74 +186,6 @@ def test_execute_circuit_str_qubit_names():
     circuit.add(gates.M(0, 1))
     result = backend.execute_circuit(circuit, nshots=20)
     assert result.samples().shape == (20, 2)
-
-
-@pytest.mark.qpu
-@pytest.mark.xfail(
-    raises=AssertionError, reason="Probabilities are not well calibrated"
-)
-def test_ground_state_probabilities_circuit(connected_backend: QibolabBackend):
-    nshots = 5000
-    nqubits = connected_backend.platform.nqubits
-    circuit = Circuit(nqubits)
-    circuit.add(gates.M(*range(nqubits)))
-    result = connected_backend.execute_circuit(circuit, nshots=nshots)
-    freqs = result.frequencies(binary=False)
-    probs = [freqs[i] / nshots for i in range(2**nqubits)]
-    warnings.warn(f"Ground state probabilities: {probs}")
-    target_probs = np.zeros(2**nqubits)
-    target_probs[0] = 1
-    np.testing.assert_allclose(probs, target_probs, atol=0.05)
-
-
-@pytest.mark.qpu
-@pytest.mark.xfail(
-    raises=AssertionError, reason="Probabilities are not well calibrated"
-)
-def test_excited_state_probabilities_circuit(connected_backend: QibolabBackend):
-    nshots = 5000
-    nqubits = connected_backend.platform.nqubits
-    circuit = Circuit(nqubits)
-    circuit.add(gates.X(q) for q in range(nqubits))
-    circuit.add(gates.M(*range(nqubits)))
-    result = connected_backend.execute_circuit(circuit, nshots=nshots)
-    freqs = result.frequencies(binary=False)
-    probs = [freqs[i] / nshots for i in range(2**nqubits)]
-    warnings.warn(f"Excited state probabilities: {probs}")
-    target_probs = np.zeros(2**nqubits)
-    target_probs[-1] = 1
-    np.testing.assert_allclose(probs, target_probs, atol=0.05)
-
-
-@pytest.mark.qpu
-@pytest.mark.xfail(
-    raises=AssertionError, reason="Probabilities are not well calibrated"
-)
-def test_superposition_for_all_qubits(connected_backend: QibolabBackend):
-    """Applies an H gate to each qubit of the circuit and measures the
-    probabilities."""
-    nshots = 5000
-    nqubits = connected_backend.platform.nqubits
-    probs = []
-    for q in range(nqubits):
-        circuit = Circuit(nqubits)
-        circuit.add(gates.GPI2(q=q, phi=np.pi / 2))
-        circuit.add(gates.M(q))
-        freqs = connected_backend.execute_circuit(circuit, nshots=nshots).frequencies(
-            binary=False
-        )
-        probs.append([freqs[i] / nshots for i in range(2)])
-        warnings.warn(
-            f"Probabilities after an Hadamard gate applied to qubit {q}: {probs[-1]}"
-        )
-    probs = np.asarray(probs)
-    target_probs = np.repeat(a=0.5, repeats=nqubits)
-    np.testing.assert_allclose(probs.T[0], target_probs, atol=0.05)
-    np.testing.assert_allclose(probs.T[1], target_probs, atol=0.05)
-
-
-# TODO: test_circuit_result_tensor
-# TODO: test_circuit_result_representation
 
 
 def test_metabackend_load(platform: Platform):

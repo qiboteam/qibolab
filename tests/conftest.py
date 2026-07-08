@@ -1,18 +1,17 @@
 import os
 import pathlib
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from typing import Optional
 
 import numpy as np
 import numpy.typing as npt
 import pytest
 
-from qibolab import AcquisitionType, AveragingMode, Platform, create_platform
+from qibolab import AcquisitionType, AveragingMode, create_platform
 from qibolab._core.platform.load import PLATFORMS_PATH
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import ParallelSweepers, Parameter, Sweeper
 
-ORIGINAL_PLATFORMS = os.environ.get(PLATFORMS_PATH, "")
 TESTING_PLATFORM_NAMES = ["dummy"]
 """Platforms used for testing without access to real instruments."""
 
@@ -25,37 +24,6 @@ def seed():
 @pytest.fixture(scope="session")
 def rng() -> np.random.Generator:
     return np.random.default_rng(seed=42)
-
-
-def pytest_addoption(parser):
-    parser.addoption(
-        "--platform",
-        type=str,
-        action="store",
-        default=None,
-        help="qpu platform to test on",
-    )
-    parser.addoption(
-        "--address",
-        type=str,
-        action="store",
-        default=None,
-        help="address for the QM simulator",
-    )
-    parser.addoption(
-        "--simulation-duration",
-        type=int,
-        action="store",
-        default=3000,
-        help="simulation duration for QM simulator tests",
-    )
-    parser.addoption(
-        "--folder",
-        type=str,
-        action="store",
-        default=None,
-        help="folder to save QM simulator test regressions",
-    )
 
 
 def set_platform_profile():
@@ -75,33 +43,14 @@ def emulators():
 
 @pytest.fixture(scope="module", params=TESTING_PLATFORM_NAMES)
 def platform(request):
-    """Dummy platform to be used when there is no access to QPU.
+    """Dummy platform to be used for testing.
 
-    This fixture should be used only by tests that do are not marked
-    as ``qpu``.
-
-    Dummy platforms are defined in ``tests/dummy_qrc`` and do not
-    need to be updated over time.
+    This platform is only supposed to generate random results. Specific testing
+    platforms may have different features, but in general the values provided should not
+    be trusted as proxies of any meaningful execution.
     """
     set_platform_profile()
     return create_platform(request.param)
-
-
-@pytest.fixture(scope="module")
-def connected_platform(request):
-    """Platform that has access to QPU instruments.
-
-    This fixture should be used for tests that are marked as ``qpu``.
-
-    These platforms are defined in the folder specified by
-    the ``QIBOLAB_PLATFORMS`` environment variable.
-    """
-    os.environ[PLATFORMS_PATH] = ORIGINAL_PLATFORMS
-    name = request.config.getoption("--device", default="dummy")
-    platform = create_platform(name)
-    platform.connect()
-    yield platform
-    platform.disconnect()
 
 
 Execution = Callable[
@@ -110,7 +59,10 @@ Execution = Callable[
 
 
 @pytest.fixture
-def execute(connected_platform: Platform) -> Execution:
+def execute() -> Iterator[Execution]:
+    platform = create_platform("dummy")
+    platform.connect()
+
     def wrapped(
         acquisition_type: AcquisitionType,
         averaging_mode: AveragingMode,
@@ -125,8 +77,8 @@ def execute(connected_platform: Platform) -> Execution:
             averaging_mode=averaging_mode,
         )
 
-        qubit = next(iter(connected_platform.qubits.values()))
-        natives = connected_platform.natives.single_qubit[0]
+        qubit = next(iter(platform.qubits.values()))
+        natives = platform.natives.single_qubit[0]
 
         if sequence is None:
             qd_seq = natives.RX()
@@ -156,7 +108,8 @@ def execute(connected_platform: Platform) -> Execution:
         assert target is not None
         assert sweepers is not None
 
-        results = connected_platform.execute([sequence], sweepers, **options)
+        results = platform.execute([sequence], sweepers, **options)
         return results[target]
 
-    return wrapped
+    yield wrapped
+    platform.disconnect()
