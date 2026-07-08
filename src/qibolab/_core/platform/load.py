@@ -6,7 +6,7 @@ from pathlib import Path
 from .components import Hardware
 from .platform import Platform
 
-__all__ = ["create_platform"]
+__all__ = ["create_platform", "locate_platform"]
 
 PLATFORM = "platform.py"
 """Conventional name of the file containing the platform definition.
