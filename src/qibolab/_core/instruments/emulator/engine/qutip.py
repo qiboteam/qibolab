@@ -153,7 +153,7 @@ class QutipEngine(SimulationEngine):
 
 
 def load_simulation(
-    simulation_path: os.PathLike, sequence_index: int, sweep_index: int
+    simulation_path: str | os.PathLike, sequence_index: int, sweep_index: int
 ) -> tuple[OperatorEvolution, np.typing.NDArray, dict]:
     """Load simulation results from disk.
 

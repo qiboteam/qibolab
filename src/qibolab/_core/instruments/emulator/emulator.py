@@ -62,7 +62,7 @@ class EmulatorController(Controller):
     """Sampling rate used during simulation."""
     engine: SimulationEngine = QutipEngine()
     """SimulationEngine. Default is QutipEngine."""
-    save_dir: os.PathLike | str | Path | None = None
+    save_dir: os.PathLike | str | None = None
     """Flag for saving the full system evolution computed from the simulation
     backend. In order to set it True modify `platform.py` file in the platform folder."""
 
@@ -70,9 +70,10 @@ class EmulatorController(Controller):
     def validate_save_dir(self):
         if self.save_dir is not None:
             # converting every possible output as a pathlib.Path object
-            object.__setattr__(self, "save_dir", Path(self.save_dir))
-            if self.save_dir.exists():
+            save_dir = Path(self.save_dir)
+            if save_dir.exists():
                 raise FileExistsError("The given data folder already exists.")
+            object.__setattr__(self, "save_dir", save_dir)
         return self
 
     @property
@@ -99,43 +100,45 @@ class EmulatorController(Controller):
     ) -> None:
         """Write operators (once), time coefficients (n-d), density matrices (n-d)."""
 
-        if self.save_dir is not None:
-            sequence_dir = self.save_dir / f"sequence_{sequence_idx}"
-            sequence_dir.mkdir(parents=True, exist_ok=True)
+        if self.save_dir is None:
+            return
 
-            # list of file coefficients; NOTE: the first element is always the simulation timesteps array
-            time_coefficients: list[NDArray] = np.stack(
-                [evolution.times] + [c for _, c in evolution.operators]
+        sequence_dir = self.save_dir / f"sequence_{sequence_idx}"
+        sequence_dir.mkdir(parents=True, exist_ok=True)
+
+        # list of file coefficients; NOTE: the first element is always the simulation timesteps array
+        time_coefficients: list[NDArray] = np.stack(
+            [evolution.times] + [c for _, c in evolution.operators]
+        )
+
+        # solver configuration file path
+        json_filename = sequence_dir / (SIMULATOR_CONFIG + ".json")
+        static_hamiltonian_filename = sequence_dir / (HAMILTONIAN_FILENAME + ".npy")
+
+        # check if the the sweeper-independent data for the current sequence have already been dumped
+        if not static_hamiltonian_filename.exists():
+            # list of file operators of the pulse sequence; NOTE: the first element is always the time independent hamiltonian
+            operators = np.stack(
+                [static_ham.full()] + [op.full() for op, _ in evolution.operators]
             )
+            np.save(static_hamiltonian_filename, operators)
 
-            # solver configuration file path
-            json_filename = sequence_dir / (SIMULATOR_CONFIG + ".json")
-            static_hamiltonian_filename = sequence_dir / (HAMILTONIAN_FILENAME + ".npy")
+        if not json_filename.exists():
+            with open(json_filename, "w") as f:
+                json.dump(simulation_config, f)
 
-            # check if the the sweeper-independent data for the current sequence have already been dumped
-            if not static_hamiltonian_filename.exists():
-                # list of file operators of the pulse sequence; NOTE: the first element is always the time independent hamiltonian
-                operators = np.stack(
-                    [static_ham.full()] + [op.full() for op, _ in evolution.operators]
-                )
-                np.save(static_hamiltonian_filename, operators)
-
-            if not json_filename.exists():
-                with open(json_filename, "w") as f:
-                    json.dump(simulation_config, f)
-
-            # NOTE: this might crash if the process is parallelized, to be review once we enable parallelization
-            sweep_idx = sum(
-                1
-                for file in sequence_dir.iterdir()
-                if file.is_file() and SWEEP_SIMULATION_FILENAME in file.name
-            )
-            np.savez(
-                sequence_dir / (SWEEP_SIMULATION_FILENAME + f"_{sweep_idx}.npz"),
-                time_coeffs=time_coefficients,
-                results=states,
-                sim_config=simulation_config,
-            )
+        # NOTE: this might crash if the process is parallelized, to be review once we enable parallelization
+        sweep_idx = sum(
+            1
+            for file in sequence_dir.iterdir()
+            if file.is_file() and SWEEP_SIMULATION_FILENAME in file.name
+        )
+        np.savez(
+            sequence_dir / (SWEEP_SIMULATION_FILENAME + f"_{sweep_idx}.npz"),
+            time_coeffs=time_coefficients,
+            results=states,
+            sim_config=simulation_config,
+        )
 
     def play(
         self,
