@@ -59,13 +59,11 @@ def _search(name: str, paths: list[Path]) -> Path:
 
 def evaluate_path(name: str | os.PathLike[str]) -> Path:
     """Search path based on string, or use it literally."""
-    path_ = None
-    try:
-        path_ = _search(str(name), _platforms_paths())
-    except ValueError:
-        pass
-
-    return Path(name if path_ is None else path_)
+    # just appending the CWD to the platforms path does the job
+    # - relative paths are interpreted relative to the current directory, which is the
+    #   intended behavioe
+    # - absolute path are taken as absolute anyhow
+    return _search(str(name), [Path.cwd()] + _platforms_paths())
 
 
 def locate_platform(name: str, paths: list[Path] | None = None) -> Path:
