@@ -18,7 +18,7 @@ from ..parameters import NativeGates, Parameters, Settings
 from ..pulses import Acquisition, Pulse, Readout, Rectangular
 from ..qubits import Qubit, QubitMap
 from .components import Hardware
-from .load import evaluate_path, load_platform
+from .load import _evaluate_path, load_hardware
 from .platform import PARAMETERS
 
 __all__ = ["initialize_parameters"]
@@ -131,8 +131,7 @@ def reset_parameters(
     pairs: list[str] | None = None,
 ) -> None:
     """Reset parameters to default values."""
-    hardware = load_platform(evaluate_path(name))
-    assert isinstance(hardware, Hardware)
+    hardware = load_hardware(name)
     parameters = initialize_parameters(hardware, natives=natives, pairs=pairs)
-    parameters_path = evaluate_path(name) / PARAMETERS
+    parameters_path = _evaluate_path(name) / PARAMETERS
     parameters_path.write_text(parameters.model_dump_json(indent=2))

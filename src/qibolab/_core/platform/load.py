@@ -1,5 +1,6 @@
 import importlib.util
 import os
+import types
 from pathlib import Path
 
 from .components import Hardware
@@ -57,11 +58,11 @@ def _search(name: str, paths: list[Path]) -> Path:
     )
 
 
-def evaluate_path(name: str | os.PathLike[str]) -> Path:
+def _evaluate_path(name: str | os.PathLike[str]) -> Path:
     """Search path based on string, or use it literally."""
     # just appending the CWD to the platforms path does the job
     # - relative paths are interpreted relative to the current directory, which is the
-    #   intended behavioe
+    #   intended behavior
     # - absolute path are taken as absolute anyhow
     return _search(str(name), [Path.cwd()] + _platforms_paths())
 
@@ -80,12 +81,17 @@ def locate_platform(name: str, paths: list[Path] | None = None) -> Path:
     return _search(name, paths)
 
 
-def load_platform(platform: Path) -> Platform | Hardware:
-    """Load the platform module."""
-    spec = importlib.util.spec_from_file_location("platform", platform / PLATFORM)
+def _load_module(path: Path, name: str = "mymodule") -> types.ModuleType:
+    """Dynamically load Python module, given its path."""
+    spec = importlib.util.spec_from_file_location(name, path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    return module.create()
+    return module
+
+
+def _load_platform(platform: Path) -> Platform | Hardware:
+    """Load the platform module."""
+    return _load_module(platform / PLATFORM, "platform").create()
 
 
 def load_hardware(name: str | os.PathLike[str]) -> Hardware:
@@ -94,8 +100,8 @@ def load_hardware(name: str | os.PathLike[str]) -> Hardware:
     It loads the :class:`Hardware` given either a :class:`str` representing its
     name, or a path to the Python module containing it.
     """
-    path = evaluate_path(name)
-    hardware = load_platform(path)
+    path = _evaluate_path(name)
+    hardware = _load_platform(path)
     assert isinstance(hardware, Hardware)
     return hardware
 
@@ -116,7 +122,7 @@ def create_platform(name: str) -> Platform:
         return create_dummy()
     path = _search(name, _platforms_paths())
 
-    hardware = load_platform(path)
+    hardware = _load_platform(path)
     if isinstance(hardware, Platform):
         return hardware
 
