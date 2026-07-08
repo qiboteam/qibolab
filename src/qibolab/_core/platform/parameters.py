@@ -40,11 +40,10 @@ def _gate_sequence(qubit: Qubit, gate: str) -> Native:
     """Default sequence corresponding to a native gate."""
     channel = _gate_channel(qubit, gate)
     pulse = Pulse(duration=0, amplitude=0, envelope=Rectangular())
+    assert channel is not None
     if gate != "MZ":
-        assert channel is not None
         return Native([(channel, pulse)])
 
-    assert channel is not None
     return Native(
         [(channel, Readout(acquisition=Acquisition(duration=0), probe=pulse))]
     )
@@ -108,7 +107,7 @@ def initialize_parameters(
         for q, qubit in hardware.qubits.items()
     }
     coupler = {
-        q: _native_builder(SingleQubitNatives, qubit, natives & {"CP"})
+        q: _native_builder(SingleQubitNatives, qubit, {"CP"})
         for q, qubit in hardware.couplers.items()
     }
     two_qubit = {
