@@ -27,6 +27,12 @@ def test_create_platform_error():
         _ = create_platform("nonexistent")
 
 
+def test_envvar_unset(monkeypatch):
+    monkeypatch.delenv(PLATFORMS_PATH)
+    with pytest.raises(RuntimeError, match="unset"):
+        _ = locate_platform("ciao")
+
+
 @pytest.fixture
 def dummy_hardware(monkeypatch, tmp_path: Path) -> str:
     name = "dummy_hardware"
@@ -48,6 +54,11 @@ def test_load_hardware(dummy_hardware: str):
     hw = load_hardware(dummy_hardware)
     assert isinstance(hw, Hardware)
     assert list(hw.qubits.keys()) == list(range(5))
+
+
+def test_direct_load():
+    hw = load_hardware(Path(__file__).parent / "dummy_hardware")
+    assert isinstance(hw, Hardware)
 
 
 def test_locate_platform(tmp_path: Path):
