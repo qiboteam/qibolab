@@ -175,7 +175,7 @@ def load_simulation(
 
     simulated_sequence_path = simulation_path / f"sequence_{sequence_index}"
     if not simulated_sequence_path.is_dir():
-        raise NotADirectoryError()
+        raise NotADirectoryError
 
     hamiltonians = np.load(simulated_sequence_path / (HAMILTONIAN_FILENAME + ".npy"))
     sweep_sim = np.load(
