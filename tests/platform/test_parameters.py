@@ -1,9 +1,11 @@
+from qibolab._core.components.channels import IqChannel
+from qibolab._core.components.configs import IqConfig, IqMixerConfig, OscillatorConfig
 from qibolab._core.platform.load import create_platform
 from qibolab._core.pulses.pulse import Pulse, Readout
 from qibolab.platform import Hardware, initialize_parameters
 
 
-def test_builder():
+def test_parameters_initialization():
     dummy = create_platform("dummy")
 
     hardware = Hardware(
@@ -11,8 +13,11 @@ def test_builder():
         qubits=dummy.qubits,
         couplers=dummy.couplers,
     )
+    hardware.instruments["dummy"].channels["0/drive"] = IqChannel(
+        mixer="mixer/ciao", lo="lo/come"
+    )
     parameters = initialize_parameters(
-        hardware=hardware, natives=["RX", "MZ", "CZ"], pairs=["0-2"]
+        hardware=hardware, natives=["RX", "RX12", "MZ", "CZ"], pairs=["0-2"]
     )
 
     for q in dummy.qubits:
@@ -35,3 +40,7 @@ def test_builder():
     sequence = parameters.native_gates.single_qubit[2].MZ
     assert sequence[0][0] == "2/acquisition"
     assert isinstance(sequence[0][1], Readout)
+
+    assert isinstance(parameters.configs["0/drive"], IqConfig)
+    assert isinstance(parameters.configs["mixer/ciao"], IqMixerConfig)
+    assert isinstance(parameters.configs["lo/come"], OscillatorConfig)
