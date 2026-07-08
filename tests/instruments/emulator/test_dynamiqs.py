@@ -71,7 +71,7 @@ def test_dynamiqs_two_body_expand_matches_qutip():
     )
 
 
-def testjax_interpolation_matches_scipy():
+def test_jax_interpolation_matches_scipy():
     """The JAX-traceable conversion reproduces the cubic spline exactly."""
     times = np.linspace(0.0, 20.0, 101)
     values = np.sin(np.pi * times / 20.0) ** 2 * np.cos(2 * np.pi * 0.3 * times)
