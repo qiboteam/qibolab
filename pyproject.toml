@@ -25,7 +25,7 @@ python = ">=3.10,<3.14"
 numpy = ">=1.26.4,<3"
 scipy = "^1.13.0"
 pydantic = "^2.4.0"
-qibo = { version = "^0.3.0" , optional = true }
+qibo = { version = "^0.3.0", optional = true }
 qutip = { version = "^5.0.2", optional = true }
 dynamiqs = { version = "^0.3.4", optional = true }
 pyserial = { version = "^3.5", optional = true }
@@ -93,12 +93,10 @@ test-docs = "make -C doc doctest"
 
 [tool.pytest.ini_options]
 testpaths = ['tests/']
-markers = ["qpu: mark tests that require qpu"]
 addopts = [
   '--cov=qibolab',
   '--cov-report=xml',
   '--cov-report=html',
-  '-m not qpu',
   "--ignore=tests/qblox", # TODO: move tests to qibolab-qblox
 ]
 

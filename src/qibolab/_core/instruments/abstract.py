@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from collections.abc import Mapping
 
 from pydantic import ConfigDict, Field
 
@@ -10,6 +11,13 @@ from ..identifier import ChannelId, Result
 from ..sequence import PulseSequence
 from ..serialize import Model
 from ..sweeper import ParallelSweepers
+
+__all__ = [
+    "Controller",
+    "Instrument",
+    "InstrumentId",
+    "InstrumentMap",
+]
 
 InstrumentId = str
 
@@ -51,6 +59,9 @@ class Instrument(Model, ABC):
         (like LO frequency and power) to the instrument after
         connecting.
         """
+
+
+InstrumentMap = Mapping[InstrumentId, Instrument]
 
 
 class Controller(Instrument):

@@ -1,13 +1,14 @@
-from typing import Annotated, Optional
+from collections.abc import Mapping
+from typing import Annotated, Any
 
 from pydantic import ConfigDict, Field
 
 from .identifier import ChannelId, QubitId, TransitionId
 from .serialize import Model
 
-__all__ = ["Qubit"]
+__all__ = ["Qubit", "QubitMap"]
 
-DefaultChannelType = Annotated[Optional[ChannelId], True]
+DefaultChannelType = Annotated[ChannelId | None, True]
 """If ``True`` the channel is included in the default qubit constructor."""
 
 
@@ -46,7 +47,9 @@ class Qubit(Model):
         ]
 
     @classmethod
-    def default(cls, name: QubitId, channels: list[str] | None = None, **kwargs):
+    def default(
+        cls, name: QubitId, channels: list[str] | None = None, **kwargs: Any
+    ) -> "Qubit":
         """Create a qubit with default channel names.
 
         Default channel names follow the convention:
@@ -73,3 +76,6 @@ class QubitPair(Model):
 
     drive: ChannelId | None = None
     """Output channel, for cross-resonance driving."""
+
+
+QubitMap = Mapping[QubitId, Qubit]

@@ -1,14 +1,37 @@
 import importlib.util
 import os
+import types
 from pathlib import Path
 
-from ..parameters import Hardware
+from .components import Hardware
 from .platform import Platform
 
-__all__ = ["create_platform", "locate_platform"]
+__all__ = ["create_platform"]
 
 PLATFORM = "platform.py"
-PLATFORMS = "QIBOLAB_PLATFORMS"
+"""Conventional name of the file containing the platform definition.
+
+This is only used for the builtin platform-retrieval mechanism.
+
+.. tip::
+
+    A Qibolab platform can be defined completely dynamically. Or it can be loaded
+    in any other way, from custom-named files.
+    However, in this case, no support for lookup and loading of the platforms is
+    provided, and the user is responsible to instantiate a full :class:`Platform`
+    object, with all the parameters value set as intended (cf.
+    :class:`qibolab.Parameters`).
+
+"""
+
+PLATFORMS_PATH = "QIBOLAB_PLATFORMS"
+"""Environment variable where to store the platforms path.
+
+This is intended to be a ``:``-separated list of paths, which are searched in order for
+folders containing platforms, identified by the presence of a source file named as
+specified by :const:`PLATFORM`.
+The paths appearing before in the list take priority over the following ones.
+"""
 
 
 def _platforms_paths() -> list[Path]:
@@ -16,9 +39,9 @@ def _platforms_paths() -> list[Path]:
 
     Path is specified using the environment variable QIBOLAB_PLATFORMS.
     """
-    paths = os.environ.get(PLATFORMS)
+    paths = os.environ.get(PLATFORMS_PATH)
     if paths is None:
-        raise RuntimeError(f"Platforms path ${PLATFORMS} unset.")
+        raise RuntimeError(f"Platforms path ${PLATFORMS_PATH} unset.")
 
     return [Path(p) for p in paths.split(os.pathsep)]
 
@@ -31,17 +54,17 @@ def _search(name: str, paths: list[Path]) -> Path:
             return platform
 
     raise ValueError(
-        f"Platform {name} not found. Check ${PLATFORMS} environment variable.",
+        f"Platform {name} not found. Check ${PLATFORMS_PATH} environment variable.",
     )
 
 
-def _load(platform: Path) -> Platform | Hardware:
-    """Load the platform module."""
-    module_name = "platform"
-    spec = importlib.util.spec_from_file_location(module_name, platform / PLATFORM)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module.create()
+def _evaluate_path(name: str | os.PathLike[str]) -> Path:
+    """Search path based on string, or use it literally."""
+    # just appending the CWD to the platforms path does the job
+    # - relative paths are interpreted relative to the current directory, which is the
+    #   intended behavior
+    # - absolute path are taken as absolute anyhow
+    return _search(str(name), [Path.cwd()] + _platforms_paths())
 
 
 def locate_platform(name: str, paths: list[Path] | None = None) -> Path:
@@ -56,6 +79,31 @@ def locate_platform(name: str, paths: list[Path] | None = None) -> Path:
     if paths is None:
         paths = _platforms_paths()
     return _search(name, paths)
+
+
+def _load_module(path: Path, name: str = "mymodule") -> types.ModuleType:
+    """Dynamically load Python module, given its path."""
+    spec = importlib.util.spec_from_file_location(name, path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _load_platform(platform: Path) -> Platform | Hardware:
+    """Load the platform module."""
+    return _load_module(platform / PLATFORM, "platform").create()
+
+
+def load_hardware(name: str | os.PathLike[str]) -> Hardware:
+    """Load the hardware representation from platform.
+
+    It loads the :class:`Hardware` given either a :class:`str` representing its
+    name, or a path to the Python module containing it.
+    """
+    path = _evaluate_path(name)
+    hardware = _load_platform(path)
+    assert isinstance(hardware, Hardware)
+    return hardware
 
 
 def create_platform(name: str) -> Platform:
@@ -74,7 +122,7 @@ def create_platform(name: str) -> Platform:
         return create_dummy()
     path = _search(name, _platforms_paths())
 
-    hardware = _load(path)
+    hardware = _load_platform(path)
     if isinstance(hardware, Platform):
         return hardware
 
@@ -88,5 +136,5 @@ def available_platforms() -> list[str]:
         for platforms in _platforms_paths()
         for d in platforms.iterdir()
         if d.is_dir()
-        and Path(f"{os.environ.get(PLATFORMS)}/{d.name}/platform.py") in d.iterdir()
+        and Path(f"{os.environ.get(PLATFORMS_PATH)}/{d.name}/{PLATFORM}") in d.iterdir()
     ]

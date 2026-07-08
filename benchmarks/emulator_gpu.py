@@ -21,7 +21,7 @@ import numpy as np
 
 from qibolab import AcquisitionType, AveragingMode, create_platform
 from qibolab._core.instruments.emulator.engine import DynamiqsEngine, QutipEngine
-from qibolab._core.platform.load import PLATFORMS
+from qibolab._core.platform.load import PLATFORMS_PATH
 from qibolab.instruments.emulator import EmulatorController
 
 HERE = Path(__file__).resolve().parent
@@ -105,7 +105,7 @@ def emulator_controller(platform) -> EmulatorController:
 
 
 def benchmark(args: argparse.Namespace) -> dict[str, Any]:
-    os.environ[PLATFORMS] = str(args.platforms_path)
+    os.environ[PLATFORMS_PATH] = str(args.platforms_path)
     platform = create_platform(args.platform)
     emulator_controller(platform).engine = build_engine(args)
 
