@@ -211,8 +211,7 @@ class Cluster(Controller):
             module = self._modules[slot]
             for port in ports:
                 offset_parameter = f"out{port}_offset"
-                if offset_parameter in module.parameters:
-                    module.parameters[offset_parameter].set(0.0)
+                module.parameters[offset_parameter].set(0.0)
 
     def play(
         self,
