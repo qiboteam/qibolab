@@ -9,7 +9,13 @@ import qblox_instruments as qblox
 from qblox_instruments.qcodes_drivers.module import Module
 from qcodes.instrument import find_or_create_instrument
 
-from qibolab._core.components import AcquisitionChannel, Configs, DcConfig, IqChannel
+from qibolab._core.components import (
+    AcquisitionChannel,
+    Configs,
+    DcChannel,
+    DcConfig,
+    IqChannel,
+)
 from qibolab._core.execution_parameters import (
     AcquisitionType,
     ExecutionParameters,
@@ -171,7 +177,7 @@ class Cluster(Controller):
         assert self._cluster is not None
         self._cluster.reset()
 
-    def connect(self):
+    def connect(self) -> None:
         """Connect and initialize the instrument."""
         if self.is_connected:
             return
@@ -180,13 +186,32 @@ class Cluster(Controller):
             qblox.Cluster, recreate=True, name=self.name, identifier=self.address
         )
 
-    def disconnect(self):
+    def disconnect(self) -> None:
         """Disconnect and reset the instrument."""
         assert self._cluster is not None
+
+        # Ensure static flux offsets are reset before closing the connection to avoid
+        # heating the fridge.
+        self._set_dc_offsets_to_0()
+
         for module in self._modules.values():
             module.stop_sequencer()
         self._cluster.close()
         self._cluster = None
+
+    def _set_dc_offsets_to_0(self) -> None:
+        flux_slot_to_ports: dict[SlotId, set[int]] = defaultdict(set)
+        for channel in self.channels.values():
+            if not isinstance(channel, DcChannel):
+                continue
+            address = PortAddress.from_path(channel.path)
+            flux_slot_to_ports[address.slot].add(address.ports[0] - 1)
+
+        for slot, ports in flux_slot_to_ports.items():
+            module = self._modules[slot]
+            for port in ports:
+                offset_parameter = f"out{port}_offset"
+                module.parameters[offset_parameter].set(0.0)
 
     def play(
         self,
