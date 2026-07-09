@@ -123,16 +123,48 @@ def index(ch: ChannelId, hconfig: HamiltonianConfig) -> int:
     return qubit_info(ch, hconfig)[1]
 
 
-def _sampled_measurements(
-    sampled: NDArray, dims: list[int], inverse_map: NDArray, indices: list[int]
+def _marginalize_probability(
+    probabilities: NDArray,
+    dims: list[int],
+    measured_qubits: list[tuple[Qubit, int]],
+    acquisition_type: AcquisitionType,
 ) -> NDArray:
-    """Extract measured subsystem states from sampled full-system states."""
-    indices = np.asarray(indices)
-    res = np.empty((len(indices), *sampled.shape[1:]), dtype=sampled.dtype)
-    for sample in np.unique(inverse_map):
-        states = np.stack(np.unravel_index(sampled[sample], dims))
-        measurements = np.flatnonzero(inverse_map == sample)
-        res[measurements] = states[indices[measurements]]
+    # probability dimensions are:
+    # (*S, M, *H_dim)
+    # discarding the last dimension since the results is just a scalar / tuple of scalar
+    results_shape = np.moveaxis(probabilities, -2, 0).shape[:-1]
+    # res has dimensions (M, *S)
+    res = np.empty(results_shape)
+    for measurement, (q, q_idx) in enumerate(measured_qubits):
+        # select the total probability distribution of the specific measurement
+        distribution = probabilities[..., measurement, :]
+        # leading are the dimensions related to the sweepers
+        leading = distribution.shape[:-1]
+        # distributions now has dimensions (*S, H_1, H_2, ..., H_i)
+        distribution = distribution.reshape(*leading, *dims)
+        # selectig the axes (hence the subspace) corresponding to the measured qubit
+        axes = tuple(len(leading) + i for i in range(len(dims)) if i != q_idx)
+        # summing over all system
+        # marginalized has dimensions (*S, H_i) where i is the qubit that's measured
+        marginalized = distribution.sum(axis=axes)
+
+        # Marginalized state is multiplied by the qubit's confusion matrix
+        # before stacking because measured subsystems may have different dimensions.
+        corrected_marginalized = np.einsum(
+            "ij,...j",
+            q.confusion_matrix,
+            marginalized,
+        )
+
+        if acquisition_type is AcquisitionType.DISCRIMINATION:
+            # now we group all the states >= 1, so we classify as 1
+            corrected_marginalized = corrected_marginalized[..., 1:]
+        else:
+            # here we are element-wise multiplying the state probability vector
+            # to the state number
+            corrected_marginalized *= np.arange(0, q.transmon_levels, 1)
+
+        res[measurement, ...] = corrected_marginalized.sum(axis=-1)
 
     return res
 
@@ -195,50 +227,18 @@ def _cyclic_results(
         qubit_info(sequence.pulse_channels(ro_id)[0], hamiltonian) for ro_id in acq_id
     ]
 
-    # probability dimensions are:
-    # (*S, M, *H_dim)
-    # discarding the last dimension since the results is just a scalar / tuple of scalar
-    results_shape = np.moveaxis(state_probs, -2, 0)[:-1]
-    # res has dimensions (M, *S)
-    res = np.empty(shape=results_shape)
-    for measurement, (q, q_idx) in enumerate(measured_qubits):
-        # select the total probability distribution of the specific measurement
-        distribution = state_probs[..., measurement, :]
-        # leading are the dimensions related to the sweepers
-        leading = distribution.shape[:-1]
-        # distributions now has dimensions (*S, H_1, H_2, ..., H_i)
-        distribution = distribution.reshape(*leading, *hamiltonian.dims)
-        # selectig the axes (hence the subspace) corresponding to the measured qubit
-        axes = tuple(
-            len(leading) + i for i in range(len(hamiltonian.dims)) if i != q_idx
-        )
-        # summing over all system
-        # marginalized has dimensions (*S, H_i) where i is the qubit that's measured
-        marginalized = distribution.sum(axis=axes)
-
-        # Marginalized state is multiplied by the qubit's confusion matrix
-        # before stacking because measured subsystems may have different dimensions.
-        corrected_marginalized = np.einsum(
-            "ij,...j",
-            q.confusion_matrix,
-            marginalized,
-        )
-
-        if options.acquisition_type is AcquisitionType.DISCRIMINATION:
-            # now we group all the states >= 1, so we classify as 1
-            corrected_marginalized = corrected_marginalized[..., 1:]
-        else:
-            # here we are element-wise multiplying the state probability vector
-            # to the state number
-            corrected_marginalized *= np.arange(0, q.transmon_levels, 1)
-
-        res[measurement, ...] = corrected_marginalized.sum(axis=-1)
+    res = _marginalize_probability(
+        probabilities=state_probs,
+        dims=hamiltonian.dims,
+        measured_qubits=measured_qubits,
+        acquisition_type=options.acquisition_type,
+    )
 
     # adding (fake) q component in the results for INTEGRATION acquisition
     if options.acquisition_type is AcquisitionType.INTEGRATION:
         res = np.random.normal(res, scale=0.001)
         zeros = np.zeros(res.shape) if np.ndim(res) != 0 else 0.0
-        res = np.stack((res, zeros))
+        res = np.stack((res, zeros), axis=-1)
 
     # res is a (M, *S, ...) array
     return dict(zip(acq_id, res))
@@ -262,14 +262,17 @@ def _singleshot_results(
         add_confusion_matrix(list(hamiltonian.qubits.values())),
         state_probs,
     )
-
     # here we move the -2 index of the probability array, hence it now becomes:
     # (M, *S, *H_dim)
     state_probs = np.moveaxis(state_probs, -2, 0)
 
     # shots function returns a vector of shape:
-    # (Nshots, M_unique, *S, *H_dim)
+    # (Nshots, M, *S, *H_dim)
     sampled = shots(state_probs, options.nshots)
+
+    # move measurements dimension to the front, getting ready for extraction
+    # the shape now is: (M, Nshots, *S, *H_dim)
+    sampled = np.moveaxis(sampled, 1, 0)
 
     # from every acquisition pulse id we get the corresponding channel, and from the channel we get the
     # corresponding Hilbert-space index to extract from the sampled full-system state.
@@ -282,7 +285,7 @@ def _singleshot_results(
     # res is a (M, M, Nshots, *S) array
     res = np.stack(np.unravel_index(sampled, hamiltonian.dims))[qubit_indices]
 
-    # using np.einsum, so res is a (M, Nshots, *S) array
+    # using np.einsum, so res is a (M, Nshots, *S, ...) array
     res = np.einsum(res, np.array([0, 0] + [...]), np.array([0] + [...]))
 
     if options.acquisition_type is AcquisitionType.DISCRIMINATION:

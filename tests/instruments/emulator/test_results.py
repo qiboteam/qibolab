@@ -5,10 +5,10 @@ from qibolab._core.execution_parameters import (
     AveragingMode,
     ExecutionParameters,
 )
+from qibolab._core.instruments.emulator.hamiltonians import Qubit
 from qibolab._core.instruments.emulator.results import (
     _cyclic_results,
     _marginalize_probability,
-    _sampled_measurements,
 )
 from qibolab._core.pulses import Acquisition
 
@@ -25,7 +25,12 @@ def random_states(space: tuple[int, ...], sweeps: tuple[int, ...] = (), nacq: in
 def test_marginalize_probability_preserves_sweep_axes():
     probabilities = np.arange(1, 49).reshape(2, 2, 12)
 
-    marginalized = _marginalize_probability(probabilities, [2, 3, 2], [1, 2])
+    marginalized = _marginalize_probability(
+        probabilities=probabilities,
+        dims=[2, 3, 2],
+        measured_qubits=[(Qubit(transmon_levels=3), 1), [Qubit(transmon_levels=2), 2]],
+        acquisition_type=AcquisitionType.DISCRIMINATION,
+    )
     expected = np.stack(
         (
             probabilities[:, 0].reshape(2, 2, 3, 2).sum(axis=(1, 3))[..., 1:].sum(-1),
@@ -55,7 +60,13 @@ def test_cyclic_integration_results_marginalize_probabilities(monkeypatch):
     results = _cyclic_results(
         state_probs=probabilities.reshape(2, -1),
         sequence=sequence,
-        hamiltonian=_HamiltonianConfig(dims=[2, 3]),
+        hamiltonian=_HamiltonianConfig(
+            dims=[2, 3],
+            qubits={
+                0: Qubit(transmon_levels=2),
+                1: Qubit(transmon_levels=3),
+            },
+        ),
         options=ExecutionParameters(
             acquisition_type=AcquisitionType.INTEGRATION,
             averaging_mode=AveragingMode.CYCLIC,
@@ -64,27 +75,6 @@ def test_cyclic_integration_results_marginalize_probabilities(monkeypatch):
 
     np.testing.assert_allclose(results[acq0.id], [0.40, 0.0])
     np.testing.assert_allclose(results[acq1.id], [0.85, 0.0])
-
-
-def test_sampled_measurements_groups_acquisitions_by_sample():
-    sampled = np.array(
-        [
-            [[0, 1], [4, 5]],
-            [[2, 3], [1, 0]],
-        ]
-    )
-    inverse_map = np.array([0, 0, 1])
-
-    measured = _sampled_measurements(
-        sampled=sampled,
-        dims=[2, 3],
-        inverse_map=inverse_map,
-        indices=[0, 1, 1],
-    )
-
-    np.testing.assert_allclose(measured[0], [[0, 0], [1, 1]])
-    np.testing.assert_allclose(measured[1], [[0, 1], [1, 2]])
-    np.testing.assert_allclose(measured[2], [[2, 0], [1, 0]])
 
 
 class _Sequence:
@@ -105,8 +95,9 @@ class _Sequence:
 
 
 class _HamiltonianConfig:
-    def __init__(self, dims):
+    def __init__(self, dims: list[int], qubits: dict[int, Qubit]):
         self.dims = dims
+        self.qubits = qubits
 
     def hilbert_space_index(self, target):
         return target
