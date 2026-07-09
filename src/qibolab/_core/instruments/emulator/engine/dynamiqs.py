@@ -3,22 +3,19 @@
 from collections.abc import Iterable
 from dataclasses import dataclass
 from functools import cached_property
-from pathlib import Path
 from typing import Any, Literal
 
 import numpy as np
 from scipy.interpolate import make_interp_spline
 
 from .abstract import (
-    HAMILTONIAN_FILENAME,
     INTEGRATION_MIN_TIME_STEP,
     INTEGRATION_MULTIPLIER,
-    STATE_FILENAME,
     Operator,
     OperatorEvolution,
     SimulationEngine,
-    _spline_function,
 )
+from .gpu_interpolation import jax_interpolation
 
 __all__ = ["DynamiqsEngine"]
 
@@ -149,74 +146,6 @@ class DynamiqsEngine(SimulationEngine):
             rtol=self.rtol, atol=self.atol, max_steps=max(max_steps, 100_000)
         )
 
-    def dump_results(self, hamiltonian: Any, sim_results: Any, dump_dir: Path) -> None:
-        """Save the Hamiltonian and simulation results to files with incremented naming.
-
-        Dynamiqs time-dependent Hamiltonians hold JAX callables that cannot be
-        pickled, so instead of the QuTiP engine's ``qsave`` format the engine
-        stores plain NumPy archives: the Hamiltonian evaluated at the saved
-        times and the density matrices at the saved times.
-        """
-        dump_dir.mkdir(parents=True, exist_ok=True)
-
-        count_1 = sum(
-            1
-            for file in dump_dir.iterdir()
-            if file.is_file() and HAMILTONIAN_FILENAME in file.name
-        )
-        count_2 = sum(
-            1
-            for file in dump_dir.iterdir()
-            if file.is_file() and STATE_FILENAME in file.name
-        )
-        count = max(count_1, count_2)
-
-        times = np.asarray(sim_results.tsave)
-        hamiltonians = np.stack([np.asarray(hamiltonian(t).to_jax()) for t in times])
-        states = np.asarray(sim_results.states.to_jax())
-        np.savez(
-            dump_dir / f"{HAMILTONIAN_FILENAME}_{count}.npz",
-            times=times,
-            hamiltonians=hamiltonians,
-        )
-        np.savez(dump_dir / f"{STATE_FILENAME}_{count}.npz", times=times, states=states)
-
-    def load_results(
-        self, dump_dir: Path, count: int | None = None
-    ) -> tuple[dict, dict]:
-        """Load the Hamiltonian and simulation results saved by :meth:`dump_results`.
-
-        Returns two dictionaries with ``times`` and ``hamiltonians`` / ``states``
-        arrays. If `count` is not given, the latest dump is loaded.
-        """
-        dump_dir = Path(dump_dir)
-        if count is None:
-            count_1 = sum(
-                1
-                for file in dump_dir.iterdir()
-                if file.is_file() and HAMILTONIAN_FILENAME in file.name
-            )
-            count_2 = sum(
-                1
-                for file in dump_dir.iterdir()
-                if file.is_file() and STATE_FILENAME in file.name
-            )
-            count = max(count_1, count_2) - 1
-
-        hamiltonians = dict(np.load(dump_dir / f"{HAMILTONIAN_FILENAME}_{count}.npz"))
-        states = dict(np.load(dump_dir / f"{STATE_FILENAME}_{count}.npz"))
-        return hamiltonians, states
-
-    def save_operators(self, operators, dump_dir: Path) -> None:
-        """Persist static operators once per experiment."""
-        np.savez(
-            dump_dir / "operators.npz",
-            **{
-                f"operator_{index}": np.asarray(_unwrap(operator).to_jax())
-                for index, operator in enumerate(operators)
-            },
-        )
-
     def evolve(
         self,
         hamiltonian: Operator,
@@ -224,7 +153,6 @@ class DynamiqsEngine(SimulationEngine):
         time: Iterable[float],
         time_hamiltonian: OperatorEvolution = None,
         collapse_operators: list[Operator] = None,
-        save_evolution: Path | None = None,
         **kwargs,
     ) -> DynamiqsEvolutionResult:
         """Evolve the system."""
@@ -234,15 +162,10 @@ class DynamiqsEngine(SimulationEngine):
         hamiltonian = self.engine.constant(_unwrap(hamiltonian))
         if time_hamiltonian is not None:
             times = time_hamiltonian.times
-            coefficients = [
-                make_interp_spline(times, coefficient, k=SPLINE_INTERP_ORDER)
-                for coefficient in time_hamiltonian.coefficients
-            ]
-            for operator, coefficient in zip(
-                time_hamiltonian.operators, coefficients, strict=True
-            ):
+            for operator, coefficient in time_hamiltonian.operators:
+                spline = make_interp_spline(times, coefficient, k=SPLINE_INTERP_ORDER)
                 hamiltonian += self.engine.modulated(
-                    _spline_function(coefficient), _unwrap(operator)
+                    jax_interpolation(spline), _unwrap(operator)
                 )
 
         method = kwargs.pop("method", self._method(time))
@@ -257,14 +180,7 @@ class DynamiqsEngine(SimulationEngine):
             **kwargs,
         )
 
-        if save_evolution is not None:
-            self.dump_results(
-                hamiltonian=hamiltonian,
-                sim_results=result,
-                dump_dir=save_evolution,
-            )
-
-        return DynamiqsEvolutionResult(result)
+        return DynamiqsEvolutionResult(result), {"engine": "dynamiqs"}
 
     def create(self, n: int) -> Operator:
         """Create operator for n levels system."""
@@ -283,13 +199,13 @@ class DynamiqsEngine(SimulationEngine):
         return DynamiqsOperator(self.engine.tensor(*[_unwrap(op) for op in operators]))
 
     def expand(
-        self, op: Operator, targets: int | list[int], dims: list[int]
+        self, op: Operator, dims: list[int], targets: int | list[int]
     ) -> Operator:
         """Expand operator in larger Hilbert space."""
         # The current emulator calls this method with QuTiP's argument order:
         # ``expand_operator(op, dims, targets)``.
-        dimensions = list(targets)
-        target_subsystems = [dims] if isinstance(dims, int) else list(dims)
+        dimensions = list(dims)
+        target_subsystems = [targets] if isinstance(targets, int) else list(targets)
         op_array = np.asarray(_unwrap(op).to_jax())
         return DynamiqsOperator(
             self.engine.asqarray(
@@ -301,6 +217,12 @@ class DynamiqsEngine(SimulationEngine):
     def basis(self, dim: int | list[int], state: int | list[int]) -> Operator:
         """Basis operator for n levels system."""
         return DynamiqsOperator(self.engine.basis(dim, state))
+
+    def save_operators(self) -> None:
+        """Persist the static operators once per experiment."""
+        # TODO: this function is now deprecated since the saving is upstream in emulator.py;
+        # however is necessary to define the load_function for loading results in dynamiqs.
+        return
 
 
 def _unwrap(operator):

@@ -44,7 +44,7 @@ class FluxEmulatorConfig(Config):
 
     @staticmethod
     def operator(n: int, engine: SimulationEngine) -> Operator:
-        return engine.create(n) * engine.destroy(n)
+        return engine.create(n) @ engine.destroy(n)
 
     @property
     def flux(self) -> float:
@@ -81,15 +81,19 @@ class Qubit(Config):
 
     def operator(self, n: int, engine: SimulationEngine, flux: float = 0):
         """Time independent operator."""
-        quadratic_term = engine.create(n) * engine.destroy(n) * self.omega(flux) / giga
+        quadratic_term = (
+            (engine.create(n) @ engine.destroy(n)) * self.omega(flux) / giga
+        )
         quartic_term = (
             self.anharmonicity
             * np.pi
             / giga
-            * engine.create(n)
-            * engine.create(n)
-            * engine.destroy(n)
-            * engine.destroy(n)
+            * (
+                engine.create(n)
+                @ engine.create(n)
+                @ engine.destroy(n)
+                @ engine.destroy(n)
+            )
         )
         return quadratic_term + quartic_term
 
@@ -100,8 +104,10 @@ class Qubit(Config):
     def relaxation(self, n: int, engine: SimulationEngine) -> Operator:
         return sum(
             np.sqrt(1 / t1)
-            * engine.basis(state=transition[0], dim=n)
-            * engine.basis(state=transition[1], dim=n).dag()
+            * (
+                engine.basis(state=transition[0], dim=n)
+                @ engine.basis(state=transition[1], dim=n).dag()
+            )
             for transition, t1 in self.t1.items()
         )
 
@@ -110,9 +116,9 @@ class Qubit(Config):
             np.sqrt(1 / self.t_phi(pair) / 2)
             * (
                 engine.basis(state=pair[0], dim=n)
-                * engine.basis(state=pair[0], dim=n).dag()
+                @ engine.basis(state=pair[0], dim=n).dag()
                 - engine.basis(state=pair[1], dim=n)
-                * engine.basis(state=pair[1], dim=n).dag()
+                @ engine.basis(state=pair[1], dim=n).dag()
             )
             for pair in self.t2
         )
@@ -293,21 +299,21 @@ class HamiltonianConfig(Config):
         """Time independent part of Hamiltonian."""
         qubit_terms = sum(
             engine.expand(
-                qubit.operator(
+                op=qubit.operator(
                     n=self.transmon_levels,
                     flux=static_flux(qubit=i, config=config),
                     engine=engine,
                 ),
-                self.dims,
-                self.hilbert_space_index(i),
+                dims=self.dims,
+                targets=self.hilbert_space_index(i),
             )
             for i, qubit in self.qubits.items()
         )
         coupling = sum(
             engine.expand(
-                pair.operator(self.transmon_levels, engine),
-                self.dims,
-                [
+                op=pair.operator(self.transmon_levels, engine),
+                dims=self.dims,
+                targets=[
                     self.hilbert_space_index(pair_id[0]),
                     self.hilbert_space_index(pair_id[1]),
                 ],
@@ -325,17 +331,17 @@ class HamiltonianConfig(Config):
             if len(qubit.t1) > 0:
                 collapse_operators.append(
                     engine.expand(
-                        qubit.relaxation(self.transmon_levels, engine),
-                        self.dims,
-                        self.hilbert_space_index(i),
+                        op=qubit.relaxation(self.transmon_levels, engine),
+                        dims=self.dims,
+                        targets=self.hilbert_space_index(i),
                     )
                 )
             if len(qubit.t2) > 0:
                 collapse_operators.append(
                     engine.expand(
-                        qubit.dephasing(self.transmon_levels, engine),
-                        self.dims,
-                        self.hilbert_space_index(i),
+                        op=qubit.dephasing(self.transmon_levels, engine),
+                        dims=self.dims,
+                        targets=self.hilbert_space_index(i),
                     )
                 )
         return collapse_operators
