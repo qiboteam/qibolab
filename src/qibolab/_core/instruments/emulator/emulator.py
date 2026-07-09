@@ -336,14 +336,14 @@ def hamiltonian(
 
     if isinstance(config, (DriveEmulatorConfig, FluxEmulatorConfig)):
         op = sum(
-            (
                 engine.expand(
-                    op=o, 
-                    dims=hamiltonian.dims, 
+                    op=o,
+                    dims=hamiltonian.dims,
                     targets=hamiltonian.hilbert_space_index(int(q)),
-                ) 
-                for (q, o) in config.operator(hamiltonian=hamiltonian, channel=channel, engine=engine)
-            )
+                )
+                for (q, o) in config.operator(
+                    hamiltonian=hamiltonian, channel=channel, engine=engine
+                )
         )
 
     else:
