@@ -107,6 +107,7 @@ class FluxEmulatorConfig(Config):
         return self.offset * self.voltage_to_flux
 
 
+# NOTE: the emulator only works with qubits (only 0 and 1 states)
 class Qubit(Config):
     """Hamiltonian parameters for single qubit."""
 
@@ -135,14 +136,17 @@ class Qubit(Config):
         n = self.transmon_levels
 
         if self.confusion_matrix is None:
-            if self.p_into_0 is None:
-                matrix = np.eye(n)
-            else:
-                matrix = np.zeros((n, n))
-                matrix[0, 0] = 1
-                matrix[1, 1] = 1
-                matrix[0, 2:] = self.p_into_0
-                matrix[1, 2:] = 1 - self.p_into_0
+            matrix = np.zeros((n, n))
+            matrix[0, 0] = 1
+            matrix[1, 1] = 1
+            if n > 2:
+                if self.p_into_0 is None:
+                    # all the states > 1 are always classified as 1
+                    matrix[0, 2:] = 0
+                    matrix[1, 2:] = 1
+                else:
+                    matrix[0, 2:] = self.p_into_0
+                    matrix[1, 2:] = 1 - self.p_into_0
 
             # ATTENTION: forcing overwriting of confusion matrix despite it's frozen
             object.__setattr__(self, "confusion_matrix", matrix)
@@ -153,9 +157,7 @@ class Qubit(Config):
             )
 
         if np.any(self.confusion_matrix.sum(axis=0) != 1):
-            raise ValueError(
-                "Confusion matrix columns must sum to 1. Found column sums."
-            )
+            raise ValueError("Confusion matrix columns must sum to 1.")
 
         return self
 
@@ -438,10 +440,10 @@ class HamiltonianConfig(Config):
         coupling = sum(
             engine.expand(
                 op=pair.operator(
-                    self.qubits[pair_id[0]].transmon_levels, 
+                    self.qubits[pair_id[0]].transmon_levels,
                     self.qubits[pair_id[1]].transmon_levels,
-                    engine
-                    ),
+                    engine,
+                ),
                 dims=self.dims,
                 targets=[
                     self.hilbert_space_index(pair_id[0]),
