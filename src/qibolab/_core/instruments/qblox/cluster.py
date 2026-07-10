@@ -1,11 +1,11 @@
 import logging
+import time
 import warnings
 from collections import defaultdict
 from functools import cached_property
 from itertools import groupby
 from typing import cast
 
-import numpy as np
 import qblox_instruments as qblox
 from qblox_instruments.qcodes_drivers.module import Module
 from qcodes.instrument import find_or_create_instrument
@@ -72,8 +72,8 @@ def _compute_duration(
     # TODO: wait_sync duration is determined as explained in this comment
     # https://github.com/qiboteam/qibolab/pull/1389#issuecomment-3884129213.
     # It should be checked with Qblox if the sync time can indeed be of the
-    # order of 1000 ns.
-    wait_sync_duration = 1000
+    # order of 900 ns.
+    wait_sync_duration = 900
     duration = options.estimate_duration(
         [ps], sweepers, time_of_flight + wait_sync_duration
     )
@@ -443,15 +443,15 @@ class Cluster(Controller):
                 module.arm_sequencer(seq)
             module.start_sequencer()
 
-        # sequencer timeout is in minutes: round up duration (s) + 1 min buffer
-        timeout = np.ceil(duration / 60) + 1
+        # wait for experiment completion
+        time.sleep(duration)
 
         # fetch acquired results
         acquisitions = {}
         for slot, seqs in sequencers.items():
             for ch, seq in seqs.items():
                 # wait all sequencers
-                status = self.cluster.get_sequencer_status(slot, seq, timeout=timeout)
+                status = self.cluster.get_sequencer_status(slot, seq, timeout=1)
                 if status.status is qblox.SequencerStatuses.ERROR:
                     raise RuntimeError(f"slot: {slot}, seq: {seq}\n{status}")
                 if status.status is qblox.SequencerStatuses.WARNING:
