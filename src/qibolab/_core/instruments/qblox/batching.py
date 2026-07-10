@@ -24,15 +24,31 @@ def _init_batch() -> dict[str, int]:
     }
 
 
-def _exceeds_memory_limits(
-    batch_memory: dict[str, int], ps_memory: dict[str, int]
-) -> bool:
-    """Return whether adding ``ps_memory`` to ``batch_memory`` exceeds the
-    ``cluster_memory_limits``.
-    """
-    return any(
-        batch_memory[key] + ps_memory[key] > limit
+def _raise_error_if_sequence_exceeds_memory_limits(ps_memory: dict[str, int]):
+    """Raise error if a single sequence exceeds the cluster memory limits."""
+    base_memory = _init_batch()
+    fits_in_memory = all(
+        base_memory[key] + ps_memory[key] <= limit
         for key, limit in cluster_memory_limits.items()
+    )
+    if fits_in_memory:
+        return
+
+    exceeded_limits = [
+        (
+            key,
+            cluster_memory_limits[key],
+            base_memory[key] + ps_memory[key],
+        )
+        for key in cluster_memory_limits
+        if base_memory[key] + ps_memory[key] > cluster_memory_limits[key]
+    ]
+    details = "\n".join(
+        f"- {key}: requested={requested:,}, limit={limit:,}."
+        for key, limit, requested in exceeded_limits
+    )
+    raise ValueError(
+        f"An individual sequence exceeds Qblox cluster memory limits:\n{details}"
     )
 
 
@@ -67,15 +83,15 @@ def _split_sequences_by_memory_limits(
             ),
         }
 
-        # Check if the pulse sequence on its own exceeds the clusters memory limit
-        if _exceeds_memory_limits(_init_batch(), ps_memory):
-            raise ValueError(
-                "An individual sequence exceeds Qblox cluster memory limits"
-            )
+        _raise_error_if_sequence_exceeds_memory_limits(ps_memory)
 
         # TODO: track instruction memory usage per module instead of summing across
         # all modules.
-        if _exceeds_memory_limits(batch_memory, ps_memory):
+        fits_in_memory = all(
+            batch_memory[key] + ps_memory[key] <= limit
+            for key, limit in cluster_memory_limits.items()
+        )
+        if not fits_in_memory:
             batches.append(batch)
             batch_memory = _init_batch()
             batch = []
