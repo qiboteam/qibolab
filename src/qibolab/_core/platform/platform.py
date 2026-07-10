@@ -270,7 +270,7 @@ class Platform:
         options = self.settings.fill(ExecutionParameters(**options))
 
         time = options.estimate_duration(sequences, sweepers)
-        log.info(f"Minimal execution time: {time:.3f} s")
+        log.info(f"Pulse execution time: {time:.3f} s")
 
         configs = self.parameters.configs.copy()
         update_configs(configs, options.updates)

@@ -1,10 +1,11 @@
-import time
+import logging
 import warnings
 from collections import defaultdict
 from functools import cached_property
 from itertools import groupby
 from typing import cast
 
+import numpy as np
 import qblox_instruments as qblox
 from qblox_instruments.qcodes_drivers.module import Module
 from qcodes.instrument import find_or_create_instrument
@@ -292,6 +293,7 @@ class Cluster(Controller):
 
                 # finally execute the experiment, and fetch results
                 duration = _compute_duration(ps, sweepers_, options_, configs)
+                logging.info(f"Qblox expected execution time: {duration:.3f} s")
                 data = self._execute(
                     sequencers, sequences_, duration, options_.acquisition_type
                 )
@@ -441,15 +443,15 @@ class Cluster(Controller):
                 module.arm_sequencer(seq)
             module.start_sequencer()
 
-        # wait for experiment completion
-        time.sleep(duration)
+        # sequencer timeout is in minutes: round up duration (s) + 1 min buffer
+        timeout = np.ceil(duration / 60) + 1
 
         # fetch acquired results
         acquisitions = {}
         for slot, seqs in sequencers.items():
             for ch, seq in seqs.items():
                 # wait all sequencers
-                status = self.cluster.get_sequencer_status(slot, seq, timeout=1)
+                status = self.cluster.get_sequencer_status(slot, seq, timeout=timeout)
                 if status.status is qblox.SequencerStatuses.ERROR:
                     raise RuntimeError(f"slot: {slot}, seq: {seq}\n{status}")
                 if status.status is qblox.SequencerStatuses.WARNING:
