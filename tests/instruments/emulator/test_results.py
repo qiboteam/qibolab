@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 
 from qibolab._core.execution_parameters import (
     AcquisitionType,
@@ -6,10 +7,7 @@ from qibolab._core.execution_parameters import (
     ExecutionParameters,
 )
 from qibolab._core.instruments.emulator.hamiltonians import Qubit
-from qibolab._core.instruments.emulator.results import (
-    _cyclic_results,
-    _marginalize_probability,
-)
+from qibolab._core.instruments.emulator.results import results
 from qibolab._core.pulses import Acquisition
 
 
@@ -22,43 +20,33 @@ def random_states(space: tuple[int, ...], sweeps: tuple[int, ...] = (), nacq: in
     return np.einsum("...i,...j->...ij", state, state)
 
 
-def test_marginalize_probability_preserves_sweep_axes():
-    probabilities = np.arange(1, 49).reshape(2, 2, 12)
-
-    marginalized = _marginalize_probability(
-        probabilities=probabilities,
-        dims=[2, 3, 2],
-        measured_qubits=[(Qubit(transmon_levels=3), 1), [Qubit(transmon_levels=2), 2]],
-        acquisition_type=AcquisitionType.DISCRIMINATION,
-    )
-    expected = np.stack(
-        (
-            probabilities[:, 0].reshape(2, 2, 3, 2).sum(axis=(1, 3))[..., 1:].sum(-1),
-            probabilities[:, 1].reshape(2, 2, 3, 2).sum(axis=(1, 2))[..., 1:].sum(-1),
-        )
-    )
-
-    np.testing.assert_allclose(marginalized, expected)
-
-
-def test_cyclic_integration_results_marginalize_probabilities(monkeypatch):
+@pytest.mark.parametrize("average", [AveragingMode.CYCLIC, AveragingMode.SINGLESHOT])
+def test_results(monkeypatch, average):
     monkeypatch.setattr(np.random, "normal", lambda loc, scale: loc)
-    acq0 = Acquisition(duration=1)
-    acq1 = Acquisition(duration=1)
+    acq01 = Acquisition(duration=1)
+    acq02 = Acquisition(duration=1)
+    acq11 = Acquisition(duration=1)
+    acq12 = Acquisition(duration=1)
     sequence = _Sequence(
         {
-            "0/acquisition": [acq0],
-            "1/acquisition": [acq1],
+            "0/acquisition": [acq01, acq02],
+            "1/acquisition": [acq11, acq12],
         }
     )
-    probabilities = np.array(
+    rho = np.stack(
         [
-            [[0.10, 0.20, 0.30], [0.05, 0.15, 0.20]],
-            [[0.10, 0.20, 0.30], [0.05, 0.15, 0.20]],
+            np.kron(
+                np.array([[1, 0], [0, 0]]),
+                np.array([[0.5, 0, 0], [0, 0.3, 0], [0, 0, 0.2]]),
+            ),
+            np.kron(
+                np.array([[0.3, 0], [0, 7]]),
+                np.array([[0, 0, 0], [0, 1, 0], [0, 0, 0]]),
+            ),
         ]
     )
-    results = _cyclic_results(
-        state_probs=probabilities.reshape(2, -1),
+    res = results(
+        states=rho,
         sequence=sequence,
         hamiltonian=_HamiltonianConfig(
             dims=[2, 3],
@@ -68,13 +56,20 @@ def test_cyclic_integration_results_marginalize_probabilities(monkeypatch):
             },
         ),
         options=ExecutionParameters(
-            acquisition_type=AcquisitionType.INTEGRATION,
-            averaging_mode=AveragingMode.CYCLIC,
+            acquisition_type=AcquisitionType.DISCRIMINATION,
+            averaging_mode=average,
+            nshots=1e3,
         ),
     )
 
-    np.testing.assert_allclose(results[acq0.id], [0.40, 0.0])
-    np.testing.assert_allclose(results[acq1.id], [0.85, 0.0])
+    if average is AveragingMode.CYCLIC:
+        rtol = 1e-7
+    else:
+        rtol = 0.05
+    np.testing.assert_allclose(res[acq01.id], [0], rtol=rtol)
+    np.testing.assert_allclose(res[acq02.id], [0.7], rtol=rtol)
+    np.testing.assert_allclose(res[acq11.id], [0.5], rtol=rtol)
+    np.testing.assert_allclose(res[acq12.id], [1], rtol=rtol)
 
 
 class _Sequence:
@@ -98,6 +93,7 @@ class _HamiltonianConfig:
     def __init__(self, dims: list[int], qubits: dict[int, Qubit]):
         self.dims = dims
         self.qubits = qubits
+        self.nqubits = len(qubits)
 
     def hilbert_space_index(self, target):
         return target

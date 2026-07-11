@@ -25,6 +25,7 @@ from qibolab._core.instruments.emulator.hamiltonians import (
 from qibolab._core.pulses import (
     Delay,
     Pulse,
+    PulseId,
     PulseLike,
     VirtualZ,
 )
@@ -150,7 +151,7 @@ class EmulatorController(Controller):
         sequences: list[PulseSequence],
         options: ExecutionParameters,
         sweepers: list[ParallelSweepers],
-    ) -> dict[int, Result]:
+    ) -> dict[PulseId, Result]:
 
         if (
             options.averaging_mode is AveragingMode.SINGLESHOT
@@ -174,7 +175,7 @@ class EmulatorController(Controller):
         sequence: tuple[int, PulseSequence],
         options: ExecutionParameters,
         sweepers: list[ParallelSweepers],
-    ):
+    ) -> dict[PulseId, Result]:
         """
         Generate results from an emulated quantum sequence execution.
         Executes a sweep of the quantum sequence and processes the results
@@ -259,6 +260,11 @@ class EmulatorController(Controller):
             collapse_operators=config.dissipation(self.engine),
             time_hamiltonian=time_hamiltonian,
         )
+        # we need to invert np.unique() call because otherwise there will be some mismatch
+        # between different sweeps of the same sequence;
+        # for example if we measure one qubit always at the same time but we sweep on time
+        # over the other, at some point the 2 measurement times might coincide so states.shape
+        # will be different
         states = np.stack([s.full() for s in results.states[1:]])[index]
 
         self._dump_simulation(
@@ -336,14 +342,14 @@ def hamiltonian(
 
     if isinstance(config, (DriveEmulatorConfig, FluxEmulatorConfig)):
         op = sum(
-                engine.expand(
-                    op=o,
-                    dims=hamiltonian.dims,
-                    targets=hamiltonian.hilbert_space_index(int(q)),
-                )
-                for (q, o) in config.operator(
-                    hamiltonian=hamiltonian, channel=channel, engine=engine
-                )
+            engine.expand(
+                op=o,
+                dims=hamiltonian.dims,
+                targets=hamiltonian.hilbert_space_index(int(q)),
+            )
+            for (q, o) in config.operator(
+                hamiltonian=hamiltonian, channel=channel, engine=engine
+            )
         )
 
     else:
