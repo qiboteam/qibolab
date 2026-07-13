@@ -4,7 +4,7 @@ import logging
 import signal
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 from ..components import Config
 from ..components.channels import Channel
@@ -213,7 +213,7 @@ class Platform:
         self,
         sequences: list[PulseSequence],
         sweepers: list[ParallelSweepers] | None = None,
-        **options,
+        **options: Any,
     ) -> dict[PulseId, Result]:
         """Execute pulse sequences.
 
