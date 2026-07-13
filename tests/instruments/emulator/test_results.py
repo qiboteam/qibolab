@@ -40,7 +40,15 @@ def test_results(monkeypatch, average):
                 np.array([[0.5, 0, 0], [0, 0.3, 0], [0, 0, 0.2]]),
             ),
             np.kron(
-                np.array([[0.3, 0], [0, 7]]),
+                np.array([[1, 0], [0, 0]]),
+                np.array([[0.5, 0, 0], [0, 0.3, 0], [0, 0, 0.2]]),
+            ),
+            np.kron(
+                np.array([[0.3, 0], [0, 0.7]]),
+                np.array([[0, 0, 0], [0, 1, 0], [0, 0, 0]]),
+            ),
+            np.kron(
+                np.array([[0.3, 0], [0, 0.7]]),
                 np.array([[0, 0, 0], [0, 1, 0], [0, 0, 0]]),
             ),
         ]
@@ -66,10 +74,17 @@ def test_results(monkeypatch, average):
         rtol = 1e-7
     else:
         rtol = 0.05
-    np.testing.assert_allclose(res[acq01.id], [0], rtol=rtol)
-    np.testing.assert_allclose(res[acq02.id], [0.7], rtol=rtol)
-    np.testing.assert_allclose(res[acq11.id], [0.5], rtol=rtol)
-    np.testing.assert_allclose(res[acq12.id], [1], rtol=rtol)
+
+    # np,mean does nothing for CYCLIC sine is just a scalar
+    prob01 = np.mean(res[acq01.id])
+    prob02 = np.mean(res[acq02.id])
+    prob11 = np.mean(res[acq11.id])
+    prob12 = np.mean(res[acq12.id])
+
+    np.testing.assert_allclose(prob01, 0, rtol=rtol)
+    np.testing.assert_allclose(prob02, 0.7, rtol=rtol)
+    np.testing.assert_allclose(prob11, 0.5, rtol=rtol)
+    np.testing.assert_allclose(prob12, 1, rtol=rtol)
 
 
 class _Sequence:

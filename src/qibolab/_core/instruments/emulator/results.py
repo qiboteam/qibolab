@@ -92,7 +92,7 @@ def _extract_probabilities(states: NDArray) -> NDArray:
 
 
 def acquisitions(sequence: PulseSequence) -> dict[PulseId, float]:
-    """Compute acquisitions' times."""
+    """Compute acquisitions' times (time-sorted)."""
     acq = {}
     for ch in sequence.channels:
         time = 0
@@ -101,7 +101,8 @@ def acquisitions(sequence: PulseSequence) -> dict[PulseId, float]:
                 acq[ev.id] = time
             assert not isinstance(ev, Align)
             time += ev.duration
-
+    # sorting acquisition in time
+    acq = dict(sorted(acq.items(), key=lambda item: item[1]))
     return acq
 
 
@@ -162,13 +163,61 @@ def select_acquisitions(
     return np.stack([states[n].full() for n in samples])[index_pos]
 
 
-def _cyclic_results(
-    state_probs: NDArray,
+def _create_qubit_meas_map(
+    sequence: PulseSequence,
     hamiltonian: HamiltonianConfig,
     options: ExecutionParameters,
-    qubit_to_m_map: dict[int, NDArray],
-    sequence_qubit_arr: NDArray,
-    **kwargs,
+) -> dict[int, NDArray]:
+    """
+    Create a mapping between measurements and qubits based on the pulse sequence.
+
+    This function generates a dictionary that maps unique measurement times to measured qubits
+    or unique measured qubits to their associated measurements, depending on the averaging mode
+    (`SINGLESHOT` or `CYCLIC`).
+    """
+
+    acq_seq = acquisitions(sequence)
+
+    # select only unique times of measurements
+    unique_acq_t, acq_inverse_map = np.unique(
+        list(acq_seq.values()),
+        return_inverse=True,
+    )
+
+    # order of measure qubits during the sequence
+    sequence_qubit_arr = np.asarray(
+        [
+            index(sequence.pulse_channels(ro_id)[0], hamiltonian)
+            for ro_id in acq_seq.keys()
+        ]
+    )
+    # select unique qubit indices of measured qubits
+    unique_qubit_indices, qubit_inverse_map = np.unique(
+        sequence_qubit_arr,
+        return_inverse=True,
+    )
+
+    # computing unique measurement -> meausured qubits mapping
+    if options.averaging_mode is AveragingMode.SINGLESHOT:
+        # mapping every unique measurement to the related qubits
+        return {
+            n: unique_qubit_indices[qubit_inverse_map[acq_inverse_map == n]]
+            for n in range(len(unique_acq_t))
+        }
+
+    else:  # computing unique qubit -> associated measurements mapping
+        # mapping every measured qubit to the unique measurement index
+        return {
+            uni_q: acq_inverse_map[qubit_inverse_map == n]
+            for n, uni_q in enumerate(unique_qubit_indices)
+        }
+
+
+def _cyclic_results(
+    state_probs: NDArray,
+    sequence: PulseSequence,
+    hamiltonian: HamiltonianConfig,
+    options: ExecutionParameters,
 ) -> Result:
     """Process measurement results from a cyclic quantum simulation, where the output for each measurement is
     excited state population.
@@ -179,6 +228,14 @@ def _cyclic_results(
     # now state_probs has shape (M_unique, *S, *H_dim)
     # dimensions of sweepers
     sweeps_dims = state_probs.shape[1 : -len(hamiltonian.dims)]
+
+    # order of measure qubits during the sequence
+    sequence_qubit_arr = np.asarray(
+        [
+            index(sequence.pulse_channels(ro_id)[0], hamiltonian)
+            for ro_id in acquisitions(sequence).keys()
+        ]
+    )
 
     # dimensions of total (not unique) measurement
     measurements_dim = sequence_qubit_arr.shape
@@ -191,13 +248,17 @@ def _cyclic_results(
     # physical_dims
     total_axis = np.arange(len(hamiltonian.dims))
 
+    qubit_to_m_map = _create_qubit_meas_map(
+        sequence=sequence, hamiltonian=hamiltonian, options=options
+    )
+
     res = np.empty(result_shape)
     for measured_q, unique_measure_idx in qubit_to_m_map.items():
         # marginal has shape (M_i, *S, H_i)
         # where M_i is the measurements on i-th transmon
         # and H_i is the Hilbert space dimension of it
         marginal = state_probs[unique_measure_idx, ...].sum(
-            axis=tuple(total_axis[total_axis != measured_q] + exp_axis - 1)
+            axis=tuple(total_axis[total_axis != measured_q] + exp_axis)
         )
 
         if options.acquisition_type is AcquisitionType.DISCRIMINATION:
@@ -224,17 +285,21 @@ def _cyclic_results(
 
 def _singleshot_results(
     state_probs: NDArray,
+    sequence: PulseSequence,
     hamiltonian: HamiltonianConfig,
     options: ExecutionParameters,
-    measurement_to_q_map: dict[int, NDArray],
-    acquisition_inverse_map: NDArray,
-    **kwargs,
 ) -> Result:
     """Extract measurement results from simulated quantum state probabilities.
     Performs single-shot measurement extraction from state probabilities by sampling
     according to the specified number of shots and mapping readout operations to their
     corresponding measurement results.
     """
+
+    measurement_to_q_map = _create_qubit_meas_map(
+        sequence=sequence,
+        hamiltonian=hamiltonian,
+        options=options,
+    )
 
     dim_array = np.asarray(hamiltonian.dims)
 
@@ -245,11 +310,8 @@ def _singleshot_results(
     # dimensions of total (not unique) measurement
     measurements_dim = tuple([sum(len(v) for v in measurement_to_q_map.values())])
 
-    # dimensions of number of shots
-    shots_dim = tuple([options.nshots])
-
     # shape is (M, Nshots *S), we are ignoring the dimensions of all subsystems
-    result_shape = measurements_dim + shots_dim + sweeps_dims
+    result_shape = measurements_dim + sweeps_dims
 
     # non physical dimensions
     exp_axis = len(result_shape)
@@ -262,25 +324,28 @@ def _singleshot_results(
         # results at the i-th unique measurement
         # and *H_mi is the list of all the dimensions of the measured transmons
         marginal = state_probs[measure, ...].sum(
-            # 2 since we loose the M dimension and the axis starts from 0
-            axis=tuple(total_axis[~np.isin(total_axis, unique_q_idx)] + exp_axis - 2),
+            # subtract 1 since we loose the M dimension
+            axis=tuple(total_axis[~np.isin(total_axis, unique_q_idx)] + exp_axis - 1),
         )
 
         # reshaping to (*S, |*H_mi|)
         marginal = marginal.reshape((*sweeps_dims, -1))
 
         # shots function returns a vector of shape:
-        # (Nshots, *S, *H_mi)
+        # (Nshots, *S)
         sampled = shots(marginal, options.nshots)
 
         # now marginal has dimensions (Q_i, Nshots, *S)
-        marginal = np.stack(np.unravel_index(sampled, dim_array[unique_q_idx]))
-
-        res.append(marginal)
+        marginal = np.stack(np.unravel_index(sampled, dim_array[sorted(unique_q_idx)]))
+        res.append(marginal[unique_q_idx])
 
     # stacking the results vertically
     # now it had dimensions (M, Nshot, *S)
-    res = np.vstack(res)[acquisition_inverse_map]
+    # NOTE: Both 'measurement_to_q_map' keys (measurement indices) and 'unique_q_idx'
+    # are automatically time-sorted. This is guaranteed because both are generated
+    # using 'np.unique'—first on the measurement times, and then via its inverse
+    # mapping applied 'unique_q_idx', which gives a ordered subset of acquisitions(sequence).keys().
+    res = np.vstack(res)
 
     if options.acquisition_type is AcquisitionType.DISCRIMINATION:
         # now we group all the states >= 1, so we classify as 1
@@ -314,37 +379,15 @@ def results(
         (*probabilities.shape[:-1], *hamiltonian.dims)
     )
 
-    acq_id = list(acquisitions(sequence).keys())
-    acq_t = np.asarray(list(acquisitions(sequence).values()))
+    acq_seq = acquisitions(sequence)
+    acq_id = list(acq_seq.keys())
+    acq_t = np.asarray(list(acq_seq.values()))
 
     # select only unique times of measurements
-    unique_acq_t, acq_direct_map, acq_inverse_map = np.unique(
+    _, acq_direct_map = np.unique(
         acq_t,
         return_index=True,
-        return_inverse=True,
     )
-
-    # order of qubits I measure during the sequence
-    sequence_qubit_arr = np.asarray(
-        [index(sequence.pulse_channels(ro_id)[0], hamiltonian) for ro_id in acq_id]
-    )
-    # select unique qubit indices of measured qubits
-    unique_qubit_indices, qubit_inverse_map = np.unique(
-        sequence_qubit_arr,
-        return_inverse=True,
-    )
-
-    # mapping every measured qubit to the unique measurement index
-    qubit_to_m_map = {
-        uni_q: acq_inverse_map[qubit_inverse_map == n]
-        for n, uni_q in enumerate(unique_qubit_indices)
-    }
-
-    # mapping every unique measurement to the related qubits
-    measure_to_q_map = {
-        n: unique_qubit_indices[qubit_inverse_map[acq_inverse_map == n]]
-        for n in range(len(unique_acq_t))
-    }
 
     confusion_matrices = []
     for i, qb in enumerate(hamiltonian.qubits.values()):
@@ -353,18 +396,16 @@ def results(
         # appending the array index
         confusion_matrices.append([i + hamiltonian.nqubits, i])
 
+    # now we reshape corrected_probabilities as (M, *S, *H_dim)
+    probabilities = np.moveaxis(probabilities, -(len(hamiltonian.dims) + 1), 0)
+
     # applying confusion matrices to the probability vector
-    # now corrected_probabilities ha dimensions (*S, M_unique, *H_dim)
+    # now corrected_probabilities ha dimensions (M_unique, *S, *H_dim)
     corrected_probabilities = np.einsum(
         *confusion_matrices,
         probabilities[acq_direct_map],
         [Ellipsis] + list(range(hamiltonian.nqubits)),
         [Ellipsis] + list(range(hamiltonian.nqubits, 2 * hamiltonian.nqubits)),
-    )
-
-    # now we reshuffle corrected_probabilities as (M_unique, *S, *H_dim)
-    corrected_probabilities = np.moveaxis(
-        corrected_probabilities, -(len(hamiltonian.dims) + 1), 0
     )
 
     results = (
@@ -378,12 +419,9 @@ def results(
             acq_id,
             results(
                 state_probs=corrected_probabilities,
+                sequence=sequence,
                 hamiltonian=hamiltonian,
                 options=options,
-                qubit_to_m_map=qubit_to_m_map,  # used only in cyclic
-                sequence_qubit_arr=sequence_qubit_arr,  # used only in cyclic
-                measurement_to_q_map=measure_to_q_map,  # used only in singleshot
-                acquisition_inverse_map=acq_inverse_map,  # used only in singleshot
             ),
         )
     )
