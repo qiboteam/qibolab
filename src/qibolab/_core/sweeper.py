@@ -9,7 +9,7 @@ from pydantic import model_validator
 
 from .components.configs import OscillatorConfig
 from .identifier import ChannelId
-from .pulses import PulseLike, VirtualZ
+from .pulses import PulseId, PulseLike, VirtualZ
 from .serialize import Model, eq
 
 __all__ = ["Parameter", "ParallelSweepers", "Sweeper"]
@@ -201,7 +201,7 @@ def iteration_length(sweepers: ParallelSweepers) -> int:
 def swept_pulses(
     sweepers: list[ParallelSweepers],
     parameters: Collection[Parameter] = frozenset(Parameter),
-) -> dict[PulseLike, Sweeper]:
+) -> dict[PulseId, Sweeper]:
     """Associate pulses swept to sweepers.
 
     Essentially, it produces a reverse index from `sweepers`.
@@ -212,7 +212,7 @@ def swept_pulses(
     # TODO: this is assuming a pulse is only swept by a single sweeper. Which is not
     # always the case. A list of `Sweeper` objects should be returned instead
     return {
-        p: sweep
+        p.id: sweep
         for parsweep in sweepers
         for sweep in parsweep
         if sweep.parameter in parameters and sweep.pulses is not None

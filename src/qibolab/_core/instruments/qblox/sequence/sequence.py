@@ -79,16 +79,19 @@ class Q1Sequence(Model):
             duration
             - sum(p.duration if not isinstance(p, Align) else 0 for p in sequence)
         ) * sampling_rate
+        pulse_and_readout_ids = {
+            pulse.id for pulse in sequence if isinstance(pulse, (Pulse, Readout))
+        }
         waveform_specs, indices_map = waveforms(
             sequence,
             sampling_rate,
-            amplitude_swept={
-                p.id for p in swept_pulses(sweepers, {Parameter.amplitude})
-            },
+            amplitude_swept=set(swept_pulses(sweepers, {Parameter.amplitude})),
             duration_swept={
-                k.id: v
-                for k, v in swept_pulses(sweepers, {Parameter.duration}).items()
-                if isinstance(k, (Pulse, Readout)) and k in sequence
+                pulse_id: sweeper
+                for pulse_id, sweeper in swept_pulses(
+                    sweepers, {Parameter.duration}
+                ).items()
+                if pulse_id in pulse_and_readout_ids
             },
         )
         sequence, sweepers = _apply_sampling_rate(sequence, sweepers, sampling_rate)
