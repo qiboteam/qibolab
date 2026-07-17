@@ -14,7 +14,6 @@ from numpy.typing import NDArray
 from pydantic import model_validator
 
 from qibolab._core.components import Config
-from qibolab._core.components.configs import AcquisitionConfig
 from qibolab._core.execution_parameters import AveragingMode, ExecutionParameters
 from qibolab._core.identifier import Result
 from qibolab._core.instruments.abstract import Controller
@@ -41,6 +40,8 @@ from .engine.abstract import (
 )
 from .hamiltonians import (
     ControlLine,
+    DriveEmulatorConfig,
+    FluxEmulatorConfig,
     HamiltonianConfig,
     waveform,
 )
@@ -316,7 +317,7 @@ def tlist(sequence: PulseSequence) -> NDArray:
 
 def hamiltonian(
     pulses: Iterable[PulseLike],
-    config: Config,
+    config: FluxEmulatorConfig | DriveEmulatorConfig,
     hamiltonian: HamiltonianConfig,
     hilbert_space_index: int,
     engine: SimulationEngine,
@@ -354,7 +355,7 @@ def hamiltonians(
         )
         for ch in sequence.channels
         # TODO: drop the following, and treat acquisitions just as empty channels
-        if not isinstance(configs[ch], AcquisitionConfig)
+        if isinstance(configs[ch], FluxEmulatorConfig | DriveEmulatorConfig)
     )
 
 
