@@ -89,16 +89,15 @@ def test_dynamiqs_evolution_matches_qutip():
     times = np.linspace(0, 1, 5)
 
     dynamiqs_result, _ = dynamiqs.evolve(
-        hamiltonian=dynamiqs.identity(2) * 0,
+        hamiltonian=OperatorEvolution(static=dynamiqs.identity(2) * 0),
         initial_state=dynamiqs.basis(2, 1),
         time=times,
         collapse_operators=[0.2 * dynamiqs.destroy(2)],
     )
     qutip_result, _ = qutip.evolve(
-        hamiltonian=qutip.identity(2) * 0,
+        hamiltonian=OperatorEvolution(static=qutip.identity(2) * 0),
         initial_state=qutip.basis(2, 1),
         time=times,
-        time_hamiltonian=OperatorEvolution(),
         collapse_operators=[0.2 * qutip.destroy(2)],
     )
 
@@ -125,14 +124,14 @@ def _driven_evolution(engine, **kwargs):
         * np.cos(2 * np.pi * 0.2 * times)
     )
     evolution = OperatorEvolution(
+        static=hamiltonian,
         operators=[(a + a.dag(), coefficient)],
         times=times,
     )
     result, _ = engine.evolve(
-        hamiltonian=hamiltonian,
+        hamiltonian=evolution,
         initial_state=engine.basis(3, 0),
         time=np.linspace(0.0, 20.0, 5),
-        time_hamiltonian=evolution,
         collapse_operators=[0.005 * a],
         **kwargs,
     )
