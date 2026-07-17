@@ -81,7 +81,7 @@ class OperatorEvolution:
     """Abstract operator evolution interface."""
 
     static: Operator
-    """static terms in the system evolution"""
+    """static term in the system evolution"""
     operators: list[TimeDependentOperator] = field(default_factory=list)
     """List of static or time-dependent operators for evolution."""
     times: NDArray = field(default_factory=lambda: np.array([], dtype=float))

@@ -158,19 +158,19 @@ class DynamiqsEngine(SimulationEngine):
 
         time = np.asarray(list(time), dtype=float)
 
-        hamiltonian = self.engine.constant(_unwrap(hamiltonian.static))
+        complete_hamiltonian = self.engine.constant(_unwrap(hamiltonian.static))
         for operator, coefficient in hamiltonian.operators:
             spline = make_interp_spline(
                 hamiltonian.times, coefficient, k=SPLINE_INTERP_ORDER
             )
-            hamiltonian += self.engine.modulated(
+            complete_hamiltonian += self.engine.modulated(
                 jax_interpolation(spline), _unwrap(operator)
             )
 
         method = kwargs.pop("method", self._method(time))
         options = kwargs.pop("options", self.engine.Options(progress_meter=False))
         result = self.engine.mesolve(
-            hamiltonian,
+            complete_hamiltonian,
             [_unwrap(op) for op in collapse_operators or []],
             _unwrap(initial_state),
             time,
