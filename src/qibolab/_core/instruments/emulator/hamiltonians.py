@@ -386,20 +386,14 @@ class HamiltonianConfig(Config):
         if self.drive_crosstalk is None:
             # ATTENTION: forcing overwriting of drive crosstalk matrix despite it's frozen
             object.__setattr__(self, "drive_crosstalk", np.eye(n))
+        elif self.drive_crosstalk.shape != (n, n):
+            raise ValueError("Drive crosstalk matrix must be squared.")
 
         if self.flux_crosstalk is None:
             # ATTENTION: forcing overwriting of flux crosstalk matrix despite it's frozen
             object.__setattr__(self, "flux_crosstalk", np.eye(n))
-
-        if self.drive_crosstalk.shape[1] != n:
-            raise ValueError(
-                "Drive crosstalk matrix must have as many columns as qubits."
-            )
-
-        if self.flux_crosstalk.shape[1] != n:
-            raise ValueError(
-                "Flux crosstalk matrix must have as many columns as qubits."
-            )
+        elif self.flux_crosstalk.shape != (n, n):
+            raise ValueError("Flux crosstalk matrix must be squared.")
 
         return self
 
