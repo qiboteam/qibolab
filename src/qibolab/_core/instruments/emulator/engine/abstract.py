@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from typing import Protocol
 
 import numpy as np
-from numpy.typing import NDArray
+from numpy.typing import ArrayLike, NDArray
 
 from qibolab._core.serialize import Model
 
@@ -43,8 +43,26 @@ class Operator(Protocol):
     def dag(self) -> "Operator":
         """Return the adjoint of the operator."""
 
+    def full(self) -> "Operator":
+        """Return the matrix form of the operator."""
+
     def __add__(self, other: "Operator") -> "Operator":
         """Add two operators."""
+
+    def __sub__(self, other: "Operator") -> "Operator":
+        """Subtract two operators."""
+
+    def __mul__(self, other: float | int | complex) -> "Operator":
+        """Scalar multiplication."""
+
+    def __rmul__(self, other: float | int | complex) -> "Operator":
+        """Right-hand scalar multiplication."""
+
+    def __truediv__(self, other: float | int | complex) -> "Operator":
+        """Scalar division."""
+
+    def __matmul__(self, other: "Operator") -> "Operator":
+        """Multiply two operators."""
 
 
 TimeDependentOperator = tuple[Operator, NDArray]
@@ -62,7 +80,9 @@ class EvolutionResult(Protocol):
 class OperatorEvolution:
     """Abstract operator evolution interface."""
 
-    operators: list[Operator | TimeDependentOperator] = field(default_factory=list)
+    static: Operator
+    """static terms in the system evolution"""
+    operators: list[TimeDependentOperator] = field(default_factory=list)
     """List of static or time-dependent operators for evolution."""
     times: NDArray = field(default_factory=lambda: np.array([], dtype=float))
     """Evolution times with time step equal to the waveforms resolution."""
@@ -79,10 +99,10 @@ class SimulationEngine(Model, ABC):
     @abstractmethod
     def evolve(
         self,
-        hamiltonian: Operator,
+        hamiltonian: OperatorEvolution,
         initial_state: Operator,
-        time: list[float],
-        collapse_operators: list[Operator] = None,
+        time: ArrayLike,
+        collapse_operators: list[Operator] | None = None,
         **kwargs,
     ) -> tuple[EvolutionResult, dict]:
         """Evolve the system."""
@@ -110,5 +130,5 @@ class SimulationEngine(Model, ABC):
         """Expand operator in larger Hilbert space."""
 
     @abstractmethod
-    def basis(self, n: int, state: int) -> Operator:
+    def basis(self, dim: int | list[int], state: int | list[int]) -> Operator:
         """Basis operator for n levels system."""

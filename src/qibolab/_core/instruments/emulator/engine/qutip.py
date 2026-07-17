@@ -1,12 +1,12 @@
 import json
 import os
-from collections.abc import Callable, Iterable
+from collections.abc import Callable
 from functools import cached_property
 from pathlib import Path
 from typing import Literal
 
 import numpy as np
-from numpy.typing import NDArray
+from numpy.typing import ArrayLike, NDArray
 from scipy.interpolate import make_interp_spline
 
 from .abstract import (
@@ -44,6 +44,7 @@ class QutipEngine(SimulationEngine):
             if self.device == "gpu" and any(
                 device.platform == "gpu" for device in devices
             ):
+                # must be always imported
                 import qutip_jax  # noqa: F401
             else:
                 object.__setattr__(self, "device", "cpu")
@@ -56,7 +57,7 @@ class QutipEngine(SimulationEngine):
 
     def interpolate_coeffs(
         self, x: NDArray, y: NDArray
-    ) -> Callable[[NDArray], Iterable[float]]:
+    ) -> Callable[[NDArray], ArrayLike]:
 
         spline = make_interp_spline(x, y, k=SPLINE_INTERP_ORDER)
         if self.device == "gpu":
@@ -71,10 +72,9 @@ class QutipEngine(SimulationEngine):
 
     def evolve(
         self,
-        hamiltonian: Operator,
+        hamiltonian: OperatorEvolution,
         initial_state: Operator,
-        time: Iterable[float],
-        time_hamiltonian: OperatorEvolution,
+        time: ArrayLike,
         collapse_operators: list[Operator] | None = None,
         **kwargs,
     ):
@@ -108,16 +108,18 @@ class QutipEngine(SimulationEngine):
             # define nsteps instead
             options = {"max_step": INTEGRATION_MAX_TIME_STEP, "nsteps": nsteps}
 
-        hamiltonian = [self._to_device(hamiltonian)] + [
+        qutip_hamiltonian: list[Operator | list[Operator | Callable]] = [
+            self._to_device(hamiltonian.static)
+        ] + [
             [
                 self._to_device(operator),
-                self.interpolate_coeffs(time_hamiltonian.times, coefficient),
+                self.interpolate_coeffs(hamiltonian.times, coefficient),
             ]
-            for operator, coefficient in time_hamiltonian.operators
+            for operator, coefficient in hamiltonian.operators
         ]
 
         sim_results = self.engine.mesolve(
-            hamiltonian,
+            qutip_hamiltonian,
             self._to_device(initial_state),
             time,
             [self._to_device(op) for op in collapse_operators or []],
@@ -147,7 +149,7 @@ class QutipEngine(SimulationEngine):
         """Expand operator in larger Hilbert space."""
         return self._to_device(self.engine.expand_operator(op, dims, targets))
 
-    def basis(self, dim: int, state: int) -> Operator:
+    def basis(self, dim: int | list[int], state: int | list[int]) -> Operator:
         """Basis operator for n levels system."""
         return self._to_device(self.engine.basis(dimensions=dim, n=state))
 
@@ -187,11 +189,13 @@ def load_simulation(
     with open(simulated_sequence_path / (SIMULATOR_CONFIG + ".json")) as f:
         sim_configs = json.load(f)
 
-    system = [Operator(hamiltonians[0])] + [
+    system = [
         TimeDependentOperator([ham, coeffs])
         for ham, coeffs in zip(hamiltonians[1:], time_coeffs[1:])
     ]
     timesteps = time_coeffs[0]
-    system_evo = OperatorEvolution(operators=system, times=timesteps)
+    system_evo = OperatorEvolution(
+        static=hamiltonians[0], operators=system, times=timesteps
+    )
 
     return system_evo, result_states, sim_configs

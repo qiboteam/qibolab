@@ -40,8 +40,8 @@ from .engine.abstract import (
     SWEEP_SIMULATION_FILENAME,
 )
 from .hamiltonians import (
+    ControlLine,
     HamiltonianConfig,
-    Modulated,
     waveform,
 )
 from .results import acquisitions, index, results
@@ -81,7 +81,7 @@ class EmulatorController(Controller):
         return self.sampling_rate_
 
     @sampling_rate.setter
-    def sampling_rate(self, value: float) -> float:
+    def sampling_rate(self, value: float) -> None:
         self.sampling_rate_ = value
 
     def connect(self):
@@ -93,7 +93,6 @@ class EmulatorController(Controller):
     def _dump_simulation(
         self,
         sequence_idx,
-        static_ham: Operator,
         evolution: OperatorEvolution,
         states: NDArray,
         simulation_config: dict,
@@ -119,7 +118,7 @@ class EmulatorController(Controller):
         if not static_hamiltonian_filename.exists():
             # list of file operators of the pulse sequence; NOTE: the first element is always the time independent hamiltonian
             operators = np.stack(
-                [static_ham.full()] + [op.full() for op, _ in evolution.operators]
+                [evolution.static.full()] + [op.full() for op, _ in evolution.operators]
             )
             np.save(static_hamiltonian_filename, operators)
 
@@ -137,7 +136,6 @@ class EmulatorController(Controller):
             sequence_dir / (SWEEP_SIMULATION_FILENAME + f"_{sweep_idx}.npz"),
             time_coeffs=time_coefficients,
             results=states,
-            sim_config=simulation_config,
         )
 
     def play(
@@ -241,7 +239,7 @@ class EmulatorController(Controller):
         configs_ = update_configs(configs, updates)
         config = cast(HamiltonianConfig, configs_["hamiltonian"])
         hamiltonian = config.hamiltonian(config=configs_, engine=self.engine)
-        time_hamiltonian = self._pulse_hamiltonian(sequence_, configs_)
+        complete_hamiltonian = self._pulse_hamiltonian(sequence_, hamiltonian, configs_)
         measurement_times = np.array(
             list(acquisitions(sequence_).values()), dtype=float
         )
@@ -249,25 +247,23 @@ class EmulatorController(Controller):
         tlist_, index = np.unique(measurement_times, return_inverse=True)
 
         results, simulation_configs = self.engine.evolve(
-            hamiltonian=hamiltonian,
+            hamiltonian=complete_hamiltonian,
             initial_state=config.initial_state(self.engine),
             time=np.concatenate(([0], tlist_)),
             collapse_operators=config.dissipation(self.engine),
-            time_hamiltonian=time_hamiltonian,
         )
         states = np.stack([s.full() for s in results.states[1:]])[index]
 
         self._dump_simulation(
             sequence_identifier,
-            hamiltonian,
-            time_hamiltonian,
+            complete_hamiltonian,
             states,
             simulation_configs,
         )
         return states
 
     def _pulse_hamiltonian(
-        self, sequence: PulseSequence, configs: dict[str, Config]
+        self, sequence: PulseSequence, static_ham: Operator, configs: dict[str, Config]
     ) -> OperatorEvolution:
         """Construct Hamiltonian time dependent term for qutip simulation."""
 
@@ -290,7 +286,7 @@ class EmulatorController(Controller):
             )
         ]
 
-        return OperatorEvolution(operators=channels, times=times)
+        return OperatorEvolution(static=static_ham, operators=channels, times=times)
 
 
 def update_sequence(sequence: PulseSequence, updates: dict) -> PulseSequence:
@@ -325,7 +321,7 @@ def hamiltonian(
     hilbert_space_index: int,
     engine: SimulationEngine,
     sampling_rate: float,
-) -> tuple[Operator, list[Modulated]]:
+) -> tuple[Operator, list[ControlLine]]:
     n = hamiltonian.transmon_levels
     op = engine.expand(
         op=config.operator(n=n, engine=engine),
@@ -345,7 +341,7 @@ def hamiltonians(
     configs: dict[str, Config],
     engine: SimulationEngine,
     sampling_rate: float,
-) -> Iterable[tuple[Operator, list[Modulated]]]:
+) -> Iterable[tuple[Operator, list[ControlLine]]]:
     hconfig = cast(HamiltonianConfig, configs["hamiltonian"])
     return (
         hamiltonian(
@@ -363,8 +359,8 @@ def hamiltonians(
 
 
 def channel_coefficients(
-    waveforms: Iterable[Modulated],
-    sampling_rate: int,
+    waveforms: Iterable[ControlLine],
+    sampling_rate: float,
     times: NDArray,
 ) -> NDArray:
     """
