@@ -68,11 +68,11 @@ class Qubit(Config):
     t2: dict[TransitionId, float] = Field(default_factory=dict)
     """Dictionary with dephasing time per transition."""
 
-    def omega(self, flux: float = 0) -> float:
+    def omega(self, flux: float | NDArray = 0) -> float | NDArray:
         """Angular velocity."""
         return 2 * np.pi * self.detuned_frequency(flux)
 
-    def detuned_frequency(self, flux: float) -> float:
+    def detuned_frequency(self, flux: float | NDArray) -> float | NDArray:
         """Return frequency of the qubit modified by the flux."""
         return (self.frequency - self.anharmonicity) * (
             self.asymmetry**2
@@ -183,7 +183,7 @@ class FluxPulse(Model):
         # we are passing the relative frequency because the term with the offset
         # is already included in the time-independent part of the Hamiltonian
         # and it corresponds to changing the static bias
-        return (
+        return np.asarray(
             2
             * np.pi
             * (
@@ -240,7 +240,7 @@ class ModulatedDelay(Model):
     phase: float = 0
     """Delay has 0 virtual z phase."""
 
-    def __call__(self, t: float, sample: int, phase: float) -> float:
+    def __call__(self, t: NDArray, sample: NDArray, phase: float) -> float:
         """Delay waveform."""
         return 0
 
@@ -253,7 +253,7 @@ class ModulatedVirtualZ(Model):
     duration: float = 0
     """Duration is 0 for virtual Z."""
 
-    def __call__(self, t: float, sample: int, phase: float) -> float:
+    def __call__(self, t: NDArray, sample: NDArray, phase: float) -> None:
         """Delay waveform."""
         raise_error(ValueError, "VirtualZ doesn't have waveform.")
 
@@ -322,11 +322,11 @@ class HamiltonianConfig(Config):
         )
         return qubit_terms + coupling
 
-    def dissipation(self, engine: SimulationEngine) -> Operator:
+    def dissipation(self, engine: SimulationEngine) -> list[Operator]:
         """Dissipation operators for the hamiltonian.
 
         They are going to be passed to mesolve as collapse operators."""
-        collapse_operators = []
+        collapse_operators: list[Operator] = []
         for i, qubit in self.qubits.items():
             if len(qubit.t1) > 0:
                 collapse_operators.append(

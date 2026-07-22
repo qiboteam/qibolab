@@ -205,6 +205,10 @@ def _singleshot_results(
     corresponding measurement results.
     """
 
+    assert options.nshots is not None, (
+        "Number of shots not inserted for SINGLESHOT simulation."
+    )
+
     # select only unique times of measurements
     _, direct_map, inverse_map = np.unique(
         list(acquisitions(sequence).values()),
@@ -252,7 +256,7 @@ def results(
     sequence: PulseSequence,
     hamiltonian: HamiltonianConfig,
     options: ExecutionParameters,
-) -> dict[int, Result]:
+) -> dict[PulseId, Result]:
     """Collect results for a single pulse sequence.
 
     The dictionary returned is already compliant with the expected
