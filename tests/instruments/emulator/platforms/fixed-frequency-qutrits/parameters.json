@@ -6,13 +6,31 @@
     "configs": {
         "hamiltonian": {
             "kind": "hamiltonian",
-            "transmon_levels": 3,
             "qubits": {
                 "0": {
+                    "transmon_levels": 3,
+                    "confusion_matrix": [
+                        [
+                            1,
+                            0,
+                            0
+                        ],
+                        [
+                            0,
+                            1,
+                            1
+                        ],
+                        [
+                            0,
+                            0,
+                            0
+                        ]
+                    ],
                     "frequency": 5114000000.0,
                     "anharmonicity": -330000000.0,
                     "sweetspot": 0.0,
                     "asymmetry": 0.0,
+                    "p_into_0": null,
                     "t1": {
                         "0-1": 38000.0,
                         "1-2": 19000.0
@@ -22,10 +40,29 @@
                     }
                 },
                 "1": {
+                    "transmon_levels": 3,
+                    "confusion_matrix": [
+                        [
+                            1,
+                            0,
+                            0
+                        ],
+                        [
+                            0,
+                            1,
+                            1
+                        ],
+                        [
+                            0,
+                            0,
+                            0
+                        ]
+                    ],
                     "frequency": 4914000000.0,
                     "anharmonicity": -330000000.0,
                     "sweetspot": 0.0,
                     "asymmetry": 0.0,
+                    "p_into_0": null,
                     "t1": {
                         "0-1": 42000.0,
                         "1-2": 21000.0
@@ -39,7 +76,27 @@
                 "0-1": {
                     "coupling": 3800000.0
                 }
-            }
+            },
+            "drive_crosstalk": [
+                [
+                    1.0,
+                    0.2
+                ],
+                [
+                    0.4,
+                    1.0
+                ]
+            ],
+            "flux_crosstalk": [
+                [
+                    1.0,
+                    0.0
+                ],
+                [
+                    0.0,
+                    1.0
+                ]
+            ]
         },
         "0/drive": {
             "kind": "drive-emulator",
@@ -74,8 +131,8 @@
             "kind": "acquisition",
             "delay": 0.0,
             "smearing": 0.0,
-            "threshold": 0.0,
-            "iq_angle": 0.0,
+            "threshold": 1.0,
+            "iq_angle": -0.0,
             "kernel": null
         },
         "1/probe": {
@@ -86,8 +143,8 @@
             "kind": "acquisition",
             "delay": 0.0,
             "smearing": 0.0,
-            "threshold": 0.0,
-            "iq_angle": 0.0,
+            "threshold": 1.0,
+            "iq_angle": -0.0,
             "kernel": null
         }
     },
@@ -99,8 +156,8 @@
                         "0/drive",
                         {
                             "kind": "pulse",
-                            "duration": 20.0,
-                            "amplitude": 0.200449,
+                            "duration": 30.0,
+                            "amplitude": 0.13131702695978262,
                             "envelope": {
                                 "kind": "drag",
                                 "rel_sigma": 0.1,
@@ -175,8 +232,8 @@
                         "1/drive",
                         {
                             "kind": "pulse",
-                            "duration": 20.0,
-                            "amplitude": 0.200792,
+                            "duration": 30.0,
+                            "amplitude": 0.13130450160280718,
                             "envelope": {
                                 "kind": "drag",
                                 "rel_sigma": 0.1,
@@ -410,6 +467,20 @@
                     ],
                     [
                         "1/drive",
+                        {
+                            "kind": "delay",
+                            "duration": 20.0
+                        }
+                    ],
+                    [
+                        "1/acquisition",
+                        {
+                            "kind": "delay",
+                            "duration": 20.0
+                        }
+                    ],
+                    [
+                        "0/acquisition",
                         {
                             "kind": "delay",
                             "duration": 20.0
