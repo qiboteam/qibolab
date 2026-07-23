@@ -127,6 +127,10 @@ class Compiler:
             return max(channel_clock[ch] for ch in platform.couplers[el].channels)
 
         gate_seq = self.get_sequence(gate, platform, wire_names)
+
+        if isinstance(gate, gates.M):
+            return gate_seq
+
         # qubits receiving pulses
         qubits = {
             q
@@ -186,8 +190,8 @@ class Compiler:
         sequence = PulseSequence()
 
         measurement_map = {}
+        measurement_seq = PulseSequence()
         channel_clock = defaultdict(float)
-
         # process circuit gates
         for moment in circuit.queue.moments:
             for gate in {x for x in moment if x is not None}:
@@ -199,7 +203,8 @@ class Compiler:
                 # properly map acquisition results to measurement gates
                 if isinstance(gate, gates.M):
                     measurement_map[gate] = gate_seq
-
-                sequence += gate_seq
-
+                    measurement_seq += gate_seq
+                else:
+                    sequence += gate_seq
+        sequence |= measurement_seq
         return sequence.trim(), measurement_map
