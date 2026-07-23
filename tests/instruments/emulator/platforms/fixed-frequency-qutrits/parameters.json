@@ -252,46 +252,6 @@
                 "CZ": null,
                 "CNOT": [
                     [
-                        "0/drive",
-                        {
-                            "kind": "virtualz",
-                            "phase": 1.5707963267948966
-                        }
-                    ],
-                    [
-                        "1/drive",
-                        {
-                            "kind": "pulse",
-                            "duration": 20.0,
-                            "amplitude": 0.100396,
-                            "envelope": {
-                                "kind": "drag",
-                                "rel_sigma": 0.1,
-                                "beta": 0.25
-                            },
-                            "relative_phase": 0.0,
-                            "chirp": null
-                        }
-                    ],
-                    [
-                        "1/drive",
-                        {
-                            "kind": "align"
-                        }
-                    ],
-                    [
-                        "0/drive1",
-                        {
-                            "kind": "align"
-                        }
-                    ],
-                    [
-                        "0/drive",
-                        {
-                            "kind": "align"
-                        }
-                    ],
-                    [
                         "0/drive1",
                         {
                             "kind": "pulse",
