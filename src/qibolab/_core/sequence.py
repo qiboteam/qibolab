@@ -3,11 +3,12 @@
 from collections import UserList, defaultdict
 from collections.abc import Callable, Iterable
 from functools import cache
-from typing import Any, Union
+from typing import Any
 
 import numpy as np
 from pydantic import TypeAdapter
 from pydantic_core import core_schema
+from typing_extensions import Self
 
 from qibolab._core.pulses.pulse import PulseId, VirtualZ
 
@@ -17,7 +18,7 @@ from .pulses import Acquisition, Align, Delay, Pulse, PulseLike, Readout
 __all__ = ["PulseSequence"]
 
 _Element = tuple[ChannelId, PulseLike]
-InputOps = Union[Readout, Acquisition]
+InputOps = Readout | Acquisition
 
 _adapted_sequence = TypeAdapter(list[_Element])
 
@@ -108,7 +109,7 @@ class PulseSequence(UserList[_Element]):
         _synchronize(self, PulseSequence(other).channels)
         self.extend(other)
 
-    def __ilshift__(self, other: Iterable[_Element]) -> "PulseSequence":
+    def __ilshift__(self, other: Iterable[_Element]) -> Self:
         """Juxtapose two sequences.
 
         Alias to :meth:`concatenate`.
@@ -146,7 +147,7 @@ class PulseSequence(UserList[_Element]):
         _synchronize(self, PulseSequence(other).channels | self.channels)
         self.extend(other)
 
-    def __ior__(self, other: Iterable[_Element]) -> "PulseSequence":
+    def __ior__(self, other: Iterable[_Element]) -> Self:
         """Pipe two sequences. ``other'' starts after ``self`` ends."""
         other_channels = PulseSequence(other).channels
         self.align(self.channels | other_channels)

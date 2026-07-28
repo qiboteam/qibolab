@@ -219,7 +219,7 @@ class RFSoC(Controller):
             buffer_overflow = r"buffer length must be \d+ samples or less"
             if re.search(buffer_overflow, str(e)) is not None:
                 log.warning("Buffer full! Use shorter pulses.")
-            raise e
+            raise
 
 
 def _validate_input_command(
@@ -313,9 +313,11 @@ def _firmware_loops(
                 pulses_in_path = []
                 for p_ch, pulse in sequence:
                     # Type check so that ADC and DACs are not compared
-                    if type(channels[p_ch]) is type(channels[ch]):
-                        if channels[p_ch].path == path:
-                            pulses_in_path.append(pulse)
+                    if (
+                        type(channels[p_ch]) is type(channels[ch])
+                        and channels[p_ch].path == path
+                    ):
+                        pulses_in_path.append(pulse)
 
                 if len(pulses_in_path) > 1:
                     return n

@@ -4,9 +4,9 @@ Define instruments mainly used for testing purposes.
 """
 
 from qibolab._core import dummy as dummy_plat
-from qibolab._core.dummy import *  # noqa: F403
+from qibolab._core.dummy import *
 from qibolab._core.instruments import dummy
-from qibolab._core.instruments.dummy import *  # noqa: F403
+from qibolab._core.instruments.dummy import *
 
 __all__ = []
 __all__ += dummy.__all__

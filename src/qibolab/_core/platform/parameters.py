@@ -51,7 +51,7 @@ def _gate_sequence(qubit: Qubit, gate: str) -> Native:
 
 def _pair_to_qubit(pair: str, qubits: QubitMap) -> Qubit:
     """Get first qubit of a pair given in ``{q0}-{q1}`` format."""
-    q = tuple(pair.split("-"))[0]
+    q = next(iter(pair.split("-")))
     try:
         return qubits[q]
     except KeyError:

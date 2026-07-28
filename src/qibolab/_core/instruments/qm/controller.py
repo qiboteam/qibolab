@@ -36,7 +36,7 @@ from .program.sweepers import find_lo_frequencies, sweeper_amplitude
 CALIBRATION_DB = "calibration_db.json"
 """Name of the file where the mixer calibration is stored."""
 
-__all__ = ["QmController", "Octave"]
+__all__ = ["Octave", "QmController"]
 
 MAX_VOLTAGE = 0.5
 """Maximum output of Quantum Machines OPX+ in Volts."""
@@ -304,7 +304,7 @@ class QmController(Controller):
     Default is ``False``.
     """
 
-    def model_post_init(self, __context):
+    def model_post_init(self, __context, /):
         if self.simulation_duration is not None:
             raise NotImplementedError(
                 "Simulation is no longer supported by the QM driver."
@@ -472,9 +472,7 @@ class QmController(Controller):
             acquisitions (dict): Map from measurement instructions to acquisition objects.
         """
         for id, pulse in sequence:
-            if isinstance(pulse, Pulse):
-                self.register_pulse(id, configs[id], pulse)
-            elif isinstance(pulse, Readout):
+            if isinstance(pulse, (Pulse, Readout)):
                 self.register_pulse(id, configs[id], pulse)
 
     def register_duration_sweeper_pulses(

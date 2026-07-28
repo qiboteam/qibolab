@@ -1,5 +1,4 @@
 from dataclasses import dataclass, field
-from typing import Union
 
 import numpy as np
 
@@ -7,12 +6,12 @@ from qibolab._core.pulses import Pulse, Rectangular
 from qibolab._core.pulses.modulation import rotate, wrap_phase
 
 __all__ = [
-    "operation",
-    "Waveform",
-    "waveforms_from_pulse",
-    "integration_weights",
-    "QmPulse",
     "QmAcquisition",
+    "QmPulse",
+    "Waveform",
+    "integration_weights",
+    "operation",
+    "waveforms_from_pulse",
 ]
 
 BATCH = 4
@@ -78,7 +77,7 @@ class ArbitraryWaveform:
         }
 
 
-Waveform = Union[ConstantWaveform, ArbitraryWaveform]
+Waveform = ConstantWaveform | ArbitraryWaveform
 
 
 def waveforms_from_pulse(
@@ -96,7 +95,7 @@ def waveforms_from_pulse(
 
 @dataclass(frozen=True)
 class Waveforms:
-    I: str  # noqa: E741
+    I: str
     Q: str
 
     @classmethod

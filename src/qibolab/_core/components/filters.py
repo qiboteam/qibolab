@@ -1,4 +1,4 @@
-from typing import Annotated, Literal, Union
+from typing import Annotated, Literal
 
 import numpy as np
 from pydantic import Field
@@ -56,6 +56,6 @@ class FiniteImpulseResponseFilter(Model):
 
 
 Filter = Annotated[
-    Union[ExponentialFilter, FiniteImpulseResponseFilter],
+    ExponentialFilter | FiniteImpulseResponseFilter,
     Field(discriminator="kind"),
 ]

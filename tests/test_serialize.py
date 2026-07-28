@@ -79,7 +79,7 @@ def test_array_nested_comparison():
     )
 
     # if identical, just checking the id
-    assert n0 == n0
+    assert n0 == n0  # noqa: PLR0124
     # otherwise, it is going for the nested comparison, and failing
     with pytest.raises(ValueError):
         assert n0 != n1

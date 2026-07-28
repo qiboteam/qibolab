@@ -12,7 +12,7 @@ from .identifier import ChannelId
 from .pulses import PulseId, PulseLike, VirtualZ
 from .serialize import Model, eq
 
-__all__ = ["Parameter", "ParallelSweepers", "Sweeper"]
+__all__ = ["ParallelSweepers", "Parameter", "Sweeper"]
 
 _PULSE = "pulse"
 _CHANNEL = "channel"

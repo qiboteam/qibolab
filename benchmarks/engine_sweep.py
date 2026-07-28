@@ -36,6 +36,7 @@ Examples:
 from __future__ import annotations
 
 import argparse
+import itertools
 import json
 import resource
 import subprocess
@@ -87,7 +88,7 @@ def chain_operators(engine, levels: int, n: int):
             * ANHARMONICITY
             * (lowering.dag() * lowering.dag() * lowering * lowering)
         )
-    for left, right in zip(lowerings[:-1], lowerings[1:]):
+    for left, right in itertools.pairwise(lowerings):
         hamiltonian += 2 * np.pi * COUPLING * (left.dag() * right + left * right.dag())
     collapse = [(1 / T1) ** 0.5 * lowering for lowering in lowerings]
     drive = lowerings[0] + lowerings[0].dag()

@@ -1,6 +1,6 @@
 """Pulse class."""
 
-from typing import Annotated, Literal, Union, cast
+from typing import Annotated, Literal, cast
 from uuid import uuid4
 
 import numpy as np
@@ -198,6 +198,6 @@ class Align(_PulseLike):
 
 
 PulseLike = Annotated[
-    Union[Align, Pulse, Delay, VirtualZ, Acquisition, Readout],
+    Align | Pulse | Delay | VirtualZ | Acquisition | Readout,
     Field(discriminator="kind"),
 ]

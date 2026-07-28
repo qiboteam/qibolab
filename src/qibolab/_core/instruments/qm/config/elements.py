@@ -1,21 +1,20 @@
 from dataclasses import dataclass, field
-from typing import Union
 
 from typing_extensions import TypedDict
 
 from qibolab._core.components import Channel
 
 __all__ = [
-    "DcElement",
-    "RfOctaveElement",
-    "AcquireOctaveElement",
-    "MwFemElement",
     "AcquireMwFemElement",
+    "AcquireOctaveElement",
+    "DcElement",
     "Element",
+    "MwFemElement",
+    "RfOctaveElement",
 ]
 
 
-InOutType = Union[tuple[str, int], tuple[str, int, int]]
+InOutType = tuple[str, int] | tuple[str, int, int]
 OctavePort = TypedDict("OpxPlusPort", {"port": tuple[str, int]})
 
 
@@ -23,7 +22,7 @@ class Port(TypedDict):
     port: InOutType
 
 
-ConnectivityType = Union[str, tuple[str, int]]
+ConnectivityType = str | tuple[str, int]
 
 
 @dataclass(frozen=True)
@@ -187,10 +186,10 @@ class AcquireMwFemElement:
         )
 
 
-Element = Union[
-    DcElement,
-    RfOctaveElement,
-    AcquireOctaveElement,
-    MwFemElement,
-    AcquireMwFemElement,
-]
+Element = (
+    DcElement
+    | RfOctaveElement
+    | AcquireOctaveElement
+    | MwFemElement
+    | AcquireMwFemElement
+)

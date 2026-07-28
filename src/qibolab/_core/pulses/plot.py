@@ -175,9 +175,9 @@ def sequence(ps: PulseSequence, freq: dict[str, float], filename=None):
                         np.array(envelope), freq[ch], rate=SAMPLING_RATE
                     )
                     ax.plot(time, modulated[1], c="lightgrey")
-                    ax.plot(time, modulated[0], c=f"C{str(n)}")
-                ax.plot(time, pulse.i(SAMPLING_RATE), c=f"C{str(n)}")
-                ax.plot(time, -pulse.i(SAMPLING_RATE), c=f"C{str(n)}")
+                    ax.plot(time, modulated[0], c=f"C{n!s}")
+                ax.plot(time, pulse.i(SAMPLING_RATE), c=f"C{n!s}")
+                ax.plot(time, -pulse.i(SAMPLING_RATE), c=f"C{n!s}")
                 # TODO: if they overlap use different shades
                 ax.axhline(0, c="dimgrey")
                 ax.set_ylabel(f"channel {ch}")

@@ -22,7 +22,7 @@ log = logging.getLogger(__name__)
 SAMPLING_RATE = 1
 
 
-__all__ = ["DummyLocalOscillator", "DummyInstrument"]
+__all__ = ["DummyInstrument", "DummyLocalOscillator"]
 
 
 class DummyDevice:

@@ -10,10 +10,10 @@ from numpy.typing import NDArray
 from qibolab._core.serialize import Model
 
 __all__ = [
-    "SimulationEngine",
     "Operator",
-    "TimeDependentOperator",
     "OperatorEvolution",
+    "SimulationEngine",
+    "TimeDependentOperator",
 ]
 
 HAMILTONIAN_FILENAME = "System_Hamiltonian"
@@ -82,7 +82,7 @@ class SimulationEngine(Model, ABC):
         hamiltonian: Operator,
         initial_state: Operator,
         time: list[float],
-        collapse_operators: list[Operator] = None,
+        collapse_operators: list[Operator] | None = None,
         **kwargs,
     ) -> tuple[EvolutionResult, dict]:
         """Evolve the system."""

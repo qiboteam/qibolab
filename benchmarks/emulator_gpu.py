@@ -112,11 +112,11 @@ def benchmark(args: argparse.Namespace) -> dict[str, Any]:
     gates = platform.natives.single_qubit[0]
     sequence = gates.RX() | gates.MZ()
     acquisition = list(sequence.channel(platform.qubits[0].acquisition))[-1].id
-    execute_kwargs = dict(
-        nshots=args.nshots,
-        acquisition_type=AcquisitionType.INTEGRATION,
-        averaging_mode=AveragingMode.CYCLIC,
-    )
+    execute_kwargs = {
+        "nshots": args.nshots,
+        "acquisition_type": AcquisitionType.INTEGRATION,
+        "averaging_mode": AveragingMode.CYCLIC,
+    }
 
     for _ in range(args.warmups):
         platform.execute([sequence], **execute_kwargs)

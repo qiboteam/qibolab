@@ -68,11 +68,10 @@ def replace_pulse_shape(
 
 def get_lo_frequency(ch: Channel, configs: dict[str, Config]) -> float:
     """Return LO frequency from channel, if applicable."""
-    if isinstance(ch, IqChannel):
-        if ch.lo is not None:
-            conf = configs[ch.lo]
-            if isinstance(conf, OscillatorConfig):
-                return conf.frequency
+    if isinstance(ch, IqChannel) and ch.lo is not None:
+        conf = configs[ch.lo]
+        if isinstance(conf, OscillatorConfig):
+            return conf.frequency
     return 0
 
 
@@ -265,7 +264,7 @@ def _(
 
     adc = 0  # Assign adc 0 to ensure frequency matching
     if isinstance(pulse, Acquisition):
-        freq = (getattr(configs[ch_id], "frequency") - lo_frequency) / mega
+        freq = (configs[ch_id].frequency - lo_frequency) / mega
         return rfsoc_pulses.Measurement(
             type="readout",
             frequency=freq,
@@ -280,7 +279,7 @@ def _(
         assert probe_id is not None
         adc = int(ch.path)
         ptype = "readout"
-        freq = (getattr(configs[probe_id], "frequency") - lo_frequency) / mega
+        freq = (configs[probe_id].frequency - lo_frequency) / mega
         amp = pulse.probe.amplitude
         rel_ph = pulse.probe.relative_phase + ch_vz_phase
         envelope = pulse.probe.envelope
@@ -353,9 +352,9 @@ def _(
             for ch_id in sweeper.channels:
                 parameters.append(rfsoc.Parameter.BIAS)
                 qubit_idx = 0
-                for ch in channels:
-                    if isinstance(channels[ch], DcChannel):
-                        if channels[ch] == channels[ch_id]:
+                for channel in channels.values():
+                    if isinstance(channel, DcChannel):
+                        if channel == channels[ch_id]:
                             indexes.append(qubit_idx)
                         else:
                             qubit_idx += 1
@@ -371,7 +370,7 @@ def _(
             assert sweeper.channels is not None
             for ch_id in sweeper.channels:
                 parameters.append(rfsoc.Parameter.FREQUENCY)
-                pulse = [p for ch, p, _ in ordered_sequence if ch == ch_id][0]
+                pulse = next(p for ch, p, _ in ordered_sequence if ch == ch_id)
                 # TODO what happens if more than one pulse are on the same channel?
                 indexes.append(get_index(pulse_sequence, pulse))
                 starts.append(start)
@@ -407,9 +406,11 @@ def _(
                 parameters.append(rfsoc.Parameter.DELAY)
                 # counting the index of the pulse (without delay pulses)
                 for idx, p in enumerate(pulse_sequence):
-                    if p.id in delay_equivalence:
-                        if pulse.id in delay_equivalence[p.id]:
-                            indexes.append(idx)
+                    if (
+                        p.id in delay_equivalence
+                        and pulse.id in delay_equivalence[p.id]
+                    ):
+                        indexes.append(idx)
 
                 starts.append(start)
                 stops.append(stop)

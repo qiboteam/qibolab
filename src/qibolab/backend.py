@@ -1,5 +1,5 @@
 from ._core import backends
-from ._core.backends import *  # noqa: F403
+from ._core.backends import *
 
 __all__ = []
 __all__ += backends.__all__

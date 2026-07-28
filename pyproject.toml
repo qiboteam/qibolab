@@ -71,7 +71,7 @@ requests = "^2.32.0"
 optional = true
 
 [tool.poetry.group.analysis.dependencies]
-ruff = "^0.9.1"
+ruff = "^0.16.0"
 
 [tool.poetry.extras]
 backend = ["qibo"]
@@ -100,8 +100,14 @@ addopts = [
   "--ignore=tests/qblox", # TODO: move tests to qibolab-qblox
 ]
 
+[tool.ruff.lint]
+ignore = ["BLE001"] # TODO: warning about except Exception, fix properly
+
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F403"]
+"src/qibolab/instruments/*.py" = ["F403"]
+"src/qibolab/backend.py" = ["F403"]
+"src/qibolab/_core/instruments/qm/program/loops.py" = ["TRY002"]
 
 [tool.pycln]
 all = true

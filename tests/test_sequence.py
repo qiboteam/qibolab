@@ -199,7 +199,7 @@ def test_juxtapose():
     assert sequence1.channel_duration("ch1") == 40 + 60
     assert sequence1.channel_duration("ch2") == 40 + 60 + 80
     assert sequence1.channel_duration("ch3") == 40 + 60 + 100
-    delay = list(sequence1.channel("ch3"))[0]
+    delay = next(iter(sequence1.channel("ch3")))
     assert isinstance(delay, Delay)
     assert delay.duration == 100
 
@@ -225,7 +225,7 @@ def test_pipe():
     s1_ior = deepcopy(s1)
     s1_ior |= s2
     assert isinstance(list(s1_ior.channel("ch1"))[1], Align)
-    assert isinstance(list(s1_ior.channel("ch2"))[0], Align)
+    assert isinstance(next(iter(s1_ior.channel("ch2"))), Align)
     compiled = s1_ior.align_to_delays()
     assert not any(isinstance(p, Align) for _, p in compiled)
     assert compiled.channels == {"ch1", "ch2"}
