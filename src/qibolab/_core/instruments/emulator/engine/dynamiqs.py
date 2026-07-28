@@ -148,10 +148,9 @@ class DynamiqsEngine(SimulationEngine):
 
     def evolve(
         self,
-        hamiltonian: Operator,
+        hamiltonian: OperatorEvolution,
         initial_state: Operator,
         time: Iterable[float],
-        time_hamiltonian: OperatorEvolution = None,
         collapse_operators: list[Operator] = None,
         **kwargs,
     ) -> DynamiqsEvolutionResult:
@@ -159,19 +158,19 @@ class DynamiqsEngine(SimulationEngine):
 
         time = np.asarray(list(time), dtype=float)
 
-        hamiltonian = self.engine.constant(_unwrap(hamiltonian))
-        if time_hamiltonian is not None:
-            times = time_hamiltonian.times
-            for operator, coefficient in time_hamiltonian.operators:
-                spline = make_interp_spline(times, coefficient, k=SPLINE_INTERP_ORDER)
-                hamiltonian += self.engine.modulated(
-                    jax_interpolation(spline), _unwrap(operator)
-                )
+        complete_hamiltonian = self.engine.constant(_unwrap(hamiltonian.static))
+        for operator, coefficient in hamiltonian.operators:
+            spline = make_interp_spline(
+                hamiltonian.times, coefficient, k=SPLINE_INTERP_ORDER
+            )
+            complete_hamiltonian += self.engine.modulated(
+                jax_interpolation(spline), _unwrap(operator)
+            )
 
         method = kwargs.pop("method", self._method(time))
         options = kwargs.pop("options", self.engine.Options(progress_meter=False))
         result = self.engine.mesolve(
-            hamiltonian,
+            complete_hamiltonian,
             [_unwrap(op) for op in collapse_operators or []],
             _unwrap(initial_state),
             time,
