@@ -85,7 +85,7 @@ lint-warnings = """
   ruff check --exit-zero \
   --select F,E,W,C90,N,UP,BLE,FBT,B,A,C4,T10,EM,EXE,ISC,ICN,LOG,G,INP,PIE,T20,PT,Q,RSE,\
            RET,SLF,SLOT,SIM,TC,INT,ARG,PTH,ERA,NPY,PERF,RUF
-"""
+""" # these are some extra strict checks, but just for reporting purposes
 types = "true"
 docs = "make -C doc html"
 docs-clean = "make -C doc clean"
@@ -100,15 +100,18 @@ addopts = [
   "--ignore=tests/qblox", # TODO: move tests to qibolab-qblox
 ]
 
+[tool.ruff]
+target-version = "py310"
+line-length = 88
+
 [tool.ruff.lint]
-ignore = ["BLE001"] # TODO: warning about except Exception, fix properly
+extend-select = ["I","UP", "D103","D200","D206","D300","D301"] # I -> pycln, D->pydocstyle, UP->pyupgrade
+ignore = ["BLE001"]  # TODO: warning about except Exception, fix properly
+
+[tool.ruff.lint.isort]
+known-first-party = ["qibolab"]
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F403"]
-"src/qibolab/instruments/*.py" = ["F403"]
-"src/qibolab/backend.py" = ["F403"]
-"src/qibolab/_core/instruments/qm/program/loops.py" = ["TRY002"]
-
-[tool.pycln]
-all = true
-exclude = "__init__.py"
+"!src/**/*" = ["D103", "D200", "D206", "D300", "D301"] # skip for non src/ files
+"src/qibolab/_core/instruments/qm/program/loops.py" = ["TRY002"] # Create your own exception

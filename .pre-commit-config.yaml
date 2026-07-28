@@ -1,5 +1,5 @@
 ci:
-  autofix_prs: false
+  autofix_prs: true
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
@@ -12,34 +12,10 @@ repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.16.0
     hooks:
-      # Run the linter.
       - id: ruff
-        args: [--fix]
-      # Sort imports
-      - id: ruff
-        args: [--select, I, --fix]
-      # Run the formatter.
+        args: [--fix, --config=pyproject.toml]
       - id: ruff-format
-  - repo: https://github.com/asottile/pyupgrade
-    rev: v3.21.2
-    hooks:
-      - id: pyupgrade
-        args:
-          - --py310-plus
-  - repo: https://github.com/hadialqattan/pycln
-    rev: v2.6.0
-    hooks:
-      - id: pycln
-        args:
-          - --config=pyproject.toml
   - repo: https://github.com/adamchainz/blacken-docs
     rev: 1.20.0
     hooks:
       - id: blacken-docs
-  - repo: https://github.com/pycqa/pydocstyle
-    rev: 6.3.0
-    hooks:
-      - id: pydocstyle
-        args:
-          - --select=D103,D200,D206,D300,D301
-        files: ^src/

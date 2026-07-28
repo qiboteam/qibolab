@@ -15,7 +15,10 @@ __all__ = [
 
 
 InOutType = tuple[str, int] | tuple[str, int, int]
-OctavePort = TypedDict("OpxPlusPort", {"port": tuple[str, int]})
+
+
+class OctavePort(TypedDict):
+    port: tuple[str, int]
 
 
 class Port(TypedDict):
@@ -73,7 +76,8 @@ class DcElement:
         return cls(_to_port(channel))
 
 
-DigitalInputs = TypedDict("digitalInputs", {"output_switch": OutputSwitch})
+class DigitalInputs(TypedDict):
+    output_switch: OutputSwitch
 
 
 @dataclass
