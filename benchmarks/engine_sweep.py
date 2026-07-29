@@ -36,6 +36,7 @@ Examples:
 from __future__ import annotations
 
 import argparse
+import itertools
 import json
 import resource
 import subprocess
@@ -87,7 +88,7 @@ def chain_operators(engine, levels: int, n: int):
             * ANHARMONICITY
             * (lowering.dag() * lowering.dag() * lowering * lowering)
         )
-    for left, right in zip(lowerings[:-1], lowerings[1:]):
+    for left, right in itertools.pairwise(lowerings):
         hamiltonian += 2 * np.pi * COUPLING * (left.dag() * right + left * right.dag())
     collapse = [(1 / T1) ** 0.5 * lowering for lowering in lowerings]
     drive = lowerings[0] + lowerings[0].dag()
@@ -133,7 +134,7 @@ def memory_metrics(device: str) -> dict:
 
             stats = jax.local_devices()[0].memory_stats() or {}
             metrics["gpu_peak_bytes"] = stats.get("peak_bytes_in_use")
-        except Exception:
+        except Exception:  # noqa: BLE001
             metrics["gpu_peak_bytes"] = None
         try:
             metrics["nvidia_smi"] = subprocess.check_output(
@@ -314,7 +315,7 @@ def run_validate(args: argparse.Namespace) -> None:
                 "dim": dim,
                 "max_deviation": deviation,
             }
-        except Exception as error:  # pragma: no cover - diagnostic path
+        except Exception as error:  # noqa: BLE001
             record = {
                 "mode": "validate",
                 "configuration": label,

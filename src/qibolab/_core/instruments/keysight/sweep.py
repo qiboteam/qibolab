@@ -80,7 +80,7 @@ def process_sweepers(
             elif sweeper.parameter in SUPPORTED_PULSE_SWEEPERS:
                 # Duration can only be swept in hardware for delays
                 if sweeper.parameter is Parameter.duration and any(
-                    [pulse.kind != "delay" for pulse in sweeper.pulses]
+                    pulse.kind != "delay" for pulse in sweeper.pulses
                 ):
                     hardware_sweeping = False
 

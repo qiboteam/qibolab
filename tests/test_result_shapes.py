@@ -24,7 +24,7 @@ def test_discrimination_singleshot(execute, sweep):
 def test_discrimination_cyclic(execute, sweep):
     result = execute(Acq.DISCRIMINATION, Av.CYCLIC, NSHOTS, sweep)
     if sweep == []:
-        assert result.shape == tuple()
+        assert result.shape == ()
     else:
         assert result.shape == (NSWEEP1, NSWEEP2)
 

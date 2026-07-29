@@ -2,7 +2,7 @@ import numpy as np
 
 from .envelope import IqWaveform
 
-__all__ = ["wrap_phase", "rotate", "modulate", "demodulate"]
+__all__ = ["demodulate", "modulate", "rotate", "wrap_phase"]
 
 
 def wrap_phase(phase: float):

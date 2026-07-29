@@ -152,7 +152,7 @@ class DynamiqsEngine(SimulationEngine):
         initial_state: Operator,
         time: Iterable[float],
         time_hamiltonian: OperatorEvolution = None,
-        collapse_operators: list[Operator] = None,
+        collapse_operators: list[Operator] | None = None,
         **kwargs,
     ) -> DynamiqsEvolutionResult:
         """Evolve the system."""

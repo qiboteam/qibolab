@@ -1,7 +1,7 @@
 """Library of pulse envelopes."""
 
 from abc import ABC
-from typing import Annotated, Literal, Union
+from typing import Annotated, Literal
 
 import numpy as np
 import numpy.typing as npt
@@ -11,17 +11,17 @@ from scipy.signal.windows import gaussian
 from ..serialize import Model, NdArray, eq
 
 __all__ = [
-    "Waveform",
-    "IqWaveform",
     "BaseEnvelope",
+    "Custom",
+    "Drag",
     "Envelope",
-    "Rectangular",
     "Exponential",
     "Gaussian",
     "GaussianSquare",
-    "Drag",
+    "IqWaveform",
+    "Rectangular",
     "Snz",
-    "Custom",
+    "Waveform",
 ]
 
 
@@ -316,15 +316,7 @@ class Custom(BaseEnvelope):
 
 
 Envelope = Annotated[
-    Union[
-        Rectangular,
-        Exponential,
-        Gaussian,
-        GaussianSquare,
-        Drag,
-        Snz,
-        Custom,
-    ],
+    Rectangular | Exponential | Gaussian | GaussianSquare | Drag | Snz | Custom,
     Field(discriminator="kind"),
 ]
 """Available pulse shapes."""

@@ -46,6 +46,9 @@ from .validate import (
     validate_sequence,
 )
 
+logger = logging.getLogger(__name__)
+
+
 __all__ = ["Cluster"]
 
 SAMPLING_RATE = 1
@@ -293,7 +296,7 @@ class Cluster(Controller):
 
                 # finally execute the experiment, and fetch results
                 duration = _compute_duration(ps, sweepers_, options_, configs)
-                logging.info(f"Qblox expected execution time: {duration:.3f} s")
+                logger.info(f"Qblox expected execution time: {duration:.3f} s")
                 data = self._execute(
                     sequencers, sequences_, duration, options_.acquisition_type
                 )

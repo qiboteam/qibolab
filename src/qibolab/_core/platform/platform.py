@@ -155,7 +155,7 @@ class Platform:
             for name, instrument in self.instruments.items():
                 try:
                     instrument.connect()
-                except Exception as exception:
+                except Exception as exception:  # noqa: BLE001
                     raise RuntimeError(
                         f"Cannot establish connection to instrument {name}. Error captured: '{exception}'",
                     )

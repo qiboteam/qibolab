@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Literal, Union
+from typing import Literal
 
 from qibolab._core.components import OscillatorConfig
 
@@ -11,15 +11,15 @@ from ..components import (
 from ..components.configs import OctaveOutputModes
 
 __all__ = [
-    "ModuleTypes",
-    "MwFemOutput",
-    "MwFemInput",
-    "OctaveOutput",
-    "OctaveInput",
     "Controller",
-    "Octave",
     "ControllerId",
     "Controllers",
+    "ModuleTypes",
+    "MwFemInput",
+    "MwFemOutput",
+    "Octave",
+    "OctaveInput",
+    "OctaveOutput",
 ]
 
 
@@ -86,7 +86,7 @@ class OctaveOutput:
 
     @classmethod
     def from_config(cls, config: OscillatorConfig | OctaveOscillatorConfig):
-        kwargs = dict(LO_frequency=config.frequency, gain=config.power)
+        kwargs = {"LO_frequency": config.frequency, "gain": config.power}
         if isinstance(config, OctaveOscillatorConfig):
             kwargs["output_mode"] = config.output_mode
         return cls(**kwargs)
@@ -154,7 +154,7 @@ class Octave:
             self.connectivity = (con, int(fem))
 
 
-ControllerId = Union[str, tuple[str, int]]
+ControllerId = str | tuple[str, int]
 
 
 def process_controller_id(id: ControllerId):
@@ -175,7 +175,7 @@ def process_controller_id(id: ControllerId):
     return id, None
 
 
-class Controllers(dict[str, Union[Controller, Opx1000]]):
+class Controllers(dict[str, Controller | Opx1000]):
     """Dictionary of controllers compatible with OPX+ and OPX1000."""
 
     def __contains__(self, key: ControllerId) -> bool:

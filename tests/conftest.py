@@ -1,7 +1,6 @@
 import os
 import pathlib
 from collections.abc import Callable, Iterator
-from typing import Optional
 
 import numpy as np
 import numpy.typing as npt
@@ -54,7 +53,7 @@ def platform(request):
 
 
 Execution = Callable[
-    [AcquisitionType, AveragingMode, int, Optional[list[ParallelSweepers]]], npt.NDArray
+    [AcquisitionType, AveragingMode, int, list[ParallelSweepers] | None], npt.NDArray
 ]
 
 
@@ -71,11 +70,11 @@ def execute() -> Iterator[Execution]:
         sequence: PulseSequence | None = None,
         target: int | None = None,
     ) -> npt.NDArray:
-        options = dict(
-            nshots=nshots,
-            acquisition_type=acquisition_type,
-            averaging_mode=averaging_mode,
-        )
+        options = {
+            "nshots": nshots,
+            "acquisition_type": acquisition_type,
+            "averaging_mode": averaging_mode,
+        }
 
         qubit = next(iter(platform.qubits.values()))
         natives = platform.natives.single_qubit[0]

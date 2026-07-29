@@ -9,7 +9,7 @@ configuration defined by these classes.
 
 from functools import reduce
 from pathlib import Path
-from typing import Annotated, Literal, Union
+from typing import Annotated, Literal
 
 import numpy as np
 from pydantic import Field
@@ -18,15 +18,15 @@ from ..serialize import Model, NdArray, eq
 from .filters import Filter
 
 __all__ = [
-    "DcConfig",
-    "IqConfig",
     "AcquisitionConfig",
-    "IqMixerConfig",
-    "OscillatorConfig",
+    "ChannelConfig",
     "Config",
     "Configs",
-    "ChannelConfig",
+    "DcConfig",
+    "IqConfig",
+    "IqMixerConfig",
     "LogConfig",
+    "OscillatorConfig",
 ]
 
 
@@ -139,6 +139,11 @@ class LogConfig(Config):
     path: Path
 
 
-ChannelConfig = Union[
-    DcConfig, IqMixerConfig, OscillatorConfig, IqConfig, AcquisitionConfig, LogConfig
-]
+ChannelConfig = (
+    DcConfig
+    | IqMixerConfig
+    | OscillatorConfig
+    | IqConfig
+    | AcquisitionConfig
+    | LogConfig
+)

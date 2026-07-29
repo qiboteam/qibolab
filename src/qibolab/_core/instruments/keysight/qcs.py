@@ -45,7 +45,7 @@ class KeysightQCS(Controller):
     sampling_rate: ClassVar[float] = (
         qcs.SAMPLE_RATES[qcs.InstrumentEnum.M5300AWG] * nano
     )
-    offset_channels: list[ChannelId] = []
+    offset_channels: list[ChannelId] = []  # noqa: RUF012
     """Subset of channels that require DC offset"""
 
     def connect(self):

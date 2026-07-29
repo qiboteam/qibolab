@@ -5,7 +5,8 @@ JSON <parameters_json>` example.
 """
 
 from collections.abc import Callable, Iterable
-from typing import Annotated, Any, Union
+from types import UnionType
+from typing import Annotated, Any, ClassVar, Union
 
 from pydantic import (
     BeforeValidator,
@@ -126,9 +127,7 @@ ComponentId = str
 This is assumed to always be in its serialized form.
 """
 
-# TODO: replace _UnionType with UnionType, once py3.9 will be abandoned
-_UnionType = Any
-_ChannelConfigT = Union[_UnionType, type[Config]]
+_ChannelConfigT = UnionType | type[Config]
 _BUILTIN_CONFIGS: tuple[_ChannelConfigT, ...] = (ChannelConfig,)
 
 
@@ -145,7 +144,7 @@ class ConfigKinds:
         loading operations.
     """
 
-    _registered: list[_ChannelConfigT] = list(_BUILTIN_CONFIGS)
+    _registered: ClassVar[list[_ChannelConfigT]] = list(_BUILTIN_CONFIGS)
 
     @classmethod
     def extend(cls, kinds: Iterable[_ChannelConfigT]):
@@ -174,7 +173,7 @@ class ConfigKinds:
         """
         return TypeAdapter(
             Annotated[
-                Union[tuple(ConfigKinds._registered)], Field(discriminator="kind")
+                Union[tuple(ConfigKinds._registered)], Field(discriminator="kind")  # noqa: UP007
             ]
         )
 

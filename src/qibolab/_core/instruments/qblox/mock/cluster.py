@@ -20,7 +20,7 @@ class MockSequencer:
         if name in ["idx", "register", "ancestors", "seq_idx"]:
             return super().__getattribute__(name)
 
-        log: dict["str", Any] = {"name": name}
+        log: dict[str, Any] = {"name": name}
         self.register["calls"].append(log)
 
         def wrapped(*args, **kwargs):
@@ -63,7 +63,7 @@ class MockModule:
         ]:
             return super().__getattribute__(name)
 
-        log: dict["str", Any] = {"name": name}
+        log: dict[str, Any] = {"name": name}
         self.register["calls"].append(log)
 
         def wrapped(*args, **kwargs):

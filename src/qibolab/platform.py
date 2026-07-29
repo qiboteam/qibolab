@@ -12,8 +12,8 @@ from qibolab._core.platform.platform import Platform
 __all__ = [
     "PLATFORM",
     "PLATFORMS_PATH",
-    "Platform",
     "Hardware",
+    "Platform",
     "create_platform",
     "initialize_parameters",
     "load_hardware",

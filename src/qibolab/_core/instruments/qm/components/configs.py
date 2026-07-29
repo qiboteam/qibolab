@@ -1,4 +1,4 @@
-from typing import Any, Literal, Union
+from typing import Any, Literal
 
 import numpy as np
 from pydantic import Field
@@ -11,11 +11,11 @@ from qibolab._core.components import (
 from qibolab._core.components.filters import ExponentialFilter
 
 __all__ = [
+    "MwFemOscillatorConfig",
+    "OctaveOscillatorConfig",
     "OpxOutputConfig",
     "QmAcquisitionConfig",
     "QmConfigs",
-    "OctaveOscillatorConfig",
-    "MwFemOscillatorConfig",
 ]
 
 OctaveOutputModes = Literal[
@@ -131,9 +131,9 @@ class MwFemOscillatorConfig(OscillatorConfig):
     sampling_rate: float = DEFAULT_SAMPLING_RATE
 
 
-QmConfigs = Union[
-    OpxOutputConfig,
-    OctaveOscillatorConfig,
-    QmAcquisitionConfig,
-    MwFemOscillatorConfig,
-]
+QmConfigs = (
+    OpxOutputConfig
+    | OctaveOscillatorConfig
+    | QmAcquisitionConfig
+    | MwFemOscillatorConfig
+)

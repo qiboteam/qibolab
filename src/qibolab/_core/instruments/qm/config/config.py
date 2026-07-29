@@ -240,9 +240,9 @@ class Configuration:
         acquisition = f"{op}_{element}"
         if acquisition not in self.pulses:
             new_probe = readout.probe.model_copy(
-                update=dict(
-                    duration=readout.acquisition.duration,
-                    envelope=Custom(
+                update={
+                    "duration": readout.acquisition.duration,
+                    "envelope": Custom(
                         i_=np.pad(
                             readout.probe.envelope.i(int(readout.probe.duration)),
                             (
@@ -268,7 +268,7 @@ class Configuration:
                             constant_values=0,
                         ),
                     ),
-                )
+                }
             )
             self.pulses[acquisition] = self.register_waveforms(
                 new_probe,

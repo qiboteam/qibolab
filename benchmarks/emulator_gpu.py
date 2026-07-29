@@ -70,7 +70,7 @@ def jax_devices() -> list[str]:
         import jax
 
         return [str(device) for device in jax.devices()]
-    except Exception as exc:  # pragma: no cover - diagnostic path
+    except Exception as exc:  # noqa: BLE001
         return [f"unavailable: {exc}"]
 
 
@@ -80,7 +80,7 @@ def cupy_device() -> str | None:
 
         device = cp.cuda.Device()
         return f"id={device.id}, memory={cp.cuda.runtime.memGetInfo()}"
-    except Exception:
+    except Exception:  # noqa: BLE001
         return None
 
 
@@ -112,11 +112,11 @@ def benchmark(args: argparse.Namespace) -> dict[str, Any]:
     gates = platform.natives.single_qubit[0]
     sequence = gates.RX() | gates.MZ()
     acquisition = list(sequence.channel(platform.qubits[0].acquisition))[-1].id
-    execute_kwargs = dict(
-        nshots=args.nshots,
-        acquisition_type=AcquisitionType.INTEGRATION,
-        averaging_mode=AveragingMode.CYCLIC,
-    )
+    execute_kwargs = {
+        "nshots": args.nshots,
+        "acquisition_type": AcquisitionType.INTEGRATION,
+        "averaging_mode": AveragingMode.CYCLIC,
+    }
 
     for _ in range(args.warmups):
         platform.execute([sequence], **execute_kwargs)
