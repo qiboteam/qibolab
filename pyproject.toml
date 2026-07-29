@@ -106,7 +106,6 @@ line-length = 88
 
 [tool.ruff.lint]
 extend-select = ["I","UP", "D103","D200","D206","D300","D301"] # I -> pycln, D->pydocstyle, UP->pyupgrade
-ignore = ["BLE001"]  # TODO: warning about except Exception, fix properly
 
 [tool.ruff.lint.isort]
 known-first-party = ["qibolab"]

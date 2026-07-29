@@ -70,7 +70,7 @@ def jax_devices() -> list[str]:
         import jax
 
         return [str(device) for device in jax.devices()]
-    except Exception as exc:  # pragma: no cover - diagnostic path
+    except Exception as exc:  # noqa: BLE001
         return [f"unavailable: {exc}"]
 
 
@@ -80,7 +80,7 @@ def cupy_device() -> str | None:
 
         device = cp.cuda.Device()
         return f"id={device.id}, memory={cp.cuda.runtime.memGetInfo()}"
-    except Exception:
+    except Exception:  # noqa: BLE001
         return None
 
 
