@@ -25,13 +25,35 @@ def test_integration_mode(platform):
 
     result = platform.execute(
         [seq],
-        nshots=NSHOTS,
         acquisition_type=AcquisitionType.INTEGRATION,
         averaging_mode=AveragingMode.CYCLIC,
     )
 
     assert result[acq_handle].shape == (2,)
     assert pytest.approx(result[acq_handle][1], abs=1e-2) == 0
+
+
+def test_discrimination_mode(platform):
+    seq = platform.natives.single_qubit[0].MZ()
+    acq_handle = list(seq.channel(platform.qubits[0].acquisition))[-1].id
+    result = platform.execute(
+        [seq],
+        nshots=NSHOTS,
+        acquisition_type=AcquisitionType.DISCRIMINATION,
+        averaging_mode=AveragingMode.SINGLESHOT,
+    )
+
+    assert result[acq_handle].shape == (NSHOTS,)
+    assert pytest.approx(result[acq_handle][:].mean(), abs=1e-2) == 0
+
+    result = platform.execute(
+        [seq],
+        acquisition_type=AcquisitionType.DISCRIMINATION,
+        averaging_mode=AveragingMode.CYCLIC,
+    )
+
+    assert np.ndim(result[acq_handle]) == 0
+    assert pytest.approx(result[acq_handle], abs=1e-2) == 0
 
 
 def test_sweepers(platform):

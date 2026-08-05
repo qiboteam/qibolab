@@ -5,9 +5,9 @@
     },
     "configs": {
     "hamiltonian":{
-      "transmon_levels": 2,
       "qubits": {
                 "0": {
+                    "transmon_levels": 2,
                     "frequency": 4.961e9,
                     "anharmonicity": -206e6,
                     "asymmetry": 0.1,
@@ -19,6 +19,7 @@
                     }
                 },
                 "1": {
+                    "transmon_levels": 2,
                     "frequency": 4.926e9,
                     "anharmonicity": -202e6,
                     "asymmetry": 0.1,
@@ -30,6 +31,7 @@
                     }
                 },
                 "2": {
+                    "transmon_levels": 2,
                     "frequency": 5.977e9,
                     "anharmonicity": -254e6,
                     "asymmetry": 0.1

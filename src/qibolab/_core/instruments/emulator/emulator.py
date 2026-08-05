@@ -16,11 +16,16 @@ from pydantic import model_validator
 from qibolab._core.components import Config
 from qibolab._core.components.configs import AcquisitionConfig
 from qibolab._core.execution_parameters import AveragingMode, ExecutionParameters
-from qibolab._core.identifier import Result
+from qibolab._core.identifier import ChannelId, Result
 from qibolab._core.instruments.abstract import Controller
+from qibolab._core.instruments.emulator.hamiltonians import (
+    DriveEmulatorConfig,
+    FluxEmulatorConfig,
+)
 from qibolab._core.pulses import (
     Delay,
     Pulse,
+    PulseId,
     PulseLike,
     VirtualZ,
 )
@@ -146,7 +151,7 @@ class EmulatorController(Controller):
         sequences: list[PulseSequence],
         options: ExecutionParameters,
         sweepers: list[ParallelSweepers],
-    ) -> dict[int, Result]:
+    ) -> dict[PulseId, Result]:
 
         if (
             options.averaging_mode is AveragingMode.SINGLESHOT
@@ -170,7 +175,7 @@ class EmulatorController(Controller):
         sequence: tuple[int, PulseSequence],
         options: ExecutionParameters,
         sweepers: list[ParallelSweepers],
-    ):
+    ) -> dict[PulseId, Result]:
         """
         Generate results from an emulated quantum sequence execution.
         Executes a sweep of the quantum sequence and processes the results
@@ -255,6 +260,11 @@ class EmulatorController(Controller):
             collapse_operators=config.dissipation(self.engine),
             time_hamiltonian=time_hamiltonian,
         )
+        # we need to invert np.unique() call because otherwise there will be some mismatch
+        # between different sweeps of the same sequence;
+        # for example if we measure one qubit always at the same time but we sweep on time
+        # over the other, at some point the 2 measurement times might coincide so states.shape
+        # will be different
         states = np.stack([s.full() for s in results.states[1:]])[index]
 
         self._dump_simulation(
@@ -322,21 +332,39 @@ def hamiltonian(
     pulses: Iterable[PulseLike],
     config: Config,
     hamiltonian: HamiltonianConfig,
-    hilbert_space_index: int,
+    channel: ChannelId,
     engine: SimulationEngine,
     sampling_rate: float,
 ) -> tuple[Operator, list[Modulated]]:
-    n = hamiltonian.transmon_levels
-    op = engine.expand(
-        op=config.operator(n=n, engine=engine),
-        targets=hilbert_space_index,
-        dims=hamiltonian.dims,
-    )
+
+    hilbert_space_index = index(channel, hamiltonian)
+    ham_qubit = hamiltonian.qubits[hilbert_space_index]
+
+    if isinstance(config, (DriveEmulatorConfig, FluxEmulatorConfig)):
+        op = sum(
+            engine.expand(
+                op=o,
+                dims=hamiltonian.dims,
+                targets=hamiltonian.hilbert_space_index(int(q)),
+            )
+            for (q, o) in config.operator(
+                hamiltonian=hamiltonian, channel=channel, engine=engine
+            )
+        )
+
+    else:
+        op = engine.expand(
+            op=config.operator(n=ham_qubit.transmon_levels, engine=engine),
+            dims=hamiltonian.dims,
+            targets=hilbert_space_index,
+        )
+
     waveforms = (
-        waveform(pulse, config, hamiltonian.qubits[hilbert_space_index], sampling_rate)
+        waveform(pulse, config, ham_qubit, sampling_rate)
         for pulse in pulses
         if isinstance(pulse, (Pulse, Delay, VirtualZ))
     )
+
     return (op, [w for w in waveforms if w is not None])
 
 
@@ -347,19 +375,21 @@ def hamiltonians(
     sampling_rate: float,
 ) -> Iterable[tuple[Operator, list[Modulated]]]:
     hconfig = cast(HamiltonianConfig, configs["hamiltonian"])
-    return (
-        hamiltonian(
-            sequence.channel(ch),
-            configs[ch],
-            hconfig,
-            index(ch, hconfig),
-            engine,
-            sampling_rate,
-        )
-        for ch in sequence.channels
+
+    hamiltonians_array = ()
+    for ch in sequence.channels:
         # TODO: drop the following, and treat acquisitions just as empty channels
-        if not isinstance(configs[ch], AcquisitionConfig)
-    )
+        if not isinstance(configs[ch], AcquisitionConfig):
+            new_terms = hamiltonian(
+                sequence.channel(ch),
+                configs[ch],
+                hconfig,
+                ch,
+                engine,
+                sampling_rate,
+            )
+            hamiltonians_array += (new_terms,)
+    return hamiltonians_array
 
 
 def channel_coefficients(

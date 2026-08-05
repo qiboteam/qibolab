@@ -29,9 +29,9 @@ the section ``configs``. Here is an example
             "settings": {"nshots": 1024, "relaxation_time": 0},
             "configs": {
                 "hamiltonian": {
-                    "transmon_levels": 2,
                     "qubits": {
                         "0": {
+                            "transmon_levels": 2,
                             "frequency": 5e9,
                             "sweetspot": 0.02,
                             "anharmonicity": -200e6,

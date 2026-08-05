@@ -16,15 +16,15 @@
                 "flux_coefficients": null
             },
             "readout": {
-                "fidelity": 0.0,
+                "fidelity": 0.96684350132626,
                 "coupling": null,
-                "effective_temperature": null,
+                "effective_temperature": 0.0,
                 "ground_state": [
                     0.0,
-                    1.0
+                    0.0
                 ],
                 "excited_state": [
-                    1.0,
+                    0.9774535809018567,
                     0.0
                 ],
                 "qudits_frequency": {}
@@ -50,15 +50,15 @@
                 "flux_coefficients": null
             },
             "readout": {
-                "fidelity": 0.0,
+                "fidelity": 0.986737400530504,
                 "coupling": null,
-                "effective_temperature": null,
+                "effective_temperature": 0.0,
                 "ground_state": [
                     0.0,
-                    1.0
+                    0.0
                 ],
                 "excited_state": [
-                    1.0,
+                    0.9973474801061007,
                     0.0
                 ],
                 "qudits_frequency": {}
@@ -71,5 +71,10 @@
     },
     "two_qubits": {},
     "readout_mitigation_matrix": null,
-    "flux_crosstalk_matrix": null
+    "flux_crosstalk_matrix": {
+        "matrix": "k05VTVBZAQB2AHsnZGVzY3InOiAnPGY4JywgJ2ZvcnRyYW5fb3JkZXInOiBGYWxzZSwgJ3NoYXBlJzogKDIsIDIpLCB9ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAoAAAAAAADwPwAAAAAAAAAAAAAAAAAAAAAAAAAAAADwPw=="
+    },
+    "microwave_crosstalk_matrix": {
+        "matrix": "k05VTVBZAQB2AHsnZGVzY3InOiAnPGY4JywgJ2ZvcnRyYW5fb3JkZXInOiBGYWxzZSwgJ3NoYXBlJzogKDIsIDIpLCB9ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAqzoBkQ/87APyF/cXuem9Q/olpJE0IH5z85zxn+lc7APw=="
+    }
 }

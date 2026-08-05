@@ -5,9 +5,9 @@
     },
     "configs": {
     "hamiltonian":{
-      "transmon_levels": 3,
       "qubits": {
         "0": {
+          "transmon_levels": 3,
           "frequency": 4813586970.0,
           "anharmonicity": -217e6,
           "sweetspot":  0.405,
@@ -20,6 +20,7 @@
           }
         },
         "1": {
+          "transmon_levels": 3,
           "frequency": 5518133438.0,
           "anharmonicity": -212e6,
           "sweetspot": 0.582,
