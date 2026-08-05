@@ -36,6 +36,9 @@ from .convert import convert, convert_units_sweeper
 __all__ = ["RFSoC", "RFSoCConfig"]
 
 
+NS_TO_US = nano / micro
+
+
 class BoardSettings(BaseModel):
     """Connection and synchronization settings for one RFSoC board."""
 
@@ -274,33 +277,27 @@ class RFSoC(Controller):
                 "sweepers before a multi-board execution."
             )
 
-        commands = []
-        hosts = []
-        ports = []
-
-        for board, connection in enumerate(settings.boards):
-            board_sequence = PulseSequence(
+        board_sequences = [
+            PulseSequence(
                 [
                     (ch, element)
                     for ch, element in sequence
                     if _channel_board(ch, board_count) == board
                 ]
             )
-            board_channels = {
+            for board in range(board_count)
+        ]
+        board_channel_maps = [
+            {
                 ch: channel
                 for ch, channel in self.channels.items()
                 if _channel_board(ch, board_count) == board
             }
+            for board in range(board_count)
+        ]
+        board_cfgs = []
 
-            qubits = [
-                rfsoc.Qubit(
-                    bias=getattr(configs[ch], "offset", 0.0),
-                    dac=int(channel.path),
-                )
-                for ch, channel in board_channels.items()
-                if isinstance(channel, DcChannel)
-            ]
-
+        for board, connection in enumerate(settings.boards):
             start = (
                 rfsoc.StartMode.START_IMMEDIATE
                 if board_count == 1
@@ -319,6 +316,54 @@ class RFSoC(Controller):
                 timeout=connection.timeout,
             )
             _update_cfg(cfg, options)
+            board_cfgs.append(cfg)
+
+        # Equalize the repeated program period across all boards. The start
+        # delay is not part of this period: only the board-local pulse sequence
+        # and the relaxation time are considered.
+        sequence_durations_ns = [
+            float(board_sequence.duration) if board_sequence else 0.0
+            for board_sequence in board_sequences
+        ]
+        equalized_relaxation_times_us = _equalized_relaxation_times(
+            sequence_durations_ns,
+            [cfg.relaxation_time for cfg in board_cfgs],
+        )
+
+        for board, relaxation_time_us in enumerate(equalized_relaxation_times_us):
+            previous_relaxation_time_us = board_cfgs[board].relaxation_time
+            board_cfgs[board] = replace(
+                board_cfgs[board],
+                relaxation_time=relaxation_time_us,
+            )
+            added_relaxation_time_us = relaxation_time_us - previous_relaxation_time_us
+            if added_relaxation_time_us > 0:
+                log.info(
+                    "Board %d relaxation time increased by %.9g us "
+                    "to %.9g us so that all board programs last %.9g us.",
+                    board,
+                    added_relaxation_time_us,
+                    relaxation_time_us,
+                    sequence_durations_ns[board] * NS_TO_US + relaxation_time_us,
+                )
+
+        commands = []
+        hosts = []
+        ports = []
+
+        for board, connection in enumerate(settings.boards):
+            board_sequence = board_sequences[board]
+            board_channels = board_channel_maps[board]
+            cfg = board_cfgs[board]
+
+            qubits = [
+                rfsoc.Qubit(
+                    bias=getattr(configs[ch], "offset", 0.0),
+                    dac=int(channel.path),
+                )
+                for ch, channel in board_channels.items()
+                if isinstance(channel, DcChannel)
+            ]
 
             # Keep dataclass objects here. execute_multiple -> execute ->
             # convert_commands owns serialization in the new qibosoq client.
@@ -430,7 +475,48 @@ def _update_cfg(cfg, options: ExecutionParameters):
     if options.nshots is not None:
         cfg.reps = options.nshots
     if options.relaxation_time is not None:
-        cfg.relaxation_time = options.relaxation_time * nano / micro
+        cfg.relaxation_time = options.relaxation_time * NS_TO_US
+
+
+def _equalized_relaxation_times(
+    sequence_durations_ns: list[float],
+    relaxation_times_us: list[float],
+) -> list[float]:
+    """Increase relaxation times until all board program periods are equal.
+
+    For board ``b``, the program period is defined as the duration of its
+    board-local pulse sequence plus its relaxation time. Sequence durations
+    are expressed in ns by Qibolab, while qibosoq relaxation times are in us.
+    No relaxation time is ever reduced.
+    """
+    if len(sequence_durations_ns) != len(relaxation_times_us):
+        raise ValueError(
+            "Sequence-duration and relaxation-time lists must have equal length."
+        )
+    if not sequence_durations_ns:
+        return []
+    if any(duration < 0 for duration in sequence_durations_ns):
+        raise ValueError("Sequence durations cannot be negative.")
+    if any(relaxation < 0 for relaxation in relaxation_times_us):
+        raise ValueError("Relaxation times cannot be negative.")
+
+    sequence_durations_us = [
+        duration_ns * NS_TO_US for duration_ns in sequence_durations_ns
+    ]
+    periods_us = [
+        duration_us + relaxation_us
+        for duration_us, relaxation_us in zip(
+            sequence_durations_us, relaxation_times_us
+        )
+    ]
+    target_period_us = max(periods_us)
+
+    return [
+        max(relaxation_us, target_period_us - duration_us)
+        for duration_us, relaxation_us in zip(
+            sequence_durations_us, relaxation_times_us
+        )
+    ]
 
 
 def _firmware_loops(
