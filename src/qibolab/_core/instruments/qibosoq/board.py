@@ -1,14 +1,18 @@
-"""QICK-Qibosoq interface."""
+"""QICK-Qibosoq interface.
+
+This version is supporting qibosoq 0.2 (namely the tprocv2).
+It also adds support for multiple synchronized boards.
+"""
 
 import re
 from collections import defaultdict
-from dataclasses import asdict
-from typing import cast
+from dataclasses import replace
+from typing import Literal, cast
 
 import numpy as np
 import numpy.typing as npt
 import qibosoq.components.base as rfsoc
-from pydantic import Field
+from pydantic import BaseModel, Field
 from qibo.config import log
 from qibosoq import client
 from scipy.constants import micro, nano
@@ -29,15 +33,44 @@ from qibolab._core.sweeper import ParallelSweepers, Parameter
 
 from .convert import convert, convert_units_sweeper
 
-__all__ = ["RFSoC"]
+__all__ = ["RFSoC", "RFSoCConfig"]
+
+
+class BoardSettings(BaseModel):
+    """Connection and synchronization settings for one RFSoC board."""
+
+    host: str = Field(min_length=1)
+    port: int = Field(default=6000, ge=1, le=65535)
+    delay: float = 0
+    timeout: float = -1
+
+
+class RFSoCConfig(Config):
+    """Qibolab configuration for a coordinated group of RFSoC boards.
+
+    The position of each entry in ``boards`` is its board index. In a
+    multi-board configuration, board 0 is the master and every other board is
+    a slave. A configuration containing one board uses immediate start mode.
+    """
+
+    kind: Literal["qibosoq"] = "qibosoq"
+    boards: list[BoardSettings] = Field(min_length=1)
+    ro_time_of_flight: int = 200
+    soft_avgs: int = 1
+    max_retries: int | None = Field(default=None, ge=1)
 
 
 class RFSoC(Controller):
     """Instrument controlling RFSoC FPGAs."""
 
+    # ``address`` is retained for compatibility with old single-board
+    # platforms. Multi-board platforms load their endpoints from RFSoCConfig.
+    address: str = ""
     _sampling_rate: float = 10e9
     cfg: rfsoc.Config = Field(default_factory=rfsoc.Config)
     """Configuration dictionary required for pulse execution."""
+    config: str = "rfsoc/config"
+    """Key of the RFSoCConfig entry in the platform configuration mapping."""
 
     @property
     def sampling_rate(self):
@@ -62,9 +95,18 @@ class RFSoC(Controller):
 
         for seq in sequences:
             _validate_input_command(seq, options, sweepers)
-            _update_cfg(self.cfg, options)
+            board_settings = self._board_settings(configs)
+            _validate_board_channels(self.channels, len(board_settings.boards))
 
-            fw = _firmware_loops(seq, sweepers, configs, self.channels)
+            # A hardware sweeper would make only the board owning the swept
+            # channel iterate. Until qibosoq exposes a synchronized no-op
+            # sweeper, coordinated executions use software sweepers so that
+            # every sweep point starts all boards together.
+            fw = (
+                _firmware_loops(seq, sweepers, configs, self.channels)
+                if len(board_settings.boards) == 1
+                else 0
+            )
             res = self._sweep(configs, seq, sweepers, len(sweepers) - fw, options, {})
             results |= _reshape_sweep_results(res, sweepers, options, fw)
 
@@ -125,38 +167,85 @@ class RFSoC(Controller):
             and options.averaging_mode is AveragingMode.CYCLIC
         )
         opcode = (
-            rfsoc.OperationCode.EXECUTE_PULSE_SEQUENCE_RAW
+            rfsoc.OperationCode.EXECUTE_PULSE_SEQUENCE_RAW_V2
             if options.acquisition_type is AcquisitionType.RAW
-            else rfsoc.OperationCode.EXECUTE_PULSE_SEQUENCE
+            else rfsoc.OperationCode.EXECUTE_PULSE_SEQUENCE_V2
         )
-        toti, totq = self._execute(
+        board_results = self._execute(
             _update_configs(configs, updates),
             _update_sequence(sequence, updates),
             sweepers,
             opcode,
+            options,
         )
 
-        acq_chs = np.unique([acq[0] for acq in sequence.acquisitions])
-
-        for idx, this_ch in enumerate(acq_chs):
-            this_ch_acq = [
-                (ch, acq) for ch, acq in sequence.acquisitions if ch == this_ch
+        board_count = len(board_results)
+        for board, (toti, totq) in enumerate(board_results):
+            board_acquisitions = [
+                (ch, acq)
+                for ch, acq in sequence.acquisitions
+                if _channel_board(ch, board_count) == board
             ]
-            for i, q, (ch, acq) in zip(toti[idx], totq[idx], this_ch_acq):
-                if options.acquisition_type is AcquisitionType.DISCRIMINATION:
-                    config = cast(AcquisitionConfig, configs[ch])
-                    angle, threshold = config.iq_angle, config.threshold
-                    assert angle is not None and threshold is not None
-                    result = _classify_shots(np.array(i), np.array(q), angle, threshold)
+            acq_chs = np.unique([ch for ch, _ in board_acquisitions])
 
-                    if options.averaging_mode is AveragingMode.CYCLIC:
-                        result = np.mean(result, axis=0)
+            if len(toti) != len(acq_chs) or len(totq) != len(acq_chs):
+                raise RuntimeError(
+                    "Unexpected acquisition-channel count returned by board "
+                    f"{board}: expected {len(acq_chs)}, got "
+                    f"I={len(toti)}, Q={len(totq)}."
+                )
 
-                else:
-                    result = np.stack([i, q], axis=-1)
-                results[acq.id] = result
+            for idx, this_ch in enumerate(acq_chs):
+                this_ch_acq = [
+                    (ch, acq) for ch, acq in board_acquisitions if ch == this_ch
+                ]
+                for i, q, (ch, acq) in zip(toti[idx], totq[idx], this_ch_acq):
+                    if options.acquisition_type is AcquisitionType.DISCRIMINATION:
+                        config = cast(AcquisitionConfig, configs[ch])
+                        angle, threshold = config.iq_angle, config.threshold
+                        assert angle is not None and threshold is not None
+                        result = _classify_shots(
+                            np.array(i), np.array(q), angle, threshold
+                        )
+
+                        if options.averaging_mode is AveragingMode.CYCLIC:
+                            result = np.mean(result, axis=0)
+
+                    else:
+                        result = np.stack([i, q], axis=-1)
+                    results[acq.id] = result
 
         return results
+
+    def _board_settings(self, configs: dict[str, Config]) -> RFSoCConfig:
+        """Load board settings, with a legacy single-board fallback."""
+        settings = configs.get(self.config)
+        if settings is not None:
+            if not isinstance(settings, RFSoCConfig):
+                raise TypeError(
+                    f"Configuration {self.config!r} must be an RFSoCConfig, "
+                    f"not {type(settings).__name__}."
+                )
+            if not settings.boards:
+                raise ValueError("RFSoCConfig.boards cannot be empty.")
+            return settings
+
+        if not self.address:
+            raise ValueError(
+                f"Missing {self.config!r} RFSoCConfig and no legacy address was set."
+            )
+        try:
+            host, port = self.address.rsplit(":", maxsplit=1)
+        except ValueError as exc:
+            raise ValueError(
+                "Legacy RFSoC address must have the form 'host:port'."
+            ) from exc
+
+        return RFSoCConfig(
+            boards=[BoardSettings(host=host, port=int(port))],
+            ro_time_of_flight=self.cfg.ro_time_of_flight,
+            soft_avgs=self.cfg.soft_avgs,
+        )
 
     def _execute(
         self,
@@ -164,11 +253,12 @@ class RFSoC(Controller):
         sequence: PulseSequence,
         sweepers: list[ParallelSweepers],
         opcode: rfsoc.OperationCode,
-    ) -> tuple[list, list]:
-        """Prepare the commands dictionary to send to the qibosoq server.
+        options: ExecutionParameters,
+    ) -> list[tuple[list, list]]:
+        """Build one command per board and execute all commands concurrently."""
+        settings = self._board_settings(configs)
+        board_count = len(settings.boards)
 
-        Returns lists of I and Q value measured.
-        """
         converted_sweepers = [
             [convert_units_sweeper(s, self.channels, configs) for s in parsweep]
             for parsweep in sweepers
@@ -178,48 +268,140 @@ class RFSoC(Controller):
                 raise RuntimeError("Sweep not permitted in RAW mode.")
             opcode = rfsoc.OperationCode.EXECUTE_SWEEPS
 
-        qubits = []
-        for ch in self.channels:
-            if isinstance(self.channels[ch], DcChannel):
-                qubits.append(
-                    rfsoc.Qubit(
-                        bias=getattr(configs[ch], "offset", 0.0),
-                        dac=int(self.channels[ch].path),
-                    )
-                )
+        if board_count > 1 and converted_sweepers:
+            raise RuntimeError(
+                "Internal error: hardware sweepers must be converted to software "
+                "sweepers before a multi-board execution."
+            )
 
-        server_commands = {
-            "operation_code": opcode,
-            "cfg": asdict(self.cfg),
-            "sequence": convert(sequence, self.sampling_rate, self.channels, configs),
-            "qubits": [asdict(q) for q in qubits],
-            "sweepers": [
-                convert(parsweep, sequence, self.channels).serialized
-                for parsweep in converted_sweepers
-            ],
-        }
-        host, port_ = self.address.split(":")
-        port = int(port_)
+        commands = []
+        hosts = []
+        ports = []
+
+        for board, connection in enumerate(settings.boards):
+            board_sequence = PulseSequence(
+                [
+                    (ch, element)
+                    for ch, element in sequence
+                    if _channel_board(ch, board_count) == board
+                ]
+            )
+            board_channels = {
+                ch: channel
+                for ch, channel in self.channels.items()
+                if _channel_board(ch, board_count) == board
+            }
+
+            qubits = [
+                rfsoc.Qubit(
+                    bias=getattr(configs[ch], "offset", 0.0),
+                    dac=int(channel.path),
+                )
+                for ch, channel in board_channels.items()
+                if isinstance(channel, DcChannel)
+            ]
+
+            start = (
+                rfsoc.StartMode.START_IMMEDIATE
+                if board_count == 1
+                else (
+                    rfsoc.StartMode.START_MASTER
+                    if board == 0
+                    else rfsoc.StartMode.START_SLAVE
+                )
+            )
+            cfg = replace(
+                self.cfg,
+                ro_time_of_flight=settings.ro_time_of_flight,
+                soft_avgs=settings.soft_avgs,
+                start=start,
+                delay=connection.delay,
+                timeout=connection.timeout,
+            )
+            _update_cfg(cfg, options)
+
+            # Keep dataclass objects here. execute_multiple -> execute ->
+            # convert_commands owns serialization in the new qibosoq client.
+            commands.append(
+                {
+                    "operation_code": opcode,
+                    "cfg": cfg,
+                    "sequence": convert(
+                        board_sequence,
+                        self.sampling_rate,
+                        board_channels,
+                        configs,
+                    ),
+                    "qubits": qubits,
+                    "sweepers": [
+                        convert(parsweep, board_sequence, board_channels)
+                        for parsweep in converted_sweepers
+                    ],
+                }
+            )
+            hosts.append(connection.host)
+            ports.append(connection.port)
 
         try:
-            return client.connect(server_commands, host, port)
-            # next qibosoq version:
-            # logs, (i, q) = client.connect(server_commands, host, port)
-            # for board_log in logs:
-            #     log.info(board_log)
-            # return  (i, q)
-        except RuntimeError as e:
-            if "exception in readout loop" in str(e):
+            # execute_multiple staggers submissions. Arm all slaves first and
+            # submit the master last so that its trigger cannot precede them.
+            execution_order = [*range(1, board_count), 0] if board_count > 1 else [0]
+            ordered_results = client.execute_multiple(
+                [commands[board] for board in execution_order],
+                [hosts[board] for board in execution_order],
+                [ports[board] for board in execution_order],
+                max_retries=settings.max_retries,
+            )
+            results_by_board: list[tuple[list, list] | None] = [None] * board_count
+            for board, result in zip(execution_order, ordered_results):
+                results_by_board[board] = result
+            assert all(result is not None for result in results_by_board)
+            return cast(list[tuple[list, list]], results_by_board)
+        except RuntimeError as exc:
+            cause = exc.__cause__ or exc
+            if isinstance(cause, client.RuntimeLoopError) or (
+                "exception in readout loop" in str(cause)
+            ):
                 log.warning(
                     "%s %s",
-                    "Exception in readout loop. Attempting again",
+                    "Exception in readout loop after qibosoq client retries.",
                     "You may want to increase the relaxation time.",
                 )
-                return client.connect(server_commands, host, port)
             buffer_overflow = r"buffer length must be \d+ samples or less"
-            if re.search(buffer_overflow, str(e)) is not None:
+            if isinstance(cause, client.BufferLengthError) or (
+                re.search(buffer_overflow, str(cause)) is not None
+            ):
                 log.warning("Buffer full! Use shorter pulses.")
             raise
+
+
+def _channel_board(channel: ChannelId, board_count: int) -> int:
+    """Extract the board index from a ``<board>_...`` channel identifier."""
+    match = re.match(r"^(\d+)_", str(channel))
+    if match is None:
+        if board_count == 1:
+            return 0
+        raise ValueError(
+            f"Channel {channel!r} has no board prefix. Multi-board channel "
+            "identifiers must start with '<board>_', for example "
+            "'0_0/drive'."
+        )
+
+    board = int(match.group(1))
+    if board >= board_count:
+        raise ValueError(
+            f"Channel {channel!r} selects board {board}, but only "
+            f"{board_count} boards are configured."
+        )
+    return board
+
+
+def _validate_board_channels(
+    channels: dict[ChannelId, Channel], board_count: int
+) -> None:
+    """Validate all channel prefixes before starting any remote execution."""
+    for channel in channels:
+        _channel_board(channel, board_count)
 
 
 def _validate_input_command(
@@ -273,6 +455,7 @@ def _firmware_loops(
         A boolean value true if the sweeper must be executed by python
         loop, false otherwise
     """
+    return 0  # TODO for tprocv2
     if any(
         isinstance(p, Pulse) and isinstance(configs[ch], DcConfig) for ch, p in sequence
     ):
