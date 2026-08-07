@@ -1,7 +1,6 @@
 import numpy as np
 from qibo import __version__ as qibo_version
 from qibo.backends import NumpyBackend
-from qibo.config import raise_error
 from qibo.models import Circuit
 from qibo.result import MeasurementOutcomes
 
@@ -84,10 +83,10 @@ class QibolabBackend(NumpyBackend):
         return natives
 
     def apply_gate(self, gate, state, nqubits):  # pragma: no cover
-        raise_error(NotImplementedError, "Qibolab cannot apply gates directly.")
+        raise NotImplementedError("Qibolab cannot apply gates directly.")
 
     def apply_gate_density_matrix(self, gate, state, nqubits):  # pragma: no cover
-        raise_error(NotImplementedError, "Qibolab cannot apply gates directly.")
+        raise NotImplementedError("Qibolab cannot apply gates directly.")
 
     def assign_measurements(self, measurement_map, readout):
         """Assigning measurement outcomes to
@@ -128,9 +127,8 @@ class QibolabBackend(NumpyBackend):
                 nshots=nshots,
             )
         if initial_state is not None:
-            raise_error(
-                ValueError,
-                "Hardware backend only supports circuits as initial states.",
+            raise ValueError(
+                "Hardware backend only supports circuits as initial states."
             )
 
         sequence, measurement_map = self.compiler.compile(circuit, self.platform)
@@ -167,9 +165,8 @@ class QibolabBackend(NumpyBackend):
                 nshots=nshots,
             )
         if initial_states is not None:
-            raise_error(
-                ValueError,
-                "Hardware backend only supports circuits as initial states.",
+            raise ValueError(
+                "Hardware backend only supports circuits as initial states."
             )
 
         # TODO: Maybe these loops can be parallelized

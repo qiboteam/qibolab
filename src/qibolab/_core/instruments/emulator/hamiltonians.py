@@ -4,7 +4,6 @@ from typing import Literal
 import numpy as np
 from numpy.typing import NDArray
 from pydantic import Field
-from qibo.config import raise_error
 from scipy.constants import giga
 
 from ...components import Config
@@ -255,7 +254,7 @@ class ModulatedVirtualZ(Model):
 
     def __call__(self, t: float, sample: int, phase: float) -> float:
         """Delay waveform."""
-        raise_error(ValueError, "VirtualZ doesn't have waveform.")
+        raise ValueError("VirtualZ doesn't have waveform.")
 
 
 Modulated = ModulatedDrive | ModulatedDelay | ModulatedVirtualZ
