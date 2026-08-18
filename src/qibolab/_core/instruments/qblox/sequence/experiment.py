@@ -15,6 +15,7 @@ from ..q1asm.ast_ import (
     Instruction,
     Line,
     Move,
+    Nop,
     Play,
     Register,
     SetPhDelta,
@@ -98,7 +99,8 @@ def _process_pulse(
                         a=Registers.phase_delta.value,
                         b=phase,
                         destination=Registers.phase_delta.value,
-                    )
+                    ),
+                    Nop(),
                 ]
                 if phase != 0
                 else []
@@ -139,7 +141,8 @@ def _process_virtualz(pulse: VirtualZ, params: set[Param], merged_vzs: bool):
                 if len(params) == 0
                 else next(iter(params)).reg,
                 destination=Registers.phase_delta.value,
-            )
+            ),
+            Nop(),
         ]
 
 

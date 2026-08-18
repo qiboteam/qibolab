@@ -9,6 +9,7 @@ from ..q1asm.ast_ import (
     Line,
     Loop,
     Move,
+    Nop,
     Program,
     Reference,
     Register,
@@ -69,7 +70,11 @@ def _negative_move(instr: Move):
     """
     src = cast(int, instr.source)
     dest = instr.destination
-    return [Move(source=0, destination=dest), Sub(a=dest, b=abs(src), destination=dest)]
+    return [
+        Move(source=0, destination=dest),
+        Sub(a=dest, b=abs(src), destination=dest),
+        Nop(),
+    ]
 
 
 def _decompose_move(instr: Move) -> Block | None:

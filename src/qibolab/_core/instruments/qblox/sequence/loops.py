@@ -156,20 +156,13 @@ def _sweep_update(p: Param, channel: set[ChannelId], pulses: set[PulseId]) -> Bl
                     ),
                     comment=f"shift {p.description}",
                 ),
+                # wait one more clock cycle, for value availability
+                Nop(),
             )
             if p.channel in channel or p.pulse in pulses
             else ()
         ),
-        *(
-            (
-                # wait one more clock cycle
-                [Nop()]
-                # then update the value
-                + update_instructions(p.role, p.reg)
-            )
-            if p.channel in channel
-            else ()
-        ),
+        *(update_instructions(p.role, p.reg) if p.channel in channel else ()),
     )
 
 
