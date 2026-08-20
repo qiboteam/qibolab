@@ -16,7 +16,6 @@ from ..q1asm.ast_ import (
     Line,
     Loop,
     Move,
-    Nop,
     Reference,
     Register,
     ResetPh,
@@ -156,8 +155,6 @@ def _sweep_update(p: Param, channel: set[ChannelId], pulses: set[PulseId]) -> Bl
                     ),
                     comment=f"shift {p.description}",
                 ),
-                # wait one more clock cycle, for value availability
-                Nop(),
             )
             if p.channel in channel or p.pulse in pulses
             else ()
@@ -202,25 +199,19 @@ def _sweep_reset(
         Pulse parameters will anyhow act around the suitable pulse, so the update is
         always performed when needed.
     """
-    return (
-        [
-            Line(
-                instruction=Move(source=p.start, destination=p.reg),
-                comment=f"init {p.description}",
-            )
-            for p in params
-            if p.channel in channel or p.pulse in pulses
-        ]
-        # wait one clock cycle before parameters' update
-        # cf. _sweep_update()
-        + [Nop()]
-        + [
-            inst
-            for p in params
-            if p.channel in channel
-            for inst in update_instructions(p.role, p.reg)
-        ]
-    )
+    return [
+        Line(
+            instruction=Move(source=p.start, destination=p.reg),
+            comment=f"init {p.description}",
+        )
+        for p in params
+        if p.channel in channel or p.pulse in pulses
+    ] + [
+        inst
+        for p in params
+        if p.channel in channel
+        for inst in update_instructions(p.role, p.reg)
+    ]
 
 
 def _sweep_iteration(
