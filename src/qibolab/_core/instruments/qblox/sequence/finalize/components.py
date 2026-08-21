@@ -27,6 +27,24 @@ class LineRule(Model, Generic[State]):
     map: LineMap[State]
     "The transformation applied."
 
+    def map_annotate(self, line: Line, state: State) -> tuple[Block, State]:
+        """Apply map preserving annotations, i.e. label and comment."""
+        block, state = self.map(line, state)
+        if len(block) == 0:
+            return block, state
+        lineable = block[0]
+        instr = lineable.instruction if isinstance(lineable, Line) else lineable
+        annotated = [
+            el
+            for el in (
+                (
+                    Line(instruction=instr, label=line.label, comment=line.comment),
+                    *(el for el in block[1:]),
+                )
+            )
+        ]
+        return annotated, state
+
 
 class BlockRule(Model, Generic[State]):
     """Block-matching transformation.
