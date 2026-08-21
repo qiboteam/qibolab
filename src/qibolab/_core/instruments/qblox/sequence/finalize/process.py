@@ -26,23 +26,26 @@ def _init_state(rule: LineRule[State] | BlockRule[State]) -> State:
     return state_type()
 
 
-def _line_traverse(lines: list[Line], rule: tuple[LineRule, ...]) -> list[Block]:
-    """...
+def _line_traverse(lines: list[Line], rules: tuple[LineRule, ...]) -> list[Block]:
+    states = [_init_state(rule) for rule in rules]
+    next_states = []
+    result = []
 
-    .. todo::
+    for line in lines:
+        states = next_states + states[len(next_states) :]
+        next_states = []
+        for state, rule in zip(states, rules):
+            match, state = rule.match(line, state)
+            next_states.append(state)
+            if match:
+                mapped, state = rule.map_annotate(line, state)
+                next_states[-1] = state
+                result.append(mapped)
+                break
+        else:
+            result.append(line)
 
-            return [
-                    for el in (
-                        (
-                            Line(instruction=block[0], label=line.label, comment=line.comment),
-                            *(el for el in block[1:]),
-                        )
-                        if block is not None
-                        else [line]
-                    )
-                ], state
-    """
-    return []
+    return result
 
 
 def _block_traverse(lines: list[Line], rule: BlockRule) -> list[Block]:
