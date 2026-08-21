@@ -49,28 +49,49 @@ def _map_long_wait(line: Line, state: LongWaits) -> tuple[Block, LongWaits]:
 
 
 long_wait = LineRule[LongWaits](match=_match_long_wait, map=_map_long_wait)
-"""Split a statically long wait.
+"""Split a long immediate wait.
 
 It accounts for the wait instruction limit, defined by :const:`MAX_WAIT`.
 
-``n`` is used for labelling the loop, and it should be different for each wait
-instruction in a sequencer.
+Each loop is labelled with its own unique tag, which is assigned sequentially by keeping
+the count of expanded loops.
 """
 
 
 def _start_merge_wait(line: Line, state: None) -> tuple[bool, None]:
-    # TODO:
-    return not isinstance(line, Line), None
+    instr = line.instruction
+    intwait = isinstance(instr, Wait) and isinstance(instr.duration, int)
+    return intwait, None
 
 
 def _end_merge_wait(line: Line, state: None) -> tuple[bool, None]:
-    # TODO:
-    return not isinstance(line, Line), None
+    instr = line.instruction
+    intwait = isinstance(instr, Wait) and isinstance(instr.duration, int)
+    return not intwait or line.label is not None, None
 
 
-def _merge_wait(block: Block, state: None) -> tuple[Block, None]:
-    # TODO:
-    return block, None
+def _merge_wait(lines: list[Line], state: None) -> tuple[Block, None]:
+    """Merge subsequent static (immediate) waits."""
+    duration: int = 0
+    comment: list[str] = []
+    label: str | None = lines[0].label
+
+    for line in lines:
+        instr = line.instruction
+        assert isinstance(instr, Wait) and isinstance(instr.duration, int)
+
+        duration += instr.duration
+        if line.comment is not None:
+            comment.append(line.comment)
+
+    merged = [
+        Line(
+            label=label,
+            instruction=Wait(duration=duration),
+            comment="\n".join(comment),
+        )
+    ]
+    return merged, None
 
 
 merge_wait = BlockRule[None](
