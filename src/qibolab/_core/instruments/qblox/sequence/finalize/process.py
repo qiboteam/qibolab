@@ -1,9 +1,10 @@
 from functools import reduce
+from typing import get_args
 
 from typing_extensions import TypeIs
 
 from ...q1asm.ast_ import Block, Line, Lineable, block_to_lines
-from .components import BlockRule, LineRule, Pipeline, Step
+from .components import BlockRule, LineRule, Pipeline, State, Step
 
 
 def _is_block(instructions: Block | list[Block]) -> TypeIs[Block]:
@@ -16,6 +17,13 @@ def _to_lines(instructions: Block | list[Block]) -> list[Line]:
         if _is_block(instructions)
         else [el for block in instructions for el in block]
     )
+
+
+def _init_state(rule: LineRule[State] | BlockRule[State]) -> State:
+    map_type = type(rule).model_fields["map"]
+    return_type = get_args(map_type)[1]
+    state_type = get_args(return_type)[1]
+    return state_type()
 
 
 def _line_traverse(lines: list[Line], rule: tuple[LineRule, ...]) -> list[Block]:
@@ -38,7 +46,27 @@ def _line_traverse(lines: list[Line], rule: tuple[LineRule, ...]) -> list[Block]
 
 
 def _block_traverse(lines: list[Line], rule: BlockRule) -> list[Block]:
-    return []
+    state = _init_state(rule)
+    result = []
+
+    # current block
+    block = []
+
+    for line in lines:
+        if len(block) == 0:
+            match, state = rule.initial(line, state)
+            if match:
+                block.append(line)
+            else:
+                result.append([line])
+        else:
+            match, state = rule.final(line, state)
+            block.append(line)
+            if match:
+                mapped, state = rule.map(block, state)
+                result.append(mapped)
+
+    return result
 
 
 def traverse(instructions: Block | list[Block], step: Step) -> list[Block]:
