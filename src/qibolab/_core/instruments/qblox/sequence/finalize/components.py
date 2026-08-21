@@ -11,7 +11,7 @@ Match: TypeAlias = Callable[[Line, State], tuple[bool, State]]
 """Matching condition."""
 LineMap: TypeAlias = Callable[[Line, State], tuple[Block, State]]
 """Transformation acting on individual lines."""
-BlockMap: TypeAlias = Callable[[Block, State], tuple[Block, State]]
+BlockMap: TypeAlias = Callable[[list[Line], State], tuple[Block, State]]
 """Transformation acting on a block of instructions."""
 
 
