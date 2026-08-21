@@ -38,7 +38,7 @@ class BlockRule(Model, Generic[State]):
     way, each condition can become effectively multi-line.
     The state itself is only depending on previously-processed ones. But, opening it
     early and closing late, it is still possible to make as general as needed, at the
-    price of shadowing other similar blocks in the same pass. In the extreme case, the
+    price of shadowing other similar blocks in the same step. In the extreme case, the
     block can open at the first instruction seen, and close at the last one, getting the
     whole program as input.
     """
@@ -51,8 +51,8 @@ class BlockRule(Model, Generic[State]):
     "The transformation applied."
 
 
-Pass: TypeAlias = tuple[LineRule, ...] | BlockRule
-"""Transformation pass.
+Step: TypeAlias = tuple[LineRule, ...] | BlockRule
+"""Transformation step.
 
 It is supposed to iterate through the entire set of instructions exactly one.
 
@@ -64,7 +64,7 @@ It can be composed of:
 Semantics
 ---------
 
-The reason for the type of allowed passes is to unambiguously define how they match the
+The reason for the type of allowed stepes is to unambiguously define how they match the
 instructions. Keep the intuition straightforward is explicitly favored over efficiency.
 
 If multiple line-oriented transformations are specified, they are tested first-to-last
@@ -87,12 +87,12 @@ is closed.
 """
 
 
-Pipeline: TypeAlias = tuple[Pass]
+Pipeline: TypeAlias = tuple[Step]
 """Series of transformation from Q1ASM-like code into executable.
 
 A pipeline is transforming a possibly internal extension of Q1ASM into a different one.
 
-It can be composed by multiple :class:`Pass`, which are expected to sequentially read
+It can be composed by multiple :class:`Step`, which are expected to sequentially read
 the entire list of instructions.
 
 The main purposes are intended to be:
@@ -127,7 +127,7 @@ The main purposes are intended to be:
     block level.
 
 .. todo::
-    A potential option is to apply each pass either to a single block, or to a list of
+    A potential option is to apply each step either to a single block, or to a list of
     them, concatenating the result. This second input would allow to segment the program
-    in a preparation pass, to be easier to process in a subsequent one.
+    in a preparation step, to be easier to process in a subsequent one.
 """
