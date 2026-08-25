@@ -94,7 +94,9 @@ class OpxOutputConfig(DcConfig):
         ``feedforward`` convolution, to avoid double-applying the same
         correction through both stages.
         """
-        fir_filters = [f for f in self.filters if isinstance(f, FiniteImpulseResponseFilter)]
+        fir_filters = [
+            f for f in self.filters if isinstance(f, FiniteImpulseResponseFilter)
+        ]
         feedforward = (
             reduce(np.convolve, [f.feedforward for f in fir_filters])
             if len(fir_filters) > 0
