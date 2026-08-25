@@ -9,7 +9,10 @@ from qibolab._core.components import (
     DcConfig,
     OscillatorConfig,
 )
-from qibolab._core.components.filters import ExponentialFilter
+from qibolab._core.components.filters import (
+    ExponentialFilter, 
+    FiniteImpulseResponseFilter,
+)
 
 __all__ = [
     "MwFemOscillatorConfig",
