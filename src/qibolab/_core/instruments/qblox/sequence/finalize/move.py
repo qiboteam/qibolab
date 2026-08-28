@@ -7,7 +7,7 @@ __all__ = ["negative_immediate"]
 
 
 def _match_negative_immediate(line: Line, state: None) -> tuple[bool, None]:
-    instr = line.instr
+    instr = line.instruction
     match = (
         isinstance(instr, Move) and isinstance(instr.source, int) and instr.source < 0
     )
@@ -15,7 +15,7 @@ def _match_negative_immediate(line: Line, state: None) -> tuple[bool, None]:
 
 
 def _map_negative_immediate(line: Line, state: None) -> tuple[Block, None]:
-    instr = line.instr
+    instr = line.instruction
     assert isinstance(instr, Move)
     src = cast(int, instr.source)
     dest = instr.destination
