@@ -19,7 +19,7 @@ class LongWaits(Model):
 
 
 def _match_long_wait(line: Line, state: LongWaits) -> tuple[bool, LongWaits]:
-    instr = line.instr
+    instr = line.instruction
     match = (
         isinstance(instr, Wait)
         and isinstance(instr.duration, int)
@@ -29,7 +29,7 @@ def _match_long_wait(line: Line, state: LongWaits) -> tuple[bool, LongWaits]:
 
 
 def _map_long_wait(line: Line, state: LongWaits) -> tuple[Block, LongWaits]:
-    instr = line.instr
+    instr = line.instruction
     assert isinstance(instr, Wait)
     duration = instr.duration
     assert isinstance(duration, int)
@@ -39,7 +39,7 @@ def _map_long_wait(line: Line, state: LongWaits) -> tuple[Block, LongWaits]:
     register = Registers.wait.value
     label = f"wait{state.n}"
 
-    block = [Wait(duration=remainder)] + [
+    block = ([Wait(duration=remainder)] if remainder > 0 else []) + [
         Move(source=iterations, destination=register),
         Line(instruction=Wait(duration=MAX_WAIT), label=label),
         Line.instr(Loop(a=register, address=Reference(label=label))),
@@ -83,14 +83,20 @@ def _merge_wait(lines: list[Line], state: None) -> tuple[Block, None]:
         duration += instr.duration
         if line.comment is not None:
             comment.append(line.comment)
+        if line.label is not None:
+            label = line.label
 
-    merged = [
-        Line(
-            label=label,
-            instruction=Wait(duration=duration),
-            comment="\n".join(comment),
-        )
-    ]
+    merged = (
+        [
+            Line(
+                label=label,
+                instruction=Wait(duration=duration),
+                comment="\n".join(comment),
+            )
+        ]
+        if duration > 0
+        else []
+    )
     return merged, None
 
 
