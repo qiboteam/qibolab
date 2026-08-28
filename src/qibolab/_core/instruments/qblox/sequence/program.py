@@ -19,13 +19,7 @@ from .acquisition import AcquisitionSpec, MeasureId
 from .experiment import experiment
 from .finalize import DEFAULT_PIPELINE, transform
 from .loops import LoopSpec, Registers, loop, loops
-from .sweepers import (
-    Param,
-    params,
-    params_reshape,
-    sweep_sequence,
-    update_instructions,
-)
+from .sweepers import Param, params, params_reshape, sweep_sequence, update_instructions
 from .waveforms import PulseRealization
 
 __all__ = ["Program"]
