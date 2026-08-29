@@ -1,0 +1,81 @@
+# AI code review using GitHub Copilot CLI.
+#
+# Trigger: add the "run-qibobot" label to a pull request.
+#
+# Required repository secrets (Settings -> Secrets and variables -> Actions -> Secrets):
+#   OPENWEBUI_API_KEY             API key from your Open WebUI instance
+#   OPENWEBUI_BASE_URL            OpenAI-compatible endpoint, e.g. https://<host>/v1
+#   OPENWEBUI_MODEL               exact model ID as shown in Open WebUI
+#   OPENWEBUI_MAX_PROMPT_TOKENS   max prompt tokens (e.g. 229376)
+#   OPENWEBUI_MAX_OUTPUT_TOKENS   max output tokens (e.g. 32768)
+#
+name: ai-review
+
+on:
+  pull_request:
+    types: [labeled]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  ai-review:
+    if: contains(github.event.pull_request.labels.*.name, 'run-qibobot')
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Copilot CLI
+        run: npm install -g @github/copilot
+
+      - name: Run Copilot CLI review (BYOK)
+        env:
+          COPILOT_PROVIDER_BASE_URL: ${{ secrets.OPENWEBUI_BASE_URL }}
+          COPILOT_PROVIDER_TYPE: openai
+          COPILOT_PROVIDER_API_KEY: ${{ secrets.OPENWEBUI_API_KEY }}
+          COPILOT_PROVIDER_MAX_PROMPT_TOKENS: ${{ secrets.OPENWEBUI_MAX_PROMPT_TOKENS }}
+          COPILOT_PROVIDER_MAX_OUTPUT_TOKENS: ${{ secrets.OPENWEBUI_MAX_OUTPUT_TOKENS }}
+          COPILOT_MODEL: ${{ secrets.OPENWEBUI_MODEL }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          copilot -p '/review the changes in PR #${PR_NUMBER}. Focus on bugs, security issues, and qibolab conventions. Write a clear markdown review of your findings (with severity, file, and line references where relevant) to review-summary.md.' \
+            -s --no-ask-user \
+            --allow-tool='shell(git:*), shell(gh:*), read, write' \
+            --share=review-session.md
+
+      - name: Post review comment
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ -f review-summary.md ]; then
+            gh pr comment "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --file review-summary.md
+          else
+            echo "No review summary produced."
+          fi
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-review-output
+          path: |
+            review-summary.md
+            review-session.md
+          if-no-files-found: ignore
