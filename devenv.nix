@@ -7,16 +7,7 @@
   ];
 
   env = {
-    QIBOLAB_PLATFORMS = (builtins.dirOf (builtins.toString ./.)) + "/../qibolab_platforms_qrc";
-    LD_LIBRARY_PATH = builtins.concatStringsSep ":" (
-      map (p: "${p}/lib") (
-        with pkgs;
-        [
-          stdenv.cc.cc.lib
-          zlib
-        ]
-      )
-    );
+    QIBOLAB_PLATFORMS = (dirOf (toString ./.)) + "/qibolab_platforms_qrc";
     PYTHONBREAKPOINT = "pudb.set_trace";
   };
 
