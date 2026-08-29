@@ -24,14 +24,17 @@
           "analysis"
           "tests"
         ];
-        extras = [
-          (lib.strings.concatStrings (
-            lib.strings.intersperse " -E " [
-              "qrng"
-              "emulator"
-            ]
-          ))
-        ];
+        extras =
+          let
+            inherit (lib.strings) concatStrings intersperse;
+          in
+          [
+            (concatStrings (
+              intersperse " -E " [
+                "emulator"
+              ]
+            ))
+          ];
       };
     };
   };
