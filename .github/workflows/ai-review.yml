@@ -2,13 +2,6 @@
 #
 # Trigger: add the "run-qibobot" label to a pull request.
 #
-# Required repository secrets (Settings -> Secrets and variables -> Actions -> Secrets):
-#   OPENWEBUI_API_KEY             API key from your Open WebUI instance
-#   OPENWEBUI_BASE_URL            OpenAI-compatible endpoint, e.g. https://<host>/v1
-#   OPENWEBUI_MODEL               exact model ID as shown in Open WebUI
-#   OPENWEBUI_MAX_PROMPT_TOKENS   max prompt tokens (e.g. 229376)
-#   OPENWEBUI_MAX_OUTPUT_TOKENS   max output tokens (e.g. 32768)
-#
 name: ai-review
 
 on:
@@ -52,6 +45,7 @@ jobs:
           COPILOT_PROVIDER_MAX_PROMPT_TOKENS: ${{ secrets.OPENWEBUI_MAX_PROMPT_TOKENS }}
           COPILOT_PROVIDER_MAX_OUTPUT_TOKENS: ${{ secrets.OPENWEBUI_MAX_OUTPUT_TOKENS }}
           COPILOT_MODEL: ${{ secrets.OPENWEBUI_MODEL }}
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           copilot -p '/review the changes in PR #${PR_NUMBER}. Focus on bugs, security issues, and qibolab conventions. Write a clear markdown review of your findings (with severity, file, and line references where relevant) to review-summary.md.' \
