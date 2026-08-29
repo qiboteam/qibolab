@@ -40,12 +40,12 @@ jobs:
 
       - name: Run Copilot CLI review (BYOK)
         env:
-          COPILOT_PROVIDER_BASE_URL: ${{ secrets.OPENWEBUI_BASE_URL }}
+          COPILOT_PROVIDER_BASE_URL: ${{ secrets.COPILOT_PROVIDER_BASE_URL }}
           COPILOT_PROVIDER_TYPE: openai
-          COPILOT_PROVIDER_API_KEY: ${{ secrets.OPENWEBUI_API_KEY }}
-          COPILOT_PROVIDER_MAX_PROMPT_TOKENS: ${{ secrets.OPENWEBUI_MAX_PROMPT_TOKENS }}
-          COPILOT_PROVIDER_MAX_OUTPUT_TOKENS: ${{ secrets.OPENWEBUI_MAX_OUTPUT_TOKENS }}
-          COPILOT_MODEL: ${{ secrets.OPENWEBUI_MODEL }}
+          COPILOT_PROVIDER_API_KEY: ${{ secrets.COPILOT_PROVIDER_API_KEY }}
+          COPILOT_PROVIDER_MAX_PROMPT_TOKENS: ${{ secrets.COPILOT_PROVIDER_MAX_PROMPT_TOKENS }}
+          COPILOT_PROVIDER_MAX_OUTPUT_TOKENS: ${{ secrets.COPILOT_PROVIDER_MAX_OUTPUT_TOKENS }}
+          COPILOT_MODEL: ${{ secrets.COPILOT_MODEL }}
           COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_PAT }}
           GITHUB_TOKEN: ${{ github.token }}
         run: |
