@@ -4,29 +4,21 @@ from typing import get_args
 from pydantic import BaseModel
 from typing_extensions import TypeIs
 
-from ...q1asm.ast_ import Block, Line, block_to_lines
+from ...q1asm.ast_ import Block, Line, Lineable, block_to_lines
 from .components import BlockRule, LineRule, Pipeline, State, Step
 
 
 def _is_block(instructions: Block | list[Block]) -> TypeIs[Block]:
     if len(instructions) == 0:
         return True
-    first = instructions[0]
-    # A Block is a flat list of Lineables; a list[Block] is a list of lists
-    return isinstance(first, (Line,)) or (
-        not isinstance(first, (list, tuple)) and hasattr(first, "keyword")
-    )
+    return isinstance(instructions[0], Lineable)
 
 
 def _to_lines(instructions: Block | list[Block]) -> list[Line]:
     """Normalize a mixed Block or list[Block] into a flat list of Lines."""
     if _is_block(instructions):
         instructions = [instructions]
-    flat = [
-        el
-        for block in instructions
-        for el in (block if isinstance(block, (list, tuple)) else [block])
-    ]
+    flat = [el for block in instructions for el in block]
     return block_to_lines(flat)
 
 
@@ -44,9 +36,7 @@ def _init_state(rule: LineRule[State] | BlockRule[State]) -> State:
 def _line_traverse(
     lines: list[Line], rules: tuple[LineRule, ...] | LineRule
 ) -> list[Block]:
-    # pydantic models are iterable (over their fields), so a single rule passed
-    # directly would be unpacked into field tuples.
-    if isinstance(rules, (LineRule,)):
+    if isinstance(rules, LineRule):
         rules = (rules,)
     states = [_init_state(rule) for rule in rules]
     next_states = []
