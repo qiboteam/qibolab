@@ -58,7 +58,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if [ -f review-summary.md ]; then
-            gh pr comment "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --file review-summary.md
+            gh pr comment "$PR_NUMBER" --body-file review-summary.md
           else
             echo "No review summary produced."
           fi
