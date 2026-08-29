@@ -15,6 +15,7 @@ concurrency:
 permissions:
   contents: read
   pull-requests: write
+  copilot-requests: write
 
 jobs:
   ai-review:
@@ -45,12 +46,9 @@ jobs:
           COPILOT_PROVIDER_MAX_PROMPT_TOKENS: ${{ secrets.OPENWEBUI_MAX_PROMPT_TOKENS }}
           COPILOT_PROVIDER_MAX_OUTPUT_TOKENS: ${{ secrets.OPENWEBUI_MAX_OUTPUT_TOKENS }}
           COPILOT_MODEL: ${{ secrets.OPENWEBUI_MODEL }}
-          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
-          copilot -p '/review the changes in PR #${PR_NUMBER}. Focus on bugs, security issues, and qibolab conventions. Write a clear markdown review of your findings (with severity, file, and line references where relevant) to review-summary.md.' \
-            -s --no-ask-user \
-            --allow-tool='shell(git:*), shell(gh:*), read, write' \
+          copilot --yolo -p "/review the changes in PR #${PR_NUMBER}. Focus on bugs, security issues, and qibolab conventions. Write a clear markdown review of your findings (with severity, file, and line references where relevant) to review-summary.md." \
             --share=review-session.md
 
       - name: Post review comment
