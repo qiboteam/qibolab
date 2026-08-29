@@ -46,6 +46,7 @@ jobs:
           COPILOT_PROVIDER_MAX_PROMPT_TOKENS: ${{ secrets.OPENWEBUI_MAX_PROMPT_TOKENS }}
           COPILOT_PROVIDER_MAX_OUTPUT_TOKENS: ${{ secrets.OPENWEBUI_MAX_OUTPUT_TOKENS }}
           COPILOT_MODEL: ${{ secrets.OPENWEBUI_MODEL }}
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_PAT }}
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           copilot --yolo -p "/review the changes in PR #${PR_NUMBER}. Focus on bugs, security issues, and qibolab conventions. Write a clear markdown review of your findings (with severity, file, and line references where relevant) to review-summary.md." \
