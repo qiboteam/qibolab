@@ -49,7 +49,7 @@ jobs:
           COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_PAT }}
           GITHUB_TOKEN: ${{ github.token }}
         run: |
-          copilot --yolo -p "/review the changes in PR #${PR_NUMBER}. Focus on bugs, security issues, and qibolab conventions. Write a clear markdown review of your findings (with severity, file, and line references where relevant) to review-summary.md." \
+          copilot --yolo -p "/review PR #${PR_NUMBER}. Write a clear markdown review of your findings to review-summary.md." \
             --share=review-session.md
 
       - name: Post review comment
