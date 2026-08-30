@@ -171,7 +171,7 @@ jobs:
                       continue
                   # Defensively strip git-style a/ b/ prefixes some tools emit.
                   norm_path = re.sub(r"^[ab]/", "", path)
-                  if (line, side) in valid.get(norm_path, set()):
+                      comments.append({"path": path, "line": line, "side": side, "body": body})
                       comments.append({"path": norm_path, "line": line, "side": side, "body": body})
                   else:
                       print(f"Skipping out-of-diff comment: {path}:{line} ({side})", file=sys.stderr)
