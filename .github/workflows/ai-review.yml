@@ -49,15 +49,31 @@ jobs:
           COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_PAT }}
           GITHUB_TOKEN: ${{ github.token }}
         run: |
-          copilot --yolo -p "/review PR #${PR_NUMBER}. Produce two files:
+          copilot --yolo -p "/review PR #${PR_NUMBER}. After you finish the review, you MUST write your findings to two files in the current working directory using your file-writing tools (do not just print them in your reply):
           1. review-summary.md: a concise, high-level markdown summary of your findings (no per-line detail, no code snippets).
           2. review-comments.json: a JSON array of objects for feedback tied to a specific line of the diff. Each object must have:
              - path: file path exactly as it appears in the diff, relative to the repo root.
              - line: the line number in the NEW version of the file.
              - side: \"RIGHT\" for added/context lines, \"LEFT\" for removed lines (default \"RIGHT\").
              - body: a markdown comment explaining the issue. When you can propose a concrete fix, include a \`\`\`suggestion fenced code block with the exact replacement code for that line (or line range).
-          Only include comments for lines that are actually part of the pull request diff. If there is no line-specific feedback, write an empty array []." \
+          Only include comments for lines that are actually part of the pull request diff. If there is no line-specific feedback, write an empty array [] to review-comments.json. Both files must exist on disk when you are done." \
             --share=review-session.md
+
+      - name: Verify review files were created
+        if: always()
+        run: |
+          missing=0
+          for f in review-summary.md review-comments.json; do
+            if [ ! -f "$f" ]; then
+              echo "ERROR: expected file '$f' was not created by the review step."
+              missing=1
+            fi
+          done
+          if [ "$missing" -ne 0 ]; then
+            echo "The Copilot CLI did not write the expected review files. Check the review step logs."
+            exit 1
+          fi
+          echo "Both review files are present."
 
       - name: Post review comment
         if: always()
