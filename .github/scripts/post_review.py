@@ -37,7 +37,7 @@ def api_request(token, method, path, payload=None):
     req.add_header("Accept", "application/vnd.github+json")
     req.add_header("X-GitHub-Api-Version", "2022-11-28")
     req.add_header("Content-Type", "application/json")
-    with urllib.request.urlopen(req) as resp:
+    with urllib.request.urlopen(req, timeout=30) as resp:
         return json.loads(resp.read().decode() or "null")
 
 
@@ -70,6 +70,8 @@ def valid_lines_by_file(token, repo, pr_number):
     for f in files:
         patch = f.get("patch")
         if not patch:
+            # Binary files (and files with no textual patch) cannot receive
+            # line-anchored comments, so they are intentionally omitted.
             continue
         old_line = new_line = None
         lines = set()
@@ -123,8 +125,6 @@ def filter_comments(token, repo, pr_number, raw_comments):
     """Keep only comments that point at a line actually present in the diff."""
     if not raw_comments:
         return []
-    if not raw_comments:
-        return []
     valid = valid_lines_by_file(token, repo, pr_number)
     comments = []
     for c in raw_comments:
@@ -165,6 +165,7 @@ def post_review(token, repo, pr_number, summary, comments):
                 token,
                 "POST",
                 f"/repos/{repo}/pulls/{pr_number}/reviews",
+                {"body": summary, "event": "COMMENT", "comments": comments},
             )
             print(f"Posted review with {len(comments)} inline comment(s).")
             return True
@@ -213,8 +214,6 @@ def main():
     token = os.environ.get("GITHUB_TOKEN")
     if not (repo and pr_number and token):
         sys.exit("Missing required env vars: REPO, PR_NUMBER, GITHUB_TOKEN")
-    pr_number = os.environ["PR_NUMBER"]
-    token = os.environ["GITHUB_TOKEN"]
 
     summary = read_summary()
     raw_comments = read_raw_comments()
