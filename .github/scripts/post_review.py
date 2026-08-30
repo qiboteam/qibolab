@@ -173,7 +173,7 @@ def filter_comments(
             line = int(c.get("line"))
         except (TypeError, ValueError):
             line = None
-        if not (path and line and body):
+        if not path or line is None or not body:
             continue
         # Defensively strip a git-style a/ or b/ prefix, but only when the path
         # as-is is not already a known changed file (so a legitimate top-level
