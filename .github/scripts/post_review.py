@@ -112,6 +112,10 @@ def valid_lines_by_file(
                 lines.add((old_line, "LEFT"))
                 old_line += 1
             else:
+                # Context (unchanged) lines are also commentable by GitHub, so
+                # they are kept in the valid set. The prompt asks the model to
+                # only comment on added/removed lines, but being permissive
+                # here avoids dropping a legitimate context-line comment.
                 lines.add((new_line, "RIGHT"))
                 old_line += 1
                 new_line += 1
@@ -171,8 +175,10 @@ def filter_comments(
             line = None
         if not (path and line and body):
             continue
-        # Defensively strip git-style a/ b/ prefixes some tools emit.
-        norm_path = re.sub(r"^[ab]/", "", path)
+        # Defensively strip a git-style a/ or b/ prefix, but only when the path
+        # as-is is not already a known changed file (so a legitimate top-level
+        # file named e.g. "a/foo.py" is not mangled).
+        norm_path = path if path in valid else re.sub(r"^[ab]/", "", path)
         if (line, side) in valid.get(norm_path, set()):
             comments.append(
                 {"path": norm_path, "line": line, "side": side, "body": body}
@@ -184,6 +190,51 @@ def filter_comments(
     return comments
 
 
+def get_current_user_login(token: str) -> str | None:
+    """Return the login of the authenticated user, or None on failure."""
+    try:
+        user = api_request(token, "GET", "/user")
+        return user.get("login") if isinstance(user, dict) else None
+    except Exception as exc:  # noqa: BLE001
+        print(f"Could not determine current user: {exc}", file=sys.stderr)
+        return None
+
+
+def dismiss_pending_reviews(token: str, repo: str, pr_number: str) -> None:
+    """Delete any pending reviews authored by the current user.
+
+    GitHub only allows one pending review per user per pull request, so a stale
+    pending review (e.g. left over from a previous cancelled run) would block a
+    new one with a 422. Clearing our own pending reviews first avoids that.
+    """
+    login = get_current_user_login(token)
+    if login is None:
+        return
+    try:
+        reviews = fetch_all(token, f"/repos/{repo}/pulls/{pr_number}/reviews")
+    except Exception as exc:  # noqa: BLE001
+        print(f"Could not list reviews: {exc}", file=sys.stderr)
+        return
+    for review in reviews:
+        if not isinstance(review, dict) or review.get("state") != "PENDING":
+            continue
+        author = (review.get("user") or {}).get("login")
+        if author != login:
+            continue
+        review_id = review.get("id")
+        if review_id is None:
+            continue
+        try:
+            api_request(
+                token, "DELETE", f"/repos/{repo}/pulls/{pr_number}/reviews/{review_id}"
+            )
+            print(f"Deleted stale pending review {review_id}.", file=sys.stderr)
+        except Exception as exc:  # noqa: BLE001
+            print(
+                f"Could not delete pending review {review_id}: {exc}", file=sys.stderr
+            )
+
+
 def post_review(
     token: str, repo: str, pr_number: str, summary: str, comments: list[ReviewComment]
 ) -> bool:
@@ -193,6 +244,8 @@ def post_review(
     the summary is logged to stderr so it can be recovered from the workflow
     logs (the review files are also uploaded as artifacts).
     """
+    # A stale pending review by the same user would block creation with a 422.
+    dismiss_pending_reviews(token, repo, pr_number)
     try:
         api_request(
             token,

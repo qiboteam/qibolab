@@ -87,10 +87,10 @@ jobs:
             fi
           done
           if [ "$missing" -ne 0 ]; then
-            echo "The Copilot CLI did not write the expected review files. Check the review step logs."
+            echo "The Copilot CLI did not produce valid review files. Check the review step logs."
             exit 1
           fi
-          echo "Both review files are present."
+          echo "Both review files are present and valid."
 
       - name: Post review comment
         if: always()
