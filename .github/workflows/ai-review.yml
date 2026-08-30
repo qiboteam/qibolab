@@ -16,6 +16,7 @@ permissions:
   contents: read
   pull-requests: write
   copilot-requests: write
+  user: read
 
 jobs:
   ai-review:
@@ -86,6 +87,12 @@ jobs:
               missing=1
             fi
           done
+          if [ -f review-comments.json ]; then
+            if ! python3 -c "import json,sys; d=json.load(open('review-comments.json')); sys.exit(0 if isinstance(d, list) else 1)"; then
+              echo "ERROR: review-comments.json is not a valid JSON array."
+              missing=1
+            fi
+          fi
           if [ "$missing" -ne 0 ]; then
             echo "The Copilot CLI did not produce valid review files. Check the review step logs."
             exit 1
@@ -93,7 +100,6 @@ jobs:
           echo "Both review files are present and valid."
 
       - name: Post review comment
-        if: always()
         env:
           GITHUB_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
