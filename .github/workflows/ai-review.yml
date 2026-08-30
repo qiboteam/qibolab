@@ -16,7 +16,6 @@ permissions:
   contents: read
   pull-requests: write
   copilot-requests: write
-  user: read
 
 jobs:
   ai-review:

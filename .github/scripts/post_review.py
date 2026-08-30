@@ -190,26 +190,15 @@ def filter_comments(
     return comments
 
 
-def get_current_user_login(token: str) -> str | None:
-    """Return the login of the authenticated user, or None on failure."""
-    try:
-        user = api_request(token, "GET", "/user")
-        return user.get("login") if isinstance(user, dict) else None
-    except Exception as exc:  # noqa: BLE001
-        print(f"Could not determine current user: {exc}", file=sys.stderr)
-        return None
-
-
 def dismiss_pending_reviews(token: str, repo: str, pr_number: str) -> None:
-    """Delete any pending reviews authored by the current user.
+    """Delete any pending reviews on the pull request.
 
     GitHub only allows one pending review per user per pull request, so a stale
     pending review (e.g. left over from a previous cancelled run) would block a
-    new one with a 422. Clearing our own pending reviews first avoids that.
+    new one with a 422. We can't identify the current user (GITHUB_TOKEN can't
+    call GET /user), so we clear all pending reviews. In this bot-managed
+    workflow any pending review is a stale artifact of a prior run.
     """
-    login = get_current_user_login(token)
-    if login is None:
-        return
     try:
         reviews = fetch_all(token, f"/repos/{repo}/pulls/{pr_number}/reviews")
     except Exception as exc:  # noqa: BLE001
@@ -217,9 +206,6 @@ def dismiss_pending_reviews(token: str, repo: str, pr_number: str) -> None:
         return
     for review in reviews:
         if not isinstance(review, dict) or review.get("state") != "PENDING":
-            continue
-        author = (review.get("user") or {}).get("login")
-        if author != login:
             continue
         review_id = review.get("id")
         if review_id is None:
@@ -244,7 +230,7 @@ def post_review(
     the summary is logged to stderr so it can be recovered from the workflow
     logs (the review files are also uploaded as artifacts).
     """
-    # A stale pending review by the same user would block creation with a 422.
+    # A stale pending review would block creation with a 422.
     dismiss_pending_reviews(token, repo, pr_number)
     try:
         api_request(
