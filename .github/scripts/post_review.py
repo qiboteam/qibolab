@@ -9,8 +9,9 @@ Reads two files produced by the Copilot CLI review step:
 
 It validates the inline comments against the actual PR diff (so only lines that
 are part of the diff are used) and posts everything as a single GitHub pull
-request review. If the review cannot be created, it falls back to a plain issue
-comment containing just the summary, so the PR always receives feedback.
+request review. If the review cannot be created, the summary is logged to
+stderr so it can be recovered from the workflow logs (the review files are
+also uploaded as artifacts).
 
 Required environment variables:
     REPO          -- ``owner/repo`` of the repository.
@@ -24,26 +25,38 @@ import re
 import sys
 import urllib.error
 import urllib.request
+from typing import Any, TypedDict
 
 API_BASE = "https://api.github.com"
+API_VERSION = "2026-03-10"
 
 
-def api_request(token, method, path, payload=None):
+class ReviewComment(TypedDict):
+    """A single inline review comment anchored to a line of the PR diff."""
+
+    path: str
+    line: int
+    side: str
+    body: str
+
+
+def api_request(token: str, method: str, path: str, payload: dict | None = None) -> Any:
     """Perform an authenticated request against the GitHub REST API."""
     url = f"{API_BASE}{path}"
     data = json.dumps(payload).encode() if payload is not None else None
     req = urllib.request.Request(url, data=data, method=method)
     req.add_header("Authorization", "Bearer " + token)
     req.add_header("Accept", "application/vnd.github+json")
-    req.add_header("X-GitHub-Api-Version", "2022-11-28")
+    req.add_header("X-GitHub-Api-Version", API_VERSION)
     req.add_header("Content-Type", "application/json")
+    # A timeout so a hung API call fails fast instead of blocking the job.
     with urllib.request.urlopen(req, timeout=30) as resp:
         return json.loads(resp.read().decode() or "null")
 
 
-def fetch_all(token, path):
+def fetch_all(token: str, path: str) -> list[Any]:
     """Fetch every page of a paginated list endpoint."""
-    items = []
+    items: list[Any] = []
     page = 1
     while True:
         sep = "&" if "?" in path else "?"
@@ -57,7 +70,9 @@ def fetch_all(token, path):
     return items
 
 
-def valid_lines_by_file(token, repo, pr_number):
+def valid_lines_by_file(
+    token: str, repo: str, pr_number: str
+) -> dict[str, set[tuple[int, str]]]:
     """Map each changed file to the set of (line, side) pairs that are part of
     the diff and can legally receive a review comment.
 
@@ -65,16 +80,22 @@ def valid_lines_by_file(token, repo, pr_number):
     ``"LEFT"`` for lines in the old version.
     """
     files = fetch_all(token, f"/repos/{repo}/pulls/{pr_number}/files")
-    valid = {}
+    valid: dict[str, set[tuple[int, str]]] = {}
     hunk_re = re.compile(r"^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@")
     for f in files:
         patch = f.get("patch")
         if not patch:
-            # Binary files (and files with no textual patch) cannot receive
-            # line-anchored comments, so they are intentionally omitted.
+            # GitHub omits `patch` for binary files and for diffs too large to
+            # include in the /pulls/{pull_number}/files response. Inline
+            # comments for such files cannot be validated, so they are skipped.
+            print(
+                f"No patch available for {f['filename']}; "
+                "inline comments for this file will be skipped.",
+                file=sys.stderr,
+            )
             continue
         old_line = new_line = None
-        lines = set()
+        lines: set[tuple[int, str]] = set()
         for raw in patch.splitlines():
             m = hunk_re.match(raw)
             if m:
@@ -98,7 +119,7 @@ def valid_lines_by_file(token, repo, pr_number):
     return valid
 
 
-def read_summary():
+def read_summary() -> str:
     """Return the review summary, or a placeholder if none was produced."""
     if os.path.exists("review-summary.md"):
         with open("review-summary.md") as fh:
@@ -108,7 +129,7 @@ def read_summary():
     return "AI review completed, but no summary was produced."
 
 
-def read_raw_comments():
+def read_raw_comments() -> list[Any]:
     """Return the list of raw inline comments, or an empty list on any error."""
     if not os.path.exists("review-comments.json"):
         return []
@@ -118,15 +139,24 @@ def read_raw_comments():
     except (json.JSONDecodeError, OSError) as exc:
         print(f"Could not parse review-comments.json: {exc}", file=sys.stderr)
         return []
-    return raw if isinstance(raw, list) else []
+    if not isinstance(raw, list):
+        print(
+            f"review-comments.json is not a JSON array (got {type(raw).__name__}); "
+            "ignoring it.",
+            file=sys.stderr,
+        )
+        return []
+    return raw
 
 
-def filter_comments(token, repo, pr_number, raw_comments):
+def filter_comments(
+    token: str, repo: str, pr_number: str, raw_comments: list[Any]
+) -> list[ReviewComment]:
     """Keep only comments that point at a line actually present in the diff."""
     if not raw_comments:
         return []
     valid = valid_lines_by_file(token, repo, pr_number)
-    comments = []
+    comments: list[ReviewComment] = []
     for c in raw_comments:
         if not isinstance(c, dict):
             continue
@@ -142,7 +172,7 @@ def filter_comments(token, repo, pr_number, raw_comments):
         if not (path and line and body):
             continue
         # Defensively strip git-style a/ b/ prefixes some tools emit.
-        norm_path = re.sub(r"^[ab]/", "", path) if path not in valid else path
+        norm_path = re.sub(r"^[ab]/", "", path)
         if (line, side) in valid.get(norm_path, set()):
             comments.append(
                 {"path": norm_path, "line": line, "side": side, "body": body}
@@ -154,58 +184,40 @@ def filter_comments(token, repo, pr_number, raw_comments):
     return comments
 
 
-def post_review(token, repo, pr_number, summary, comments):
-    """Post the review, falling back to a plain issue comment on failure.
+def post_review(
+    token: str, repo: str, pr_number: str, summary: str, comments: list[ReviewComment]
+) -> bool:
+    """Post the review.
 
-    Returns ``True`` if the review (or the fallback comment) was posted.
+    Returns ``True`` if the review was posted, ``False`` otherwise. On failure
+    the summary is logged to stderr so it can be recovered from the workflow
+    logs (the review files are also uploaded as artifacts).
     """
     try:
-        try:
-            api_request(
-                token,
-                "POST",
-                f"/repos/{repo}/pulls/{pr_number}/reviews",
-                {"body": summary, "event": "COMMENT", "comments": comments},
-            )
-            print(f"Posted review with {len(comments)} inline comment(s).")
-            return True
-        except urllib.error.HTTPError as exc:
-            detail = exc.read().decode()
-            print(f"Review creation failed ({exc.code}): {detail}", file=sys.stderr)
-            print(
-                "Falling back to a plain issue comment with the summary only.",
-                file=sys.stderr,
-            )
-            api_request(
-                token,
-                "POST",
-                f"/repos/{repo}/issues/{pr_number}/comments",
-                {"body": summary},
-            )
-            return True
-    except Exception as exc:  # noqa: BLE001 - last-resort fallback, must not fail silently
+        api_request(
+            token,
+            "POST",
+            f"/repos/{repo}/pulls/{pr_number}/reviews",
+            {"body": summary, "event": "COMMENT", "comments": comments},
+        )
+    except urllib.error.HTTPError as exc:
+        # HTTPError is a URLError, so this also covers network-level failures.
+        detail = exc.read().decode()
         print(
-            f"Unexpected error while posting review: {type(exc).__name__}: {exc}",
+            f"Review creation failed ({exc.code}): {detail}\n"
+            f"Review summary:\n{summary}",
             file=sys.stderr,
         )
-        # Still try to leave feedback on the PR before failing the step.
-        try:
-            api_request(
-                token,
-                "POST",
-                f"/repos/{repo}/issues/{pr_number}/comments",
-                {"body": summary},
-            )
-            print(
-                "Posted fallback issue comment after unexpected error.", file=sys.stderr
-            )
-            return True
-        except Exception as fallback_exc:  # noqa: BLE001
-            print(
-                f"Fallback comment also failed: {type(fallback_exc).__name__}: {fallback_exc}",
-                file=sys.stderr,
-            )
-            return False
+        return False
+    except Exception as exc:  # noqa: BLE001 - log and fail, do not retry
+        print(
+            f"Unexpected error while posting review: {type(exc).__name__}: {exc}\n"
+            f"Review summary:\n{summary}",
+            file=sys.stderr,
+        )
+        return False
+    print(f"Posted review with {len(comments)} inline comment(s).")
+    return True
 
 
 def main():

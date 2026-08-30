@@ -53,11 +53,28 @@ jobs:
           1. review-summary.md: a concise, high-level markdown summary of your findings (no per-line detail, no code snippets).
           2. review-comments.json: a JSON array of objects for feedback tied to a specific line of the diff. Each object must have:
              - path: file path exactly as it appears in the diff, relative to the repo root.
-             - line: the line number in the NEW version of the file.
-             - side: \"RIGHT\" for added/context lines, \"LEFT\" for removed lines (default \"RIGHT\").
+             - line: the line number in the file version implied by side (RIGHT = new file, LEFT = old file).
+             - side: \"RIGHT\" for added/context lines in the new file, \"LEFT\" for removed lines in the old file.
              - body: a markdown comment explaining the issue. When you can propose a concrete fix, include a \`\`\`suggestion fenced code block with the exact replacement code for that line (or line range).
           Only include comments for lines that are actually part of the pull request diff. If there is no line-specific feedback, write an empty array [] to review-comments.json. Both files must exist on disk when you are done." \
             --share=review-session.md
+
+      - name: Verify review files were created (second prompt, same session)
+        if: always()
+        env:
+          COPILOT_PROVIDER_BASE_URL: ${{ secrets.COPILOT_PROVIDER_BASE_URL }}
+          COPILOT_PROVIDER_TYPE: openai
+          COPILOT_PROVIDER_API_KEY: ${{ secrets.COPILOT_PROVIDER_API_KEY }}
+          COPILOT_PROVIDER_MAX_PROMPT_TOKENS: ${{ secrets.COPILOT_PROVIDER_MAX_PROMPT_TOKENS }}
+          COPILOT_PROVIDER_MAX_OUTPUT_TOKENS: ${{ secrets.COPILOT_PROVIDER_MAX_OUTPUT_TOKENS }}
+          COPILOT_MODEL: ${{ secrets.COPILOT_MODEL }}
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_PAT }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          # Ask the same session to double-check that both files were actually
+          # written, and to (re)write them if they are missing or malformed.
+          copilot --yolo --continue -p "Verify that the files review-summary.md and review-comments.json exist in the current working directory and that review-comments.json contains valid JSON (an array). If either file is missing or malformed, create or fix it now using your file-writing tools, based on the review you already performed. Do not start a new review." \
+            --share=review-session-verify.md
 
       - name: Verify review files were created
         if: always()
@@ -92,4 +109,5 @@ jobs:
             review-summary.md
             review-comments.json
             review-session.md
+            review-session-verify.md
           if-no-files-found: ignore
