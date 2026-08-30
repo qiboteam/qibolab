@@ -121,6 +121,8 @@ jobs:
                           continue
                       if old_line is None:
                           continue
+                      if raw.startswith("\\ No newline at end of file"):
+                          continue
                       if raw.startswith("+"):
                           lines.add((new_line, "RIGHT"))
                           new_line += 1
