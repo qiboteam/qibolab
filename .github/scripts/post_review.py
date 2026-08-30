@@ -191,6 +191,45 @@ def filter_comments(
 
 
 def dismiss_pending_reviews(token: str, repo: str, pr_number: str) -> None:
+    """Delete any pending reviews on the pull request that belong to this bot.
+
+    GitHub only allows one pending review per user per pull request, so a stale
+    pending review from a previous run of this bot would block a new one with a
+    422. We identify the bot's own login via GET /user and only delete pending
+    reviews authored by that user, leaving other reviewers' pending reviews
+    untouched.
+    """
+    try:
+        me = api_request(token, "GET", "/user")
+        bot_login = me.get("login") if isinstance(me, dict) else None
+    except Exception as exc:  # noqa: BLE001
+        print(f"Could not identify current user: {exc}", file=sys.stderr)
+        return
+    if bot_login is None:
+        return
+    try:
+        reviews = fetch_all(token, f"/repos/{repo}/pulls/{pr_number}/reviews")
+    except Exception as exc:  # noqa: BLE001
+        print(f"Could not list reviews: {exc}", file=sys.stderr)
+        return
+    for review in reviews:
+        if not isinstance(review, dict) or review.get("state") != "PENDING":
+            continue
+        user = review.get("user") or {}
+        if user.get("login") != bot_login:
+            continue
+        review_id = review.get("id")
+        if review_id is None:
+            continue
+        try:
+            api_request(
+                token, "DELETE", f"/repos/{repo}/pulls/{pr_number}/reviews/{review_id}"
+            )
+            print(f"Deleted stale pending review {review_id}.", file=sys.stderr)
+        except Exception as exc:  # noqa: BLE001
+            print(
+                f"Could not delete pending review {review_id}: {exc}", file=sys.stderr
+            )
     """Delete any pending reviews on the pull request.
 
     GitHub only allows one pending review per user per pull request, so a stale
