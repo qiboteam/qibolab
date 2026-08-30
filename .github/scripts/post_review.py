@@ -35,6 +35,7 @@ def api_request(token, method, path, payload=None):
     req = urllib.request.Request(url, data=data, method=method)
     req.add_header("Authorization", "Bearer " + token)
     req.add_header("Accept", "application/vnd.github+json")
+    req.add_header("X-GitHub-Api-Version", "2022-11-28")
     req.add_header("Content-Type", "application/json")
     with urllib.request.urlopen(req) as resp:
         return json.loads(resp.read().decode() or "null")
@@ -122,6 +123,8 @@ def filter_comments(token, repo, pr_number, raw_comments):
     """Keep only comments that point at a line actually present in the diff."""
     if not raw_comments:
         return []
+    if not raw_comments:
+        return []
     valid = valid_lines_by_file(token, repo, pr_number)
     comments = []
     for c in raw_comments:
@@ -139,7 +142,7 @@ def filter_comments(token, repo, pr_number, raw_comments):
         if not (path and line and body):
             continue
         # Defensively strip git-style a/ b/ prefixes some tools emit.
-        norm_path = re.sub(r"^[ab]/", "", path)
+        norm_path = re.sub(r"^[ab]/", "", path) if path not in valid else path
         if (line, side) in valid.get(norm_path, set()):
             comments.append(
                 {"path": norm_path, "line": line, "side": side, "body": body}
@@ -162,7 +165,6 @@ def post_review(token, repo, pr_number, summary, comments):
                 token,
                 "POST",
                 f"/repos/{repo}/pulls/{pr_number}/reviews",
-                {"body": summary, "event": "COMMENT", "comments": comments},
             )
             print(f"Posted review with {len(comments)} inline comment(s).")
             return True
@@ -206,7 +208,11 @@ def post_review(token, repo, pr_number, summary, comments):
 
 
 def main():
-    repo = os.environ["REPO"]
+    repo = os.environ.get("REPO")
+    pr_number = os.environ.get("PR_NUMBER")
+    token = os.environ.get("GITHUB_TOKEN")
+    if not (repo and pr_number and token):
+        sys.exit("Missing required env vars: REPO, PR_NUMBER, GITHUB_TOKEN")
     pr_number = os.environ["PR_NUMBER"]
     token = os.environ["GITHUB_TOKEN"]
 
