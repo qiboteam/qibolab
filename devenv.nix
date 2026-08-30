@@ -31,6 +31,7 @@
           [
             (concatStrings (
               intersperse " -E " [
+                "qrng"
                 "emulator"
               ]
             ))
