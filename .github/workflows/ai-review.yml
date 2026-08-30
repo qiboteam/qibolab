@@ -158,6 +158,9 @@ jobs:
           if raw_comments:
               valid = valid_lines_by_file()
               for c in raw_comments:
+                  if not isinstance(c, dict):
+                      continue
+                  path = c.get("path")
                   path = c.get("path")
                   body = c.get("body")
                   side = str(c.get("side") or "RIGHT").upper()
