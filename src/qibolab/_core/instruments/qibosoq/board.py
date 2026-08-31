@@ -44,8 +44,6 @@ class BoardSettings(BaseModel):
 
     host: str = Field(min_length=1)
     port: int = Field(default=6000, ge=1, le=65535)
-    delay: float = 0
-    timeout: float = -1
 
 
 class RFSoCConfig(Config):
@@ -69,7 +67,7 @@ class RFSoC(Controller):
     # ``address`` is retained for compatibility with old single-board
     # platforms. Multi-board platforms load their endpoints from RFSoCConfig.
     address: str = ""
-    _sampling_rate: float = 10e9
+    _sampling_rate: float = 2.702556618561159
     cfg: rfsoc.Config = Field(default_factory=rfsoc.Config)
     """Configuration dictionary required for pulse execution."""
     config: str = "rfsoc/config"
@@ -312,8 +310,6 @@ class RFSoC(Controller):
                 ro_time_of_flight=settings.ro_time_of_flight,
                 soft_avgs=settings.soft_avgs,
                 start=start,
-                delay=connection.delay,
-                timeout=connection.timeout,
             )
             _update_cfg(cfg, options)
             board_cfgs.append(cfg)
@@ -391,6 +387,8 @@ class RFSoC(Controller):
             # execute_multiple staggers submissions. Arm all slaves first and
             # submit the master last so that its trigger cannot precede them.
             execution_order = [*range(1, board_count), 0] if board_count > 1 else [0]
+            for board in execution_order:
+                print(commands)
             ordered_results = client.execute_multiple(
                 [commands[board] for board in execution_order],
                 [hosts[board] for board in execution_order],
