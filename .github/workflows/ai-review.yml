@@ -49,17 +49,14 @@ jobs:
           COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_PAT }}
           GITHUB_TOKEN: ${{ github.token }}
         run: |
-          copilot --yolo -p "/review PR #${PR_NUMBER}. After you finish the review, you MUST write your findings to two files in the current working directory using your file-writing tools (do not just print them in your reply):
-          1. review-summary.md: a concise, high-level markdown summary of your findings (no per-line detail, no code snippets).
-          2. review-comments.json: a JSON array of objects for feedback tied to a specific line of the diff. Each object must have:
-             - path: file path exactly as it appears in the diff, relative to the repo root.
-             - line: the line number in the file version implied by side (RIGHT = new file, LEFT = old file).
-             - side: \"RIGHT\" for added/context lines in the new file, \"LEFT\" for removed lines in the old file.
-             - body: a markdown comment explaining the issue. When you can propose a concrete fix, include a \`\`\`suggestion fenced code block with the exact replacement code for that line (or line range).
-          Only include comments for lines that are actually part of the pull request diff. If there is no line-specific feedback, write an empty array [] to review-comments.json. Both files must exist on disk when you are done." \
+          # Step 1: run the review. The /review command is a specialized agent
+          # that outputs its findings to the conversation; it does NOT reliably
+          # write files, so the file-writing is done in a separate follow-up
+          # prompt below (same session, so it has the review in context).
+          copilot --yolo -p "/review PR #${PR_NUMBER}" \
             --share=review-session.md
 
-      - name: Verify review files were created (second prompt, same session)
+      - name: Write review files (second prompt, same session)
         if: always()
         env:
           COPILOT_PROVIDER_BASE_URL: ${{ secrets.COPILOT_PROVIDER_BASE_URL }}
@@ -71,9 +68,16 @@ jobs:
           COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_PAT }}
           GITHUB_TOKEN: ${{ github.token }}
         run: |
-          # Ask the same session to double-check that both files were actually
-          # written, and to (re)write them if they are missing or malformed.
-          copilot --yolo --continue -p "Verify that the files review-summary.md and review-comments.json exist in the current working directory and that review-comments.json contains valid JSON (an array). If either file is missing or malformed, create or fix it now using your file-writing tools, based on the review you already performed. Do not start a new review." \
+          # Step 2: in the same session, explicitly write the review findings
+          # to two files, then self-verify they exist and are valid.
+          copilot --yolo --continue -p "Based on the review you just performed, write your findings to two files in the current working directory using your file-writing tools (do not just print them in your reply):
+          1. review-summary.md: a concise, high-level markdown summary of your findings (no per-line detail, no code snippets).
+          2. review-comments.json: a JSON array of objects for feedback tied to a specific line of the diff. Each object must have:
+             - path: file path exactly as it appears in the diff, relative to the repo root.
+             - line: the line number in the file version implied by side (RIGHT = new file, LEFT = old file).
+             - side: \"RIGHT\" for added/context lines in the new file, \"LEFT\" for removed lines in the old file.
+             - body: a markdown comment explaining the issue. When you can propose a concrete fix, include a \`\`\`suggestion fenced code block with the exact replacement code for that line (or line range).
+          Only include comments for lines that are actually part of the pull request diff. If there is no line-specific feedback, write an empty array [] to review-comments.json. After writing, verify both files exist and that review-comments.json is a valid JSON array; if either is missing or malformed, fix it. Do not start a new review." \
             --share=review-session-verify.md
 
       - name: Verify review files were created
