@@ -35,7 +35,7 @@ def test_integration_mode(platform):
 
 def test_discrimination_mode(platform):
     seq = platform.natives.single_qubit[0].MZ()
-    acq_handle = list(seq.channel(platform.qubits[0].acquisition))[-1].id
+    acq_handle = next(iter(seq.channel(platform.qubits[0].acquisition))).id
     result = platform.execute(
         [seq],
         nshots=NSHOTS,
