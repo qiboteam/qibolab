@@ -28,6 +28,7 @@ import json
 import os
 import re
 import sys
+import time
 import urllib.error
 import urllib.request
 from typing import Any, TypedDict
@@ -37,6 +38,11 @@ API_VERSION = "2026-03-10"
 # The identity GITHUB_TOKEN acts as when posting reviews. Overridable via the
 # BOT_LOGIN env var if the workflow is switched to a different bot token.
 DEFAULT_BOT_LOGIN = "github-actions[bot]"
+# HTTP status codes that indicate a transient failure worth retrying.
+RETRYABLE_STATUS = {429, 500, 502, 503, 504}
+# Total attempts (initial + retries) and the base backoff in seconds.
+MAX_ATTEMPTS = 3
+RETRY_BACKOFF_SECONDS = 1.0
 
 
 class ReviewComment(TypedDict):
@@ -49,17 +55,36 @@ class ReviewComment(TypedDict):
 
 
 def api_request(token: str, method: str, path: str, payload: dict | None = None) -> Any:
-    """Perform an authenticated request against the GitHub REST API."""
+    """Perform an authenticated request against the GitHub REST API.
+
+    Transient failures (429/5xx responses and network errors) are retried with
+    exponential backoff, up to MAX_ATTEMPTS total attempts.
+    """
     url = f"{API_BASE}{path}"
     data = json.dumps(payload).encode() if payload is not None else None
-    req = urllib.request.Request(url, data=data, method=method)
-    req.add_header("Authorization", "Bearer " + token)
-    req.add_header("Accept", "application/vnd.github+json")
-    req.add_header("X-GitHub-Api-Version", API_VERSION)
-    req.add_header("Content-Type", "application/json")
-    # A timeout so a hung API call fails fast instead of blocking the job.
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        return json.loads(resp.read().decode() or "null")
+    last_exc: Exception | None = None
+    for attempt in range(1, MAX_ATTEMPTS + 1):
+        req = urllib.request.Request(url, data=data, method=method)
+        req.add_header("Authorization", "Bearer " + token)
+        req.add_header("Accept", "application/vnd.github+json")
+        req.add_header("X-GitHub-Api-Version", API_VERSION)
+        req.add_header("Content-Type", "application/json")
+        try:
+            # A timeout so a hung API call fails fast instead of blocking the job.
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                return json.loads(resp.read().decode() or "null")
+        except urllib.error.HTTPError as exc:
+            last_exc = exc
+            if exc.code not in RETRYABLE_STATUS or attempt == MAX_ATTEMPTS:
+                raise
+        except (urllib.error.URLError, TimeoutError) as exc:
+            # Network-level failure (DNS, connection reset, timeout, etc.).
+            last_exc = exc
+            if attempt == MAX_ATTEMPTS:
+                raise
+        time.sleep(RETRY_BACKOFF_SECONDS * (2 ** (attempt - 1)))
+    # Unreachable: the loop always returns or raises.
+    raise last_exc  # type: ignore[misc]
 
 
 def fetch_all(token: str, path: str) -> list[Any]:
