@@ -17,6 +17,11 @@ Required environment variables:
     REPO          -- ``owner/repo`` of the repository.
     PR_NUMBER     -- the pull request number.
     GITHUB_TOKEN  -- a token with ``pull-requests: write`` permission.
+
+Optional environment variables:
+    BOT_LOGIN     -- the login of the bot that posts this review, used to
+                     dismiss only its own stale pending reviews. Defaults to
+                     ``github-actions[bot]`` (the identity of GITHUB_TOKEN).
 """
 
 import json
@@ -29,6 +34,9 @@ from typing import Any, TypedDict
 
 API_BASE = "https://api.github.com"
 API_VERSION = "2026-03-10"
+# The identity GITHUB_TOKEN acts as when posting reviews. Overridable via the
+# BOT_LOGIN env var if the workflow is switched to a different bot token.
+DEFAULT_BOT_LOGIN = "github-actions[bot]"
 
 
 class ReviewComment(TypedDict):
@@ -191,15 +199,18 @@ def filter_comments(
 
 
 def dismiss_pending_reviews(token: str, repo: str, pr_number: str) -> None:
-    """Delete any pending reviews on the pull request that were authored by a bot.
+    """Delete this bot's stale pending reviews on the pull request.
 
     GitHub only allows one pending review per user per pull request, so a stale
     pending review (e.g. left over from a previous cancelled run of this bot)
     would block a new one with a 422. We can't call GET /user with GITHUB_TOKEN
-    (the ``user`` scope is not grantable to a workflow token), so instead we
-    identify the bot's own reviews by ``user.type == "Bot"`` and delete only
-    those, leaving human reviewers' pending reviews untouched.
+    (the ``user`` scope is not grantable to a workflow token), so we match the
+    known bot login (``BOT_LOGIN`` env var, defaulting to
+    ``github-actions[bot]``) instead. Only that bot's pending reviews are
+    deleted; other reviewers' (human or other bots') pending reviews are left
+    untouched.
     """
+    bot_login = os.environ.get("BOT_LOGIN") or DEFAULT_BOT_LOGIN
     try:
         reviews = fetch_all(token, f"/repos/{repo}/pulls/{pr_number}/reviews")
     except Exception as exc:  # noqa: BLE001
@@ -209,7 +220,7 @@ def dismiss_pending_reviews(token: str, repo: str, pr_number: str) -> None:
         if not isinstance(review, dict) or review.get("state") != "PENDING":
             continue
         user = review.get("user") or {}
-        if user.get("type") != "Bot":
+        if user.get("login") != bot_login:
             continue
         review_id = review.get("id")
         if review_id is None:
