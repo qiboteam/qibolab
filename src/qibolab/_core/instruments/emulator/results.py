@@ -336,10 +336,12 @@ def _singleshot_results(
         sampled = shots(marginal, options.nshots)
 
         # sorting the unique qubit indices to match the order of the Hilbert space dimensions
-        sorted_unique_q_idx = np.sort(unique_q_idx)
+        unique_q_idx_sorting = np.argsort(unique_q_idx)
         # now marginal has dimensions (Q_i, Nshots, *S)
-        marginal = np.stack(np.unravel_index(sampled, dim_array[sorted_unique_q_idx]))
-        res.append(marginal)
+        marginal = np.stack(
+            np.unravel_index(sampled, dim_array[unique_q_idx[unique_q_idx_sorting]])
+        )
+        res.append(marginal[unique_q_idx_sorting])
 
     # stacking the results vertically
     # now it had dimensions (M, Nshot, *S)
@@ -394,7 +396,7 @@ def results(
     # now we reshape corrected_probabilities as (M, *S, *H_dim)
     probabilities = np.moveaxis(probabilities, -(len(hamiltonian.dims) + 1), 0)
 
-    if options.acquisition_type is Acquisition:
+    if options.acquisition_type is AcquisitionType.DISCRIMINATION:
         confusion_matrices = []
         for i, qb in enumerate(hamiltonian.qubits.values()):
             # appending the confusion matrix
