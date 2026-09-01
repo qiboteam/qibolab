@@ -159,8 +159,6 @@ class Q1Sequence(Model):
             len(self.program.elements) == 1
             and isinstance(self.program.elements[0], Line)
             and isinstance(self.program.elements[0].instruction, Stop)
-            and len(self.waveforms) > 0
-            and len(self.acquisitions) == 0
         )
 
     @property

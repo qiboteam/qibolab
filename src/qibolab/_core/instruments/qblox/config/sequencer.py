@@ -80,11 +80,12 @@ class SequencerConfig(Model):
         acquisition: AcquisitionType,
         rf: bool,
         sequence: Q1Sequence | None = None,
-        twpa: str | None = None,
+        twpa: bool = False,
+        mixer: IqMixerConfig | None = None,
     ) -> "SequencerConfig":
         config = configs.get(channel_id)
 
-        is_cw = twpa is not None and (sequence is None or sequence.is_cw)
+        is_cw = twpa and (sequence is None or sequence.is_cw)
 
         # conditional configurations
         cfg = cls(
@@ -130,24 +131,13 @@ class SequencerConfig(Model):
             # demodulation
             cfg.demod_en_acq = acquisition is not AcquisitionType.RAW
 
-        # set NCO frequency
-        # note that probe channels also include readout ones (probe+acquisition), thus
-        # there is no need to set it separately for the acquisition (which is on the
-        # same IO sequencer)
-        if twpa is not None:
-            osc_config = cast(OscillatorConfig, configs[twpa])
-            freq = osc_config.frequency
-            probe_ = cast(IqChannel, channels[channel_id])
-            if probe_.lo is not None:
-                lo_freq = cast(OscillatorConfig, configs[probe_.lo]).frequency
-                cfg.nco_freq = int(freq - lo_freq)
-            else:
-                cfg.nco_freq = int(freq)
-            if probe_.mixer is not None:
-                mixer = cast(IqMixerConfig, configs[probe_.mixer])
+        # set NCO frequency and mixer corrections
+        if twpa:
+            cfg.nco_freq = 0
+            if mixer is not None:
                 cfg.mixer_corr_gain_ratio = mixer.scale_q
                 cfg.mixer_corr_phase_offset_degree = mixer.phase_q
-        else:
+        elif channel_id in channels:
             probe = channels[channel_id].iqout(channel_id)
             if probe is not None:
                 freq = configs[probe].frequency
