@@ -80,6 +80,7 @@ jobs:
              - side: \"RIGHT\" for added/context lines in the new file, \"LEFT\" for removed lines in the old file.
              - body: a markdown comment explaining the issue. When you can propose a concrete fix, include a \`\`\`suggestion fenced code block with the exact replacement code for that line (or line range).
           Only include comments for lines that are actually part of the pull request diff. If there is no line-specific feedback, write an empty array [] to review-comments.json. After writing, verify both files exist and that review-comments.json is a valid JSON array; if either is missing or malformed, fix it. Do not start a new review." \
+            --max-ai-credits "${MAX_AI_CREDITS}" \
             --share=review-session-verify.md
 
       - name: Verify review files were created
