@@ -349,7 +349,7 @@ def hamiltonian(
 ) -> tuple[Operator, list[Modulated]]:
 
     hilbert_space_index = index(channel, hamiltonian)
-    ham_qubit = hamiltonian.qubits[hilbert_space_index]
+    ham_qubit = list(hamiltonian.qubits.values())[hilbert_space_index]
 
     if isinstance(config, (DriveEmulatorConfig, FluxEmulatorConfig)):
         crosstalk = (
@@ -363,10 +363,9 @@ def hamiltonian(
         channel_idx = channel.split("/")[0]
         if "coupler" in channel_idx:
             channel_idx = channel_idx.split("_")[1]
-        line_label = (
+        line_idx = (
             int(channel_idx) if channel_idx not in hamiltonian.qubits else channel_idx
         )
-        line_idx = hamiltonian.hilbert_space_index(line_label)
 
         op = sum(
             engine.expand(
@@ -377,7 +376,7 @@ def hamiltonian(
             for (q, o) in config.operator(
                 crosstalk_matrix=crosstalk,
                 qubits_map=hamiltonian.qubits,
-                channel_idx=line_idx,
+                channel_idx=hamiltonian.hilbert_space_index(line_idx),
                 engine=engine,
             )
         )

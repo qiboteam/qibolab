@@ -21,7 +21,7 @@ __all__ = ["DriveEmulatorConfig", "FluxEmulatorConfig", "HamiltonianConfig"]
 class Qubit(Config):
     """Hamiltonian parameters for single qubit."""
 
-    transmon_levels: int = 2
+    transmon_levels: int = Field(default=2, ge=2)
     """Number of energy eigenstates to simulate"""
     confusion_matrix: ArrayList | None = None
     """Confusion matrix for state classification"""
@@ -69,9 +69,15 @@ class Qubit(Config):
                 "Confusion matrix must be a square matrix with dimension (transmon_levels, transmon_levels)."
             )
 
-        cumulative_probs = self.confusion_matrix.sum(axis=0)
-        if not np.allclose(cumulative_probs, np.ones_like(cumulative_probs)):
-            raise ValueError("Confusion matrix columns must sum to 1.")
+        if (
+            not np.all(np.isfinite(self.confusion_matrix))
+            or np.any(self.confusion_matrix < 0)
+            or np.any(self.confusion_matrix > 1)
+            or not np.allclose(self.confusion_matrix.sum(axis=0), 1)
+        ):
+            raise ValueError(
+                "Confusion matrix entries must be finite probabilities and columns must sum to 1."
+            )
 
         return self
 
@@ -357,7 +363,7 @@ class HamiltonianConfig(Config):
 
     kind: Literal["hamiltonian"] = "hamiltonian"
     qubits: dict[QubitId, Qubit] = Field(default_factory=dict)
-    """Dictionary with classical crosstalk coefficients per flux channel."""
+    """Hamiltonian configurations keyed by qubit ID."""
     pairs: dict[QubitPairId, CapacitiveCoupling] = Field(default_factory=dict)
 
     drive_crosstalk: ArrayList | None = None

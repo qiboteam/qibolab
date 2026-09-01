@@ -64,6 +64,7 @@ An additional limitation arises from the handling of measurement ordering. In ce
 Additionally, Qibolab emulator implements a confusion matrix for simulating mislabeling of the qubits states. At the time being we are assuming an uncorrelated model, in which the total confusion matrix is simply the Kronecker product between single qubits' confusion matrices, which indeed does not take into account correlations between qubits due to quantum effects.
 
 This confusion matrix is applied directly to the states probabilities computed from the solution density matrix; then, if we call :math:`M_i` the matrix corresponding to the i-th qubit and :math:`P_{raw}` the output probability vector of the ODE solver, we'll have that the 'corrected' probability vector :math:`P_{corr}` is:
+
 .. math::
 
   P_{corr} = \left( \bigotimes_i M_i \right) P_{raw}

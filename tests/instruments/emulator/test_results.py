@@ -66,7 +66,7 @@ def test_results(monkeypatch, average):
         options=ExecutionParameters(
             acquisition_type=AcquisitionType.DISCRIMINATION,
             averaging_mode=average,
-            nshots=1e3,
+            nshots=1_000,
         ),
     )
 
@@ -75,7 +75,7 @@ def test_results(monkeypatch, average):
     else:
         rtol = 0.05
 
-    # np,mean does nothing for CYCLIC sine is just a scalar
+    # np.mean does nothing for CYCLIC sine is just a scalar
     prob01 = np.mean(res[acq01.id])
     prob02 = np.mean(res[acq02.id])
     prob11 = np.mean(res[acq11.id])

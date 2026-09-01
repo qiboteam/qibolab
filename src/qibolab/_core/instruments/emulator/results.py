@@ -308,7 +308,7 @@ def _singleshot_results(
     sweeps_dims = state_probs.shape[1 : -len(dim_array)]
 
     # dimensions of total (not unique) measurement
-    measurements_dim = tuple([sum(len(v) for v in measurement_to_q_map.values())])
+    measurements_dim = (sum(len(v) for v in measurement_to_q_map.values()),)
 
     # shape is (M, Nshots *S), we are ignoring the dimensions of all subsystems
     result_shape = measurements_dim + sweeps_dims
@@ -335,9 +335,11 @@ def _singleshot_results(
         # (Nshots, *S)
         sampled = shots(marginal, options.nshots)
 
+        # sorting the unique qubit indices to match the order of the Hilbert space dimensions
+        sorted_unique_q_idx = np.sort(unique_q_idx)
         # now marginal has dimensions (Q_i, Nshots, *S)
-        marginal = np.stack(np.unravel_index(sampled, dim_array[sorted(unique_q_idx)]))
-        res.append(marginal[unique_q_idx])
+        marginal = np.stack(np.unravel_index(sampled, dim_array[sorted_unique_q_idx]))
+        res.append(marginal)
 
     # stacking the results vertically
     # now it had dimensions (M, Nshot, *S)
@@ -389,24 +391,28 @@ def results(
         return_index=True,
     )
 
-    confusion_matrices = []
-    for i, qb in enumerate(hamiltonian.qubits.values()):
-        # appending the confusion matrix
-        confusion_matrices.append(qb.confusion_matrix)
-        # appending the array index
-        confusion_matrices.append([i + hamiltonian.nqubits, i])
-
     # now we reshape corrected_probabilities as (M, *S, *H_dim)
     probabilities = np.moveaxis(probabilities, -(len(hamiltonian.dims) + 1), 0)
 
-    # applying confusion matrices to the probability vector
-    # now corrected_probabilities ha dimensions (M_unique, *S, *H_dim)
-    corrected_probabilities = np.einsum(
-        *confusion_matrices,
-        probabilities[acq_direct_map],
-        [Ellipsis] + list(range(hamiltonian.nqubits)),
-        [Ellipsis] + list(range(hamiltonian.nqubits, 2 * hamiltonian.nqubits)),
-    )
+    if options.acquisition_type is Acquisition:
+        confusion_matrices = []
+        for i, qb in enumerate(hamiltonian.qubits.values()):
+            # appending the confusion matrix
+            confusion_matrices.append(qb.confusion_matrix)
+            # appending the array index
+            confusion_matrices.append([i + hamiltonian.nqubits, i])
+
+        # applying confusion matrices to the probability vector
+        # now corrected_probabilities ha dimensions (M_unique, *S, *H_dim)
+        corrected_probabilities = np.einsum(
+            *confusion_matrices,
+            probabilities[acq_direct_map],
+            [Ellipsis] + list(range(hamiltonian.nqubits)),
+            [Ellipsis] + list(range(hamiltonian.nqubits, 2 * hamiltonian.nqubits)),
+        )
+    else:
+        # corrected_probabilities ha dimensions (M_unique, *S, *H_dim)
+        corrected_probabilities = probabilities[acq_direct_map]
 
     results = (
         _singleshot_results
