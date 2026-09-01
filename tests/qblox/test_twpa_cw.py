@@ -1,24 +1,26 @@
-"""Tests for TWPA continuous-waveform (CW) sequencer configuration."""
+"""Tests for TWPA continuous-waveform (CW) pump support in the Qblox driver."""
+
+import pytest
 
 from qibolab._core.components.configs import OscillatorConfig
-from qibolab._core.instruments.qblox.config.port import PortAddress
+from qibolab._core.instruments.qblox.components import QbloxClusterConfig
 from qibolab._core.instruments.qblox.config.sequencer import SequencerConfig
+from qibolab._core.parameters import ConfigKinds, Parameters
+
+# ---------------------------------------------------------------------------
+# `SequencerConfig.build_cw`
+# ---------------------------------------------------------------------------
 
 
 def test_build_cw_basic():
-    """Verify CW sequencer config has expected fields."""
-    address = PortAddress.from_path("0/o1")
-    osc = OscillatorConfig(frequency=6.36e9, power=-10.0)
-    lo_freq = 5.0e9
+    cfg = SequencerConfig.build_cw(address="out1", nco_freq=1_360_000_000)
 
-    cfg = SequencerConfig.build_cw(address=address, osc_config=osc, lo_freq=lo_freq)
-
-    assert cfg.address == "out0"
+    assert cfg.address == "out1"
     assert cfg.cont_mode_en_awg_path0 is True
     assert cfg.cont_mode_en_awg_path1 is True
     assert cfg.cont_mode_waveform_idx_awg_path0 == 0
     assert cfg.cont_mode_waveform_idx_awg_path1 == 0
-    assert cfg.nco_freq == int(6.36e9 - 5.0e9)
+    assert cfg.nco_freq == 1_360_000_000
     assert cfg.nco_phase_offs == 0.0
     assert cfg.mod_en_awg is True
     assert cfg.sync_en is False
@@ -29,7 +31,6 @@ def test_build_cw_basic():
     assert cfg.marker_ovr_en is True
     assert cfg.marker_ovr_value == 15
 
-    # sequence should be a valid CW sequence
     seq = cfg.sequence
     assert seq is not None
     assert seq["program"] == "stop"
@@ -37,33 +38,65 @@ def test_build_cw_basic():
     assert len(seq["waveforms"]["cw"]["data"]) % 4 == 0
 
 
-def test_build_cw_nco_frequency():
-    """Verify NCO frequency is computed as absolute - LO."""
-    address = PortAddress.from_path("5/o2")
-    osc = OscillatorConfig(frequency=7.5e9, power=-5.0)
-    lo_freq = 7.0e9
-
-    cfg = SequencerConfig.build_cw(address=address, osc_config=osc, lo_freq=lo_freq)
-    assert cfg.nco_freq == 500_000_000  # 0.5 GHz IF
-
-
-def test_build_cw_port_address():
-    """Verify port address mapping."""
-    addr = PortAddress.from_path("3/o4")
-    osc = OscillatorConfig(frequency=1.0e9, power=0.0)
-    cfg = SequencerConfig.build_cw(address=addr, osc_config=osc, lo_freq=500_000_000)
-    assert cfg.address == "out3"
+def test_build_cw_amplitude_override():
+    cfg = SequencerConfig.build_cw(address="out0", nco_freq=500_000_000, amplitude=0.25)
+    assert cfg.offset_awg_path0 == 0.25
+    assert cfg.offset_awg_path1 == 0.0
 
 
 def test_build_cw_serialization():
-    """Verify CW config can be serialized to JSON."""
     import json
 
-    address = PortAddress.from_path("0/o1")
-    osc = OscillatorConfig(frequency=6.0e9, power=-10.0)
-    cfg = SequencerConfig.build_cw(address=address, osc_config=osc, lo_freq=5.0e9)
-
-    dumped = cfg.model_dump_json()
-    loaded = json.loads(dumped)
+    cfg = SequencerConfig.build_cw(address="out0", nco_freq=1_000_000_000)
+    loaded = json.loads(cfg.model_dump_json())
     assert loaded["cont_mode_en_awg_path0"] is True
     assert loaded["nco_freq"] == 1_000_000_000
+
+
+# ---------------------------------------------------------------------------
+# `QbloxClusterConfig`
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture(autouse=True)
+def _register_qblox_cluster_config():
+    """Ensure `QbloxClusterConfig` is registered in `ConfigKinds`."""
+    ConfigKinds.reset()
+    ConfigKinds.extend([QbloxClusterConfig])
+    yield
+    ConfigKinds.reset()
+
+
+def test_qblox_cluster_config_deserialization():
+    raw = {
+        "kind": "qblox-cluster",
+        "twpa_sources": {"o1": "twpa_pump"},
+        "turn_off_on_disconnect": False,
+    }
+    cfg = ConfigKinds.adapted().validate_python(raw)
+    assert isinstance(cfg, QbloxClusterConfig)
+    assert cfg.kind == "qblox-cluster"
+    assert cfg.twpa_sources == {"o1": "twpa_pump"}
+    assert cfg.turn_off_on_disconnect is False
+
+
+def test_qblox_cluster_config_defaults():
+    cfg = QbloxClusterConfig()
+    assert cfg.twpa_sources == {}
+    assert cfg.turn_off_on_disconnect is True
+
+
+def test_qblox_cluster_config_in_parameters():
+    """`QbloxClusterConfig` should be resolvable when mixed with built-in configs."""
+    p = Parameters(
+        configs={
+            "my_cluster": {
+                "kind": "qblox-cluster",
+                "twpa_sources": {"o1": "twpa"},
+            },
+            "twpa": {"kind": "oscillator", "frequency": 6.36e9, "power": -10.0},
+        }
+    )
+    assert isinstance(p.configs["my_cluster"], QbloxClusterConfig)
+    assert isinstance(p.configs["twpa"], OscillatorConfig)
+    assert p.configs["my_cluster"].twpa_sources == {"o1": "twpa"}

@@ -55,16 +55,6 @@ class Settings(Model):
     relaxation_time: int = int(1e5)
     """Time in ns to wait for the qubit to relax to its ground state between
     shots."""
-    twpa_sources: dict[str, str] = Field(default_factory=dict)
-    """Mapping of QCM-RF port paths to TWPA configuration names.
-
-    Each key is a port path (e.g. ``"0/o1"``) on a QCM-RF module that will
-    generate a continuous-wave pump tone.  The value is the name of an
-    :class:`OscillatorConfig` entry in :attr:`Parameters.configs`.
-
-    The driver uses this to configure a dedicated sequencer on the module in
-    continuous-waveform mode, independent of any Q1ASM sequence.
-    """
 
     def fill(self, options: ExecutionParameters):
         """Use default values for missing execution options."""

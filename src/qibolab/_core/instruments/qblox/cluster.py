@@ -16,7 +16,6 @@ from qibolab._core.components import (
     DcChannel,
     DcConfig,
     IqChannel,
-    OscillatorConfig,
 )
 from qibolab._core.execution_parameters import (
     AcquisitionType,
@@ -31,6 +30,7 @@ from qibolab._core.sweeper import ParallelSweepers, Parameter, normalize_sweeper
 
 from . import config
 from .batching import batch_sequences_by_cluster_memory_limits
+from .components import QbloxClusterConfig
 from .config import PortAddress
 from .identifiers import SequencerMap, SlotId
 from .log import Logger
@@ -190,6 +190,8 @@ class Cluster(Controller):
         self._cluster = find_or_create_instrument(
             qblox.Cluster, recreate=True, name=self.name, identifier=self.address
         )
+        # cleared on disconnect
+        self._twpa_cluster_config = None
 
     def disconnect(self) -> None:
         """Disconnect and reset the instrument."""
@@ -201,15 +203,18 @@ class Cluster(Controller):
 
         for module in self._modules.values():
             module.stop_sequencer()
-        # Disable any TWPA continuous-wave pumps
-        if self._twpa_sources:
+
+        # Stop TWPA continuous-wave pumps, unless configured to keep them running.
+        # The flag is read from the `QbloxClusterConfig` associated with this
+        # cluster, if available in the last `play()`'s configurations.
+        ccfg = getattr(self, "_twpa_cluster_config", None)
+        if ccfg is not None and ccfg.turn_off_on_disconnect:
             for module in self._modules.values():
-                for seq in module.sequencers:
-                    for param in ("cont_mode_en_awg_path0", "cont_mode_en_awg_path1"):
-                        if param in seq.parameters:
-                            seq.parameters[param].set(False)
+                self._stop_twpa_cw(module)
+
         self._cluster.close()
         self._cluster = None
+        self._twpa_cluster_config = None
 
     def _set_dc_offsets_to_0(self) -> None:
         flux_slot_to_ports: dict[SlotId, set[int]] = defaultdict(set)
@@ -224,6 +229,10 @@ class Cluster(Controller):
             for port in ports:
                 offset_parameter = f"out{port}_offset"
                 module.parameters[offset_parameter].set(0.0)
+
+    def _stop_twpa_cw(self, module) -> None:
+        """Stop continuous-waveform (TWPA pump) on all sequencers of a module."""
+        config.module.ModuleConfig.disable_twpa_cw(module)
 
     def play(
         self,
@@ -266,13 +275,10 @@ class Cluster(Controller):
             },
         )
 
-        # configure the modules
-        _module_configs = self._configure_modules(configs)
-
-        # configure TWPA continuous-wave pumps, if any
-        twpa_sources = self._twpa_sources
-        if twpa_sources:
-            self._configure_twpa(configs, twpa_sources)
+        # configure the modules (including TWPA continuous-wave pumps, if any)
+        self._configure_modules(configs)
+        # remember the cluster config for the `disconnect()` turn-off handling
+        self._twpa_cluster_config = self._cluster_config(configs)
 
         # Execute each batch sequentially, and concatenate results
         log = Logger(configs)
@@ -354,6 +360,7 @@ class Cluster(Controller):
 
         Returns a dictionary mapping slots to their respective ModuleConfig.
         """
+        cluster_config = self._cluster_config(configs)
         modcfgs = {}
         for slot, chs in self._channels_by_module.items():
             module = self._modules[slot]
@@ -362,85 +369,23 @@ class Cluster(Controller):
             los = config.module.los(self._los, configs, ids)
             mixers = config.module.mixers(self._mixers, configs, ids)
             modcfg = modcfgs[slot] = config.ModuleConfig.build(
-                channels, configs, los, mixers
+                channels,
+                configs,
+                los,
+                mixers,
+                twpa_sources=(
+                    cluster_config.twpa_sources if cluster_config is not None else None
+                ),
             )
             modcfg.apply(module)
         return modcfgs
 
-    def _configure_twpa(self, configs: Configs, twpa_sources: dict[str, str]) -> None:
-        """Configure continuous-waveform (CW) pump tones for TWPA.
-
-        For each port listed in *twpa_sources*, configure the
-        highest-indexed sequencer on the corresponding module in CW mode.
-        This is independent of any Q1ASM sequence.
-        """
-        if not twpa_sources:
-            return
-
-        # Group TWPA sources by module slot
-        twpa_by_slot: dict[SlotId, list[config.PortAddress]] = defaultdict(list)
-        for path in twpa_sources:
-            address = config.PortAddress.from_path(path)
-            twpa_by_slot[address.slot].append(address)
-
-        for slot, addresses in twpa_by_slot.items():
-            module = self._modules[slot]
-            n_sequencers = len(module.sequencers)
-
-            for i, address in enumerate(addresses):
-                # Assign the last available sequencers to TWPA, to keep
-                # lower-indexed sequencers free for Q1ASM sequences.
-                seq_idx = n_sequencers - 1 - i
-                sequencer = module.sequencers[seq_idx]
-
-                # Resolve the TWPA config name and fetch the oscillator config
-                twpa_name = twpa_sources[address.local_address]
-                osc_config = cast("OscillatorConfig", configs.get(twpa_name))
-                if osc_config is None:
-                    raise ValueError(
-                        f"TWPA source '{twpa_name}' (port {address.local_address}) "
-                        f"not found in configs."
-                    )
-
-                # Determine the LO frequency for this port.
-                # The TWPA port must be associated with a channel that has an LO.
-                lo_freq = self._twpa_lo_freq(slot, address, configs)
-
-                cw_cfg = config.SequencerConfig.build_cw(
-                    address=address,
-                    osc_config=osc_config,
-                    lo_freq=lo_freq,
-                )
-                cw_cfg.apply(sequencer)
-
-                # Enable the LO on the module for this port
-                lo_param = f"out{address.ports[0] - 1}_lo_en"
-                module.parameters[lo_param].set(True)
-
-                # Arm the sequencer for CW playback
-                module.arm_sequencer(seq_idx)
-
-        # Start all armed sequencers (CW pumps) across all modules
-        for slot in twpa_by_slot:
-            self._modules[slot].start_sequencer()
-
-    def _twpa_lo_freq(
-        self, slot: SlotId, address: config.PortAddress, configs: Configs
-    ) -> int:
-        """Determine the LO frequency for a TWPA port on a given module."""
-        port_id = address.ports[0] - 1
-        # Look up the channel on this slot with the matching port
-        for channel in self.channels.values():
-            ch_address = config.PortAddress.from_path(channel.path)
-            if ch_address.slot == slot and ch_address.ports[0] - 1 == port_id:
-                lo_name = cast(IqChannel, channel).lo
-                if lo_name is not None:
-                    return int(cast(OscillatorConfig, configs[lo_name]).frequency)
-                break
-        raise ValueError(
-            f"Cannot determine LO frequency for TWPA port {address.local_address} "
-            f"on slot {slot}. Ensure the channel on this port has an LO configured."
-        )
+    def _cluster_config(self, configs: Configs) -> QbloxClusterConfig | None:
+        """Retrieve the :class:`QbloxClusterConfig` for this cluster, if any."""
+        cfg = configs.get(self.name)
+        if isinstance(cfg, QbloxClusterConfig):
+            return cfg
+        return None
 
     def _configure_sequencers(
         self,
@@ -639,15 +584,3 @@ class Cluster(Controller):
             )
             if mix is not None
         }
-
-    @property
-    def _twpa_sources(self) -> dict[str, str]:
-        """Extract TWPA source mapping from settings.
-
-        Returns a mapping of port paths (e.g. ``"0/o1"``) to TWPA
-        configuration names.  Empty if no TWPA sources are configured.
-        """
-        settings = getattr(self, "settings", None)
-        if settings is None:
-            return {}
-        return settings.twpa_sources
