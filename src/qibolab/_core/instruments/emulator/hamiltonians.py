@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from functools import cached_property
 from typing import Literal
 
@@ -8,7 +9,7 @@ from qibo.config import raise_error
 from scipy.constants import giga
 
 from ...components import Config
-from ...identifier import ChannelId, QubitId, QubitPairId, TransitionId
+from ...identifier import QubitId, QubitPairId, TransitionId
 from ...parameters import Update, _setvalue
 from ...pulses import Delay, IqWaveform, Pulse, PulseLike, VirtualZ
 from ...serialize import ArrayList, Model
@@ -17,97 +18,6 @@ from .engine import Operator, SimulationEngine
 __all__ = ["DriveEmulatorConfig", "FluxEmulatorConfig", "HamiltonianConfig"]
 
 
-class DriveEmulatorConfig(Config):
-    """Configuration for an IQ channel."""
-
-    kind: Literal["drive-emulator"] = "drive-emulator"
-
-    frequency: float
-    """Frequency of drive."""
-    rabi_frequency: float = 1e9
-    """Rabi frequency [Hz]"""
-
-    @staticmethod
-    def operator(
-        hamiltonian: Config, channel: ChannelId, engine: SimulationEngine
-    ) -> Operator:
-
-        channel_idx = channel.split("/")[0]
-        if "coupler" in channel_idx:
-            channel_idx = channel_idx.split("_")[1]
-        channel_idx = int(channel_idx)
-
-        operator_tuple = ()
-        drive_line = hamiltonian.drive_crosstalk[channel_idx]
-        assert len(drive_line) == len(hamiltonian.qubits), (
-            """Crosstalk matrix should have as many columns as qubits in the system."""
-        )
-
-        for mu, (q_idx, qubit) in zip(drive_line, hamiltonian.qubits.items()):
-            if mu != 0:
-                operator_tuple += (
-                    (
-                        q_idx,
-                        -1j
-                        * mu
-                        * (
-                            engine.destroy(qubit.transmon_levels)
-                            - engine.create(qubit.transmon_levels)
-                        ),
-                    ),
-                )
-
-        return operator_tuple
-
-
-class FluxEmulatorConfig(Config):
-    """Configuration for a flux line."""
-
-    kind: Literal["flux-emulator"] = "flux-emulator"
-
-    offset: float
-    """DC offset of the channel."""
-    voltage_to_flux: float = 1
-    """Convert voltarget to flux."""
-
-    @staticmethod
-    def operator(
-        hamiltonian: Config, channel: ChannelId, engine: SimulationEngine
-    ) -> Operator:
-
-        channel_idx = channel.split("/")[0]
-        if "coupler" in channel_idx:
-            channel_idx = channel_idx.split("_")[1]
-        channel_idx = int(channel_idx)
-
-        operator_tuple = ()
-        flux_line = hamiltonian.flux_crosstalk[channel_idx]
-        assert len(flux_line) == len(hamiltonian.qubits), (
-            """Crosstalk matrix should have as many columns as qubits in the system."""
-        )
-
-        for mu, (q_idx, qubit) in zip(flux_line, hamiltonian.qubits.items()):
-            if mu != 0:
-                operator_tuple += (
-                    (
-                        q_idx,
-                        mu
-                        * (
-                            engine.create(qubit.transmon_levels)
-                            @ engine.destroy(qubit.transmon_levels)
-                        ),
-                    ),
-                )
-
-        return operator_tuple
-
-    @property
-    def flux(self) -> float:
-        """Returns flux."""
-        return self.offset * self.voltage_to_flux
-
-
-# NOTE: the emulator only works with qubits (only 0 and 1 states)
 class Qubit(Config):
     """Hamiltonian parameters for single qubit."""
 
@@ -124,7 +34,11 @@ class Qubit(Config):
     asymmetry: float = 0
     """Asymmetry."""
     p_into_0: float | None = None
-    """Probability of misclassifying higher levels as 0."""
+    """Probability of misclassifying higher levels as 0.
+
+    NOTE: at the time being we classify higher excited levels
+    as either 0 or 1.
+    """
     t1: dict[TransitionId, float] = Field(default_factory=dict)
     """Dictionary with relaxation times per transition."""
     t2: dict[TransitionId, float] = Field(default_factory=dict)
@@ -148,7 +62,6 @@ class Qubit(Config):
                     matrix[0, 2:] = self.p_into_0
                     matrix[1, 2:] = 1 - self.p_into_0
 
-            # ATTENTION: forcing overwriting of confusion matrix despite it's frozen
             object.__setattr__(self, "confusion_matrix", matrix)
 
         if self.confusion_matrix.shape != (n, n):
@@ -156,7 +69,8 @@ class Qubit(Config):
                 "Confusion matrix must be a square matrix with dimension (transmon_levels, transmon_levels)."
             )
 
-        if np.any(self.confusion_matrix.sum(axis=0) != 1):
+        cumulative_probs = self.confusion_matrix.sum(axis=0)
+        if not np.allclose(cumulative_probs, np.ones_like(cumulative_probs)):
             raise ValueError("Confusion matrix columns must sum to 1.")
 
         return self
@@ -215,6 +129,89 @@ class Qubit(Config):
             )
             for pair in self.t2
         )
+
+
+def _crosstalk_operator(
+    crosstalk_lines: NDArray,
+    line_idx: int,
+    qubits: dict[QubitId, Qubit],
+    operator_func: Callable[[int], Operator],
+) -> tuple[tuple[QubitId, Operator], ...]:
+    """Return crosstalk operator for a given channel."""
+
+    operator_tuple: tuple[tuple[QubitId, Operator], ...] = ()
+    lines = crosstalk_lines[line_idx]
+
+    for mu, (q_idx, qubit) in zip(lines, qubits.items()):
+        if not np.isclose(mu, 0):
+            operator_tuple += ((q_idx, mu * operator_func(qubit.transmon_levels)),)
+
+    return operator_tuple
+
+
+class DriveEmulatorConfig(Config):
+    """Configuration for an IQ channel."""
+
+    kind: Literal["drive-emulator"] = "drive-emulator"
+
+    frequency: float
+    """Frequency of drive."""
+    rabi_frequency: float = 1e9
+    """Rabi frequency [Hz]"""
+
+    @staticmethod
+    def operator(
+        crosstalk_matrix: NDArray,
+        qubits_map: dict[QubitId, Qubit],
+        channel_idx: int,
+        engine: SimulationEngine,
+    ) -> tuple[tuple[QubitId, Operator], ...]:
+
+        def _drive_crosstalk_operator(transmon_levels: int):
+            return -1j * (
+                engine.destroy(transmon_levels) - engine.create(transmon_levels)
+            )
+
+        return _crosstalk_operator(
+            crosstalk_lines=crosstalk_matrix,
+            qubits=qubits_map,
+            line_idx=channel_idx,
+            operator_func=_drive_crosstalk_operator,
+        )
+
+
+class FluxEmulatorConfig(Config):
+    """Configuration for a flux line."""
+
+    kind: Literal["flux-emulator"] = "flux-emulator"
+
+    offset: float
+    """DC offset of the channel."""
+    voltage_to_flux: float = 1
+    """Convert voltarget to flux."""
+
+    @staticmethod
+    def operator(
+        crosstalk_matrix: NDArray,
+        qubits_map: dict[QubitId, Qubit],
+        channel_idx: int,
+        engine: SimulationEngine,
+    ) -> tuple[tuple[QubitId, Operator], ...]:
+
+        def _flux_crosstalk_operator(transmon_levels: int):
+            return engine.create(transmon_levels) @ engine.destroy(transmon_levels)
+
+        return _crosstalk_operator(
+            crosstalk_lines=crosstalk_matrix,
+            qubits=qubits_map,
+            line_idx=channel_idx,
+            operator_func=_flux_crosstalk_operator,
+        )
+
+    @property
+    def flux(self) -> float:
+        """Returns flux."""
+        return self.offset * self.voltage_to_flux
 
 
 class CapacitiveCoupling(Config):
@@ -346,7 +343,7 @@ class ModulatedVirtualZ(Model):
     duration: float = 0
     """Duration is 0 for virtual Z."""
 
-    def __call__(self, t: float, sample: int, phase: float) -> float:
+    def __call__(self, t: float, sample: int, phase: float) -> None:
         """Delay waveform."""
         raise_error(ValueError, "VirtualZ doesn't have waveform.")
 
@@ -384,16 +381,10 @@ class HamiltonianConfig(Config):
         n = self.nqubits
 
         if self.drive_crosstalk is None:
-            # ATTENTION: forcing overwriting of drive crosstalk matrix despite it's frozen
             object.__setattr__(self, "drive_crosstalk", np.eye(n))
-        elif self.drive_crosstalk.shape != (n, n):
-            raise ValueError("Drive crosstalk matrix must be squared.")
 
         if self.flux_crosstalk is None:
-            # ATTENTION: forcing overwriting of flux crosstalk matrix despite it's frozen
             object.__setattr__(self, "flux_crosstalk", np.eye(n))
-        elif self.flux_crosstalk.shape != (n, n):
-            raise ValueError("Flux crosstalk matrix must be squared.")
 
         return self
 

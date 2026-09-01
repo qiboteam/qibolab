@@ -234,12 +234,27 @@ class EmulatorController(Controller):
         configs: dict[str, Config],
         updates: dict,
     ) -> NDArray:
-        """Evolve a pulse sequence on the quantum emulator.
+        """Execute pulse sequence evolution and return quantum states.
 
-        This method updates the sequence parameters, generates the time grid, constructs
-        the time-dependent Hamiltonian, evolves the initial state with optional collapse
-        operators, and returns the resulting measurement data.
+        Evolves the quantum system according to the provided pulse sequence and
+        configuration, simulating the time evolution of the quantum state under the
+        specified Hamiltonian and dissipation channels.
+
+        Measurement times are deduplicated using np.unique() and the inverse mapping
+        is applied to the results to ensure consistent state array shapes across
+        different sweeps of the same sequence. This is critical when sweeping gate durations
+        or witing times across different qubits, as measurement times from different qubits
+        may coincide at certain sweep points, causing potential shape mismatches.
+
+        Example: In a two qubits system (0 and 1), we do nothing but measure qubit 0 at time 2.0
+        and sweep qubit 1's measurement time according to the sweeper [1.0, 2.0, 3.0].
+        In the second iteration of the sweeper both qubits measurement times coincide;
+        without inverting the np.unique() mapping, states at this sweep point would have shape (1,)
+        instead of the expected (2,) from other sweep points, causing shape mismatches. By inverting
+        the np.unique() mapping, states are correctly aligned and maintain consistent shapes regardless
+        of coinciding measurement times.
         """
+
         sequence_identifier, sequence = sequence_tuple
 
         sequence_ = update_sequence(sequence, updates)
@@ -251,7 +266,7 @@ class EmulatorController(Controller):
             list(acquisitions(sequence_).values()), dtype=float
         )
         measurement_times[measurement_times < SAMPLING_INTERVAL] = SAMPLING_INTERVAL
-        tlist_, index = np.unique(measurement_times, return_inverse=True)
+        tlist_, measurement_index = np.unique(measurement_times, return_inverse=True)
 
         results, simulation_configs = self.engine.evolve(
             hamiltonian=hamiltonian,
@@ -260,12 +275,8 @@ class EmulatorController(Controller):
             collapse_operators=config.dissipation(self.engine),
             time_hamiltonian=time_hamiltonian,
         )
-        # we need to invert np.unique() call because otherwise there will be some mismatch
-        # between different sweeps of the same sequence;
-        # for example if we measure one qubit always at the same time but we sweep on time
-        # over the other, at some point the 2 measurement times might coincide so states.shape
-        # will be different
-        states = np.stack([s.full() for s in results.states[1:]])[index]
+        # inverting the np.unique() call for having corrrect shape; check function docstring
+        states = np.stack([s.full() for s in results.states[1:]])[measurement_index]
 
         self._dump_simulation(
             sequence_identifier,
@@ -341,6 +352,22 @@ def hamiltonian(
     ham_qubit = hamiltonian.qubits[hilbert_space_index]
 
     if isinstance(config, (DriveEmulatorConfig, FluxEmulatorConfig)):
+        crosstalk = (
+            hamiltonian.flux_crosstalk
+            if isinstance(config, FluxEmulatorConfig)
+            else hamiltonian.drive_crosstalk
+        )
+
+        # Extract the channel index from the channel identifier, handling coupler channels by removing the coupler prefix.
+        # Convert to integer if it's numeric, otherwise treat as a qubit label, then map to Hilbert space index.
+        channel_idx = channel.split("/")[0]
+        if "coupler" in channel_idx:
+            channel_idx = channel_idx.split("_")[1]
+        line_label = (
+            int(channel_idx) if channel_idx not in hamiltonian.qubits else channel_idx
+        )
+        line_idx = hamiltonian.hilbert_space_index(line_label)
+
         op = sum(
             engine.expand(
                 op=o,
@@ -348,7 +375,10 @@ def hamiltonian(
                 targets=hamiltonian.hilbert_space_index(int(q)),
             )
             for (q, o) in config.operator(
-                hamiltonian=hamiltonian, channel=channel, engine=engine
+                crosstalk_matrix=crosstalk,
+                qubits_map=hamiltonian.qubits,
+                channel_idx=line_idx,
+                engine=engine,
             )
         )
 
@@ -376,20 +406,14 @@ def hamiltonians(
 ) -> Iterable[tuple[Operator, list[Modulated]]]:
     hconfig = cast(HamiltonianConfig, configs["hamiltonian"])
 
-    hamiltonians_array = ()
-    for ch in sequence.channels:
+    return (
+        hamiltonian(
+            sequence.channel(ch), configs[ch], hconfig, ch, engine, sampling_rate
+        )
+        for ch in sequence.channels
         # TODO: drop the following, and treat acquisitions just as empty channels
-        if not isinstance(configs[ch], AcquisitionConfig):
-            new_terms = hamiltonian(
-                sequence.channel(ch),
-                configs[ch],
-                hconfig,
-                ch,
-                engine,
-                sampling_rate,
-            )
-            hamiltonians_array += (new_terms,)
-    return hamiltonians_array
+        if not isinstance(configs[ch], AcquisitionConfig)
+    )
 
 
 def channel_coefficients(
