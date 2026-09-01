@@ -2,8 +2,8 @@
 
 import numpy as np
 
-from qibolab._core.components import IqChannel, IqConfig, OscillatorConfig
-from qibolab._core.execution_parameters import ExecutionParameters
+from qibolab._core.components import IqChannel, OscillatorConfig
+from qibolab._core.execution_parameters import AcquisitionType, ExecutionParameters
 from qibolab._core.instruments.qblox.cluster import Cluster
 from qibolab._core.instruments.qblox.config.port import PortAddress
 from qibolab._core.instruments.qblox.config.sequencer import SequencerConfig
@@ -19,52 +19,6 @@ from qibolab._core.instruments.qblox.q1asm.ast_ import (
 from qibolab._core.instruments.qblox.sequence import Q1Sequence, compile
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import Parameter, Sweeper
-
-# ---------------------------------------------------------------------------
-# `SequencerConfig.build_cw`
-# ---------------------------------------------------------------------------
-
-
-def test_build_cw_basic():
-    cfg = SequencerConfig.build_cw(address="out1", nco_freq=1_360_000_000)
-
-    assert cfg.address == "out1"
-    assert cfg.cont_mode_en_awg_path0 is True
-    assert cfg.cont_mode_en_awg_path1 is True
-    assert cfg.cont_mode_waveform_idx_awg_path0 == 0
-    assert cfg.cont_mode_waveform_idx_awg_path1 == 0
-    assert cfg.nco_freq == 1_360_000_000
-    assert cfg.nco_phase_offs == 0.0
-    assert cfg.mod_en_awg is True
-    assert cfg.sync_en is False
-    assert cfg.offset_awg_path0 == 0.5
-    assert cfg.offset_awg_path1 == 0.0
-    assert cfg.gain_awg_path0 == 1.0
-    assert cfg.gain_awg_path1 == 1.0
-    assert cfg.marker_ovr_en is True
-    assert cfg.marker_ovr_value == 15
-
-    seq = cfg.sequence
-    assert seq is not None
-    assert "stop" in seq["program"]
-    assert "0" in seq["waveforms"]
-    assert len(seq["waveforms"]["0"]["data"]) % 4 == 0
-
-
-def test_build_cw_amplitude_override():
-    cfg = SequencerConfig.build_cw(address="out0", nco_freq=500_000_000, amplitude=0.25)
-    assert cfg.offset_awg_path0 == 0.25
-    assert cfg.offset_awg_path1 == 0.0
-
-
-def test_build_cw_serialization():
-    import json
-
-    cfg = SequencerConfig.build_cw(address="out0", nco_freq=1_000_000_000)
-    loaded = json.loads(cfg.model_dump_json())
-    assert loaded["cont_mode_en_awg_path0"] is True
-    assert loaded["nco_freq"] == 1_000_000_000
-
 
 # ---------------------------------------------------------------------------
 # `Q1Sequence` CW and Swept TWPA
@@ -153,7 +107,7 @@ def test_compile_twpa_cw():
         options=options,
         sampling_rate=1.0,
         merged_vzs=True,
-        twpas={"twpa_ch"},
+        twpas={"twpa_ch": "twpa_pump"},
     )
     assert "twpa_ch" in seqs
     assert seqs["twpa_ch"].is_cw is True
@@ -173,7 +127,7 @@ def test_compile_twpa_swept():
         options=options,
         sampling_rate=1.0,
         merged_vzs=True,
-        twpas={"twpa_ch"},
+        twpas={"twpa_ch": "twpa_pump"},
     )
     assert "twpa_ch" in seqs
     assert seqs["twpa_ch"].is_cw is False
@@ -188,10 +142,9 @@ def test_sequencer_config_build_twpa_cw():
     address = PortAddress.from_path("8/o1")
     channels = {"twpa_ch": IqChannel(path="8/o1", lo="lo1")}
     configs = {
-        "twpa_ch": IqConfig(frequency=6.5e9),
+        "twpa_pump": OscillatorConfig(frequency=6.5e9, power=10.0),
         "lo1": OscillatorConfig(frequency=5.0e9, power=10.0),
     }
-    from qibolab._core.execution_parameters import AcquisitionType
 
     seq = Q1Sequence.cw()
     cfg = SequencerConfig.build(
@@ -202,13 +155,13 @@ def test_sequencer_config_build_twpa_cw():
         acquisition=AcquisitionType.INTEGRATION,
         rf=True,
         sequence=seq,
-        twpa=True,
+        twpa="twpa_pump",
     )
 
     assert cfg.sync_en is False
     assert cfg.cont_mode_en_awg_path0 is True
     assert cfg.cont_mode_en_awg_path1 is True
-    assert cfg.offset_awg_path0 == 0.5
+    assert cfg.offset_awg_path0 == 1.0
     assert cfg.gain_awg_path0 == 1.0
     assert cfg.gain_awg_path1 == 1.0
     assert cfg.nco_freq == 1_500_000_000
@@ -218,10 +171,9 @@ def test_sequencer_config_build_twpa_swept():
     address = PortAddress.from_path("8/o1")
     channels = {"twpa_ch": IqChannel(path="8/o1", lo="lo1")}
     configs = {
-        "twpa_ch": IqConfig(frequency=6.5e9),
+        "twpa_pump": OscillatorConfig(frequency=6.5e9, power=10.0),
         "lo1": OscillatorConfig(frequency=5.0e9, power=10.0),
     }
-    from qibolab._core.execution_parameters import AcquisitionType
 
     options = ExecutionParameters(nshots=10, relaxation_time=1000)
     sweeper = Sweeper(
@@ -239,27 +191,46 @@ def test_sequencer_config_build_twpa_swept():
         acquisition=AcquisitionType.INTEGRATION,
         rf=True,
         sequence=seq,
-        twpa=True,
+        twpa="twpa_pump",
     )
 
     assert cfg.sync_en is True
     assert cfg.cont_mode_en_awg_path0 is None
-    assert cfg.offset_awg_path0 == 0.5
-    assert cfg.gain_awg_path0 == 1.0
-    assert cfg.gain_awg_path1 == 1.0
+    assert cfg.offset_awg_path0 == 0.0
+    assert cfg.gain_awg_path0 is None
+    assert cfg.gain_awg_path1 is None
     assert cfg.nco_freq == 1_500_000_000
 
 
 # ---------------------------------------------------------------------------
-# `Cluster` attributes
+# `Cluster` attributes and resolution helpers
 # ---------------------------------------------------------------------------
 
 
 def test_cluster_twpa_fields_defaults():
     c = Cluster(address="addr", name="my_cluster")
-    assert c.twpas == set()
+    assert c.twpas == {}
 
 
 def test_cluster_twpa_custom():
-    c = Cluster(address="addr", name="my_cluster", twpas={"twpa_ch"})
-    assert c.twpas == {"twpa_ch"}
+    c = Cluster(address="addr", name="my_cluster", twpas={"twpa_ch": "twpa_pump"})
+    assert c.twpas == {"twpa_ch": "twpa_pump"}
+
+
+def test_cluster_twpa_resolution():
+    c = Cluster(
+        address="addr",
+        name="my_cluster",
+        channels={
+            "ch1": IqChannel(path="8/o1"),
+            "ch2": IqChannel(path="7/o2"),
+        },
+        twpas={
+            "ch1": "pump1",
+            "7/o2": "pump2",
+        },
+    )
+    assert c._twpa_channels == {"ch1", "ch2", "7/o2"}
+    assert c._twpa_config("ch1", PortAddress.from_path("8/o1")) == "pump1"
+    assert c._twpa_config("ch2", PortAddress.from_path("7/o2")) == "pump2"
+    assert c._twpa_config("unknown", PortAddress.from_path("1/o1")) is None
