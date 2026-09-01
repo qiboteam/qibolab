@@ -1,6 +1,6 @@
 # AI code review using GitHub Copilot CLI.
 #
-# Trigger: add the "run-qibobot" label to a pull request.
+# Trigger: add the "run-qibot" label to a pull request.
 #
 name: ai-review
 
@@ -19,7 +19,7 @@ permissions:
 
 jobs:
   ai-review:
-    if: contains(github.event.pull_request.labels.*.name, 'run-qibobot')
+    if: contains(github.event.pull_request.labels.*.name, 'run-qibot')
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:

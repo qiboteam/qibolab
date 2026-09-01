@@ -62,13 +62,13 @@ def api_request(token: str, method: str, path: str, payload: dict | None = None)
     """
     url = f"{API_BASE}{path}"
     data = json.dumps(payload).encode() if payload is not None else None
+    req = urllib.request.Request(url, data=data, method=method)
+    req.add_header("Authorization", "Bearer " + token)
+    req.add_header("Accept", "application/vnd.github+json")
+    req.add_header("X-GitHub-Api-Version", API_VERSION)
+    req.add_header("Content-Type", "application/json")
     last_exc: Exception | None = None
     for attempt in range(1, MAX_ATTEMPTS + 1):
-        req = urllib.request.Request(url, data=data, method=method)
-        req.add_header("Authorization", "Bearer " + token)
-        req.add_header("Accept", "application/vnd.github+json")
-        req.add_header("X-GitHub-Api-Version", API_VERSION)
-        req.add_header("Content-Type", "application/json")
         try:
             # A timeout so a hung API call fails fast instead of blocking the job.
             with urllib.request.urlopen(req, timeout=30) as resp:
