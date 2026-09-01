@@ -3,7 +3,6 @@ from typing import cast
 
 import numpy as np
 from pydantic import ConfigDict
-from qblox_instruments.qcodes_drivers.module import Module
 from qblox_instruments.qcodes_drivers.sequencer import Sequencer
 
 from qibolab._core.components.channels import Channel, IqChannel
@@ -82,16 +81,21 @@ class SequencerConfig(Model):
         acquisition: AcquisitionType,
         rf: bool,
         sequence: Q1Sequence | None = None,
+        twpa: bool = False,
     ) -> "SequencerConfig":
         config = configs[channel_id]
+
+        is_cw = twpa and (sequence is None or sequence.is_cw)
 
         # conditional configurations
         cfg = cls(
             # connect to physical address
             address=address.local_address,
             # TODO: mixer calibration not yet propagated
-            offset_awg_path0=0.0,
+            offset_awg_path0=0.5 if twpa else 0.0,
             offset_awg_path1=0.0,
+            gain_awg_path0=1.0 if twpa else None,
+            gain_awg_path1=1.0 if twpa else None,
             # TODO: properly document - the first 4 marker bits are used to toggle
             # outputs, enabling suitable amplification
             marker_ovr_en=True,
@@ -102,9 +106,13 @@ class SequencerConfig(Model):
                 json.loads(sequence.model_dump_json()) if sequence is not None else None
             ),
             # configure the sequencers to synchronize
-            sync_en=True,
+            sync_en=not is_cw,
             # modulation, only disable for QCM - always used for flux pulses
             mod_en_awg=rf,
+            cont_mode_en_awg_path0=True if is_cw else None,
+            cont_mode_en_awg_path1=True if is_cw else None,
+            cont_mode_waveform_idx_awg_path0=0 if is_cw else None,
+            cont_mode_waveform_idx_awg_path1=0 if is_cw else None,
         )
 
         # acquisition
@@ -131,13 +139,15 @@ class SequencerConfig(Model):
         if probe is not None:
             freq = cast(IqConfig, configs[probe]).frequency
             probe_ = cast(IqChannel, channels[probe])
-            assert probe_.lo is not None
-            lo_freq = cast(OscillatorConfig, configs[probe_.lo]).frequency
-            cfg.nco_freq = int(freq - lo_freq)
-            assert probe_.mixer is not None
-            mixer = cast(IqMixerConfig, configs[probe_.mixer])
-            cfg.mixer_corr_gain_ratio = mixer.scale_q
-            cfg.mixer_corr_phase_offset_degree = mixer.phase_q
+            if probe_.lo is not None:
+                lo_freq = cast(OscillatorConfig, configs[probe_.lo]).frequency
+                cfg.nco_freq = int(freq - lo_freq)
+            else:
+                cfg.nco_freq = int(freq)
+            if probe_.mixer is not None:
+                mixer = cast(IqMixerConfig, configs[probe_.mixer])
+                cfg.mixer_corr_gain_ratio = mixer.scale_q
+                cfg.mixer_corr_phase_offset_degree = mixer.phase_q
 
         return cfg
 
@@ -161,10 +171,10 @@ class SequencerConfig(Model):
         """
         # Flat envelope waveform, length must be a multiple of 4
         sequence = {
-            "waveforms": {"cw": {"data": [0.0] * 4, "index": 0}},
+            "waveforms": {"0": {"data": [0.0] * 4, "index": 0}},
             "weights": {},
             "acquisitions": {},
-            "program": "stop",
+            "program": "stop\n",
         }
 
         return cls(
@@ -205,46 +215,3 @@ class SequencerConfig(Model):
                     # Parameter not available on this sequencer type
                     # (e.g. cont_mode_* on a baseband sequencer)
                     pass
-
-
-def apply_cw(
-    module: Module,
-    seq_idx: int,
-    address: str,
-    nco_freq: int,
-    amplitude: float = 0.5,
-) -> None:
-    """Configure a sequencer in continuous-waveform (CW) mode and arm it.
-
-    The sequencer plays a flat-envelope waveform forever, bypassing the Q1ASM
-    sequence processor. The NCO provides the IF tone (``nco_freq``); the
-    module-level LO upconverts it to the target RF frequency.
-
-    Args:
-        module: the Qblox module holding the sequencer.
-        seq_idx: index of the sequencer to use for the CW tone.
-        address: physical output port (e.g. ``"out1"``).
-        nco_freq: IF frequency in Hz (``frequency - lo_freq``).
-        amplitude: flat-envelope amplitude in [-1, 1]; 0.5 leaves headroom.
-    """
-    sequencer = module.sequencers[seq_idx]
-    SequencerConfig.build_cw(
-        address=address, nco_freq=nco_freq, amplitude=amplitude
-    ).apply(sequencer)
-
-    # Enable the LO for this port, to upconvert the IF tone to RF.
-    port_id = int(address[3:])
-    lo_param = f"out{port_id}_lo_en"
-    if lo_param in module.parameters:
-        module.parameters[lo_param].set(True)
-
-    # Arm the sequencer; the caller is responsible for starting the module.
-    module.arm_sequencer(seq_idx)
-
-
-def stop_cw(module: Module) -> None:
-    """Disable continuous-waveform mode on every sequencer of a module."""
-    for seq in module.sequencers:
-        for param in ("cont_mode_en_awg_path0", "cont_mode_en_awg_path1"):
-            if param in seq.parameters:
-                seq.parameters[param].set(False)
