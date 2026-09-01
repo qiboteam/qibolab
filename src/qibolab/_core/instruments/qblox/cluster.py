@@ -17,6 +17,7 @@ from qibolab._core.components import (
     DcChannel,
     DcConfig,
     IqChannel,
+    IqMixerConfig,
 )
 from qibolab._core.execution_parameters import (
     AcquisitionType,
@@ -156,15 +157,17 @@ class Cluster(Controller):
     As described in:
     https://docs.qblox.com/en/main/getting_started/setup.html#connecting-to-multiple-instruments
     """
-    twpas: dict[str, str] = Field(default_factory=dict)
-    """TWPA pump channels.
+    twpas: dict[str, tuple[str, str | None]] = Field(default_factory=dict)
+    """TWPA pump sources.
 
-    Maps TWPA channel identifiers (or output port paths, e.g. ``"8/o1"``) to the
-    name of the corresponding :class:`OscillatorConfig` in
-    :attr:`Parameters.configs`.
+    Maps TWPA identifiers (which match keys in :attr:`Parameters.configs`
+    holding the :class:`OscillatorConfig` for the pump tone) to a tuple of
+    ``(port_path, mixer_config_name)`` where ``mixer_config_name`` optionally
+    references an :class:`IqMixerConfig` in :attr:`Parameters.configs` (or
+    ``None`` if not used).
 
-    Each TWPA channel generates either a continuous-wave tone in the background
-    or a synchronized single-pulse sweep when targeted by channel sweepers.
+    Each entry generates either a continuous-wave tone in the background or a
+    synchronized single-pulse sweep when targeted by channel sweepers.
     """
 
     _cluster: qblox.Cluster | None = None
@@ -290,11 +293,15 @@ class Cluster(Controller):
                     options_,
                     self.sampling_rate,
                     merged_vzs=not phase_sweeper_present,
-                    twpas=self._twpa_channels,
+                    twpas=self.twpas,
                 )
 
                 for channelid, seq in sequences_.items():
-                    slot = PortAddress.from_path(self.channels[channelid].path).slot
+                    if channelid in self.twpas:
+                        path, _ = self.twpas[channelid]
+                        slot = PortAddress.from_path(path).slot
+                    else:
+                        slot = PortAddress.from_path(self.channels[channelid].path).slot
                     validate_sequence(seq, self._modules[slot].is_qrm_type)
 
                 log.sequences(sequences_)
@@ -331,32 +338,6 @@ class Cluster(Controller):
             results |= concat_shots(psres, options)
         return results
 
-    @property
-    def _twpa_channels(self) -> set[ChannelId]:
-        """Channel identifiers corresponding to TWPA channels."""
-        twpa_set = set(self.twpas)
-        for ch, channel in self.channels.items():
-            addr = PortAddress.from_path(channel.path)
-            if (
-                ch in self.twpas
-                or f"{addr.slot}/{addr.local_address}" in self.twpas
-                or f"{addr.slot}/o{addr.ports[0]}" in self.twpas
-            ):
-                twpa_set.add(ch)
-        return twpa_set
-
-    def _twpa_config(self, ch: ChannelId, address: PortAddress) -> str | None:
-        """Find TWPA OscillatorConfig name for a channel or port path, if any."""
-        if ch in self.twpas:
-            return self.twpas[ch]
-        path = f"{address.slot}/{address.local_address}"
-        if path in self.twpas:
-            return self.twpas[path]
-        short_path = f"{address.slot}/o{address.ports[0]}"
-        if short_path in self.twpas:
-            return self.twpas[short_path]
-        return None
-
     def _disconnect_and_desync_sequencers(self) -> None:
         """Clear the relevant module settings before applying a new sequence."""
         # see FAQ in docs for disconnect_outputs() and disconnect_inputs()
@@ -385,7 +366,14 @@ class Cluster(Controller):
         for slot, chs in self._channels_by_module.items():
             module = self._modules[slot]
             ids = {id for id, _ in chs}
-            channels = {id: ch for id, ch in self.channels.items() if id in ids}
+            channels = {
+                id: (
+                    self.channels[id]
+                    if id in self.channels
+                    else IqChannel(path=self.twpas[id][0])
+                )
+                for id in ids
+            }
             los = config.module.los(self._los, configs, ids)
             mixers = config.module.mixers(self._mixers, configs, ids)
             modcfg = modcfgs[slot] = config.ModuleConfig.build(
@@ -422,7 +410,7 @@ class Cluster(Controller):
         for slot, chs in self._channels_by_module.items():
             module = self._modules[slot]
 
-            # each channel is going to be assigned to its own sequencer, thus they can
+            # each channel is going to be assigned to its own sequencer, channels can
             # not be outnumbered
             assert len(module.sequencers) >= len(chs)
 
@@ -440,7 +428,13 @@ class Cluster(Controller):
                 if exec_mode and ch not in sequences:
                     continue
 
-                twpa_config_name = self._twpa_config(ch, address)
+                is_twpa = ch in self.twpas
+                mixer = None
+                if is_twpa:
+                    _, mixer_name = self.twpas[ch]
+                    if mixer_name is not None and mixer_name in configs:
+                        mixer = cast(IqMixerConfig, configs[mixer_name])
+
                 seqcfg = seqcfgs[slot][idx] = config.SequencerConfig.build(
                     address,
                     ch,
@@ -449,7 +443,8 @@ class Cluster(Controller):
                     acquisition,
                     module.is_rf_type,
                     sequence=sequences_[ch],
-                    twpa=twpa_config_name,
+                    twpa=is_twpa,
+                    mixer=mixer,
                 )
                 seqcfg.apply(sequencer)
                 # populate channel-to-sequencer mapping
@@ -531,7 +526,7 @@ class Cluster(Controller):
 
     @cached_property
     def _probes(self) -> set[ChannelId]:
-        """Determine probe channels."""
+        """Extract probe channels."""
         return {
             ch.probe
             for ch in self.channels.values()
@@ -546,15 +541,22 @@ class Cluster(Controller):
         the :attr:`qibolab.Channel.port` attributes of each channel.
         """
         addresses = {
-            name: PortAddress.from_path(ch.path) for name, ch in self.channels.items()
+            name: PortAddress.from_path(ch.path)
+            for name, ch in self.channels.items()
+            if name not in self._probes
         }
+        for twpa_id, (path, _) in self.twpas.items():
+            addresses[twpa_id] = PortAddress.from_path(path)
+
         return {
             k: [el[1] for el in g]
             for k, g in groupby(
                 sorted(
-                    (address.slot, (ch, address))
-                    for ch, address in addresses.items()
-                    if ch not in self._probes
+                    (
+                        (address.slot, (ch, address))
+                        for ch, address in addresses.items()
+                    ),
+                    key=lambda el: el[0],
                 ),
                 key=lambda el: el[0],
             )
@@ -569,7 +571,7 @@ class Cluster(Controller):
         to retrieve the configuration.
         """
         channels = self.channels
-        return {
+        los = {
             ch: lo
             for ch, lo in (
                 (ch, cast(IqChannel, channels[iq]).lo)
@@ -578,13 +580,16 @@ class Cluster(Controller):
             )
             if lo is not None
         }
+        for twpa_id in self.twpas:
+            los[twpa_id] = twpa_id
+        return los
 
     @cached_property
     def _mixers(self) -> dict[ChannelId, str]:
         """Extract channel to mixer mapping."""
         # TODO: identical to the `._los` property, deduplicate it please...
         channels = self.channels
-        return {
+        mixers = {
             ch: mix
             for ch, mix in (
                 (ch, cast(IqChannel, channels[iq]).mixer)
@@ -593,3 +598,7 @@ class Cluster(Controller):
             )
             if mix is not None
         }
+        for twpa_id, (_, mixer_name) in self.twpas.items():
+            if mixer_name is not None:
+                mixers[twpa_id] = mixer_name
+        return mixers
