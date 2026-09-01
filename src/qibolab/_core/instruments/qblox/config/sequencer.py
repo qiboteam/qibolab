@@ -142,9 +142,9 @@ class SequencerConfig(Model):
     @classmethod
     def build_cw(
         cls,
-        address: PortAddress,
-        osc_config: OscillatorConfig,
-        lo_freq: int,
+        address: str,
+        nco_freq: int,
+        amplitude: float = 0.5,
     ) -> "SequencerConfig":
         """Build a sequencer configuration for continuous-waveform (CW) mode.
 
@@ -153,18 +153,10 @@ class SequencerConfig(Model):
         LO upconverts it to the target RF frequency.
 
         Args:
-            address: physical port address on the module.
-            osc_config: oscillator configuration (``frequency`` = absolute output
-                freq, ``power`` = output power in dB).
-            lo_freq: local-oscillator frequency in Hz (module-level setting).
+            address: physical port path (e.g. ``"out1"``).
+            nco_freq: IF frequency in Hz (``frequency - lo_freq``).
+            amplitude: flat-envelope amplitude in [-1, 1]; 0.5 leaves headroom.
         """
-        nco_freq = int(osc_config.frequency - lo_freq)
-        # In CW mode the AWG offset (flat envelope) sets the tone amplitude.
-        # The gain is left at 1 and the offset carries the amplitude.
-        # The full-scale range is [-1, 1]; we use 0.5 as a sensible default
-        # that leaves headroom and avoids clipping.
-        amplitude = 0.5
-
         # Flat envelope waveform, length must be a multiple of 4
         sequence = {
             "waveforms": {"cw": {"data": [0.0] * 4, "index": 0}},
@@ -174,7 +166,7 @@ class SequencerConfig(Model):
         }
 
         return cls(
-            address=address.local_address,
+            address=address,
             sequence=sequence,
             sync_en=False,
             mod_en_awg=True,
