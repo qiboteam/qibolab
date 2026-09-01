@@ -59,9 +59,17 @@ class SequencerConfig(Model):
     thresholded_acq_threshold: float | None = None
     demod_en_acq: bool | None = None
     nco_freq: int | None = None
+    nco_phase_offs: float | None = None
     mod_en_awg: bool | None = None
     mixer_corr_gain_ratio: float | None = None
     mixer_corr_phase_offset_degree: float | None = None
+    # continuous-waveform mode (bypasses the Q1ASM sequence processor)
+    cont_mode_en_awg_path0: bool | None = None
+    cont_mode_en_awg_path1: bool | None = None
+    cont_mode_waveform_idx_awg_path0: int | None = None
+    cont_mode_waveform_idx_awg_path1: int | None = None
+    gain_awg_path0: float | None = None
+    gain_awg_path1: float | None = None
 
     @classmethod
     def build(
@@ -132,6 +140,62 @@ class SequencerConfig(Model):
 
         return cfg
 
+    @classmethod
+    def build_cw(
+        cls,
+        address: PortAddress,
+        osc_config: OscillatorConfig,
+        lo_freq: int,
+    ) -> "SequencerConfig":
+        """Build a sequencer configuration for continuous-waveform (CW) mode.
+
+        The sequencer plays a flat-envelope waveform forever, bypassing the
+        Q1ASM sequence processor.  The NCO provides the IF tone; the module-level
+        LO upconverts it to the target RF frequency.
+
+        Args:
+            address: physical port address on the module.
+            osc_config: oscillator configuration (``frequency`` = absolute output
+                freq, ``power`` = output power in dB).
+            lo_freq: local-oscillator frequency in Hz (module-level setting).
+        """
+        nco_freq = int(osc_config.frequency - lo_freq)
+        # In CW mode the AWG offset (flat envelope) sets the tone amplitude.
+        # The gain is left at 1 and the offset carries the amplitude.
+        # The full-scale range is [-1, 1]; we use 0.5 as a sensible default
+        # that leaves headroom and avoids clipping.
+        amplitude = 0.5
+
+        # Flat envelope waveform, length must be a multiple of 4
+        sequence = {
+            "waveforms": {"cw": {"data": [0.0] * 4, "index": 0}},
+            "weights": {},
+            "acquisitions": {},
+            "program": "stop",
+        }
+
+        return cls(
+            address=address.local_address,
+            sequence=sequence,
+            sync_en=False,
+            mod_en_awg=True,
+            nco_freq=nco_freq,
+            nco_phase_offs=0.0,
+            # amplitude via AWG offset (flat envelope)
+            offset_awg_path0=amplitude,
+            offset_awg_path1=0.0,
+            gain_awg_path0=1.0,
+            gain_awg_path1=1.0,
+            # enable continuous-waveform mode on both paths
+            cont_mode_en_awg_path0=True,
+            cont_mode_en_awg_path1=True,
+            cont_mode_waveform_idx_awg_path0=0,
+            cont_mode_waveform_idx_awg_path1=0,
+            # turn on the RF output switch
+            marker_ovr_en=True,
+            marker_ovr_value=15,
+        )
+
     def apply(self, seq: Sequencer):
         """Configure sequencer-wide settings."""
         if self.address is not None:
@@ -142,4 +206,9 @@ class SequencerConfig(Model):
         for name in self.model_fields_set - applied:
             value = getattr(self, name)
             if value is not None:
-                seq.parameters[name].set(value)
+                try:
+                    seq.parameters[name].set(value)
+                except KeyError:
+                    # Parameter not available on this sequencer type
+                    # (e.g. cont_mode_* on a baseband sequencer)
+                    pass
