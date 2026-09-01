@@ -4,7 +4,7 @@ from typing import Annotated, Any, Literal, cast
 from qblox_instruments.qcodes_drivers.module import Module
 
 from qibolab._core.components import Channel, OscillatorConfig
-from qibolab._core.components.channels import AcquisitionChannel, IqChannel
+from qibolab._core.components.channels import AcquisitionChannel
 from qibolab._core.components.configs import Configs, IqMixerConfig
 from qibolab._core.identifier import ChannelId
 from qibolab._core.serialize import Model
@@ -59,13 +59,6 @@ class ModuleConfig(Model):
     So, they are defined at the module-level, but dynamically prefixed for the physical
     port.
     """
-    twpa: dict[str, dict] | None = None
-    """TWPA continuous-wave pump sources.
-
-    Maps physical output port paths (e.g. ``"out1"``) to a dictionary with
-    the pump tone configuration (``frequency``, ``lo_freq``, ``power``).
-    Applied via :meth:`_apply_twpa_cw`, independent of the Q1ASM sequences.
-    """
     # the following attributes are automatically processed and set
     scope_acq_trigger_mode_path0: Annotated[
         Literal["sequencer", "level"], ModuleType.QRM
@@ -92,7 +85,6 @@ class ModuleConfig(Model):
         configs: Configs,
         los: dict[ChannelId, OscillatorConfig],
         mixers: dict[ChannelId, IqMixerConfig],
-        twpa_sources: dict[str, str] | None = None,
     ) -> "ModuleConfig":
         # generate port configurations as a dictionary
         def portconfig(*args, **kwargs) -> tuple[str, port.StrDict]:
@@ -136,21 +128,6 @@ class ModuleConfig(Model):
             # only retain non-empty configurations
             if len(port) > 0
         ]
-        # build TWPA continuous-wave pump sources, if any
-        twpa: dict[str, dict] = {}
-        if twpa_sources:
-            for port_id, twpa_name in twpa_sources.items():
-                if (osc_config := configs.get(twpa_name)) is not None:
-                    twpa[f"out{port_id}"] = {
-                        "frequency": int(osc_config.frequency),
-                        "lo_freq": cls._twpa_lo_freq(channels, configs, port_id),
-                        "power": osc_config.power,
-                    }
-                else:
-                    raise ValueError(
-                        f"TWPA source '{twpa_name}' (port {port_id}) not found in configs."
-                    )
-
         # since port configurations can be set or referenced through multiple paths,
         # let's check consistency, and deduplicate them
         ports = port.deduplicate_configs(ports)
@@ -164,37 +141,8 @@ class ModuleConfig(Model):
                 f"{path}_{k}": v
                 for path, configs in ports.items()
                 for k, v in configs.items()
-            },
-            twpa=twpa or None,
+            }
         )
-
-    @staticmethod
-    def _twpa_lo_freq(
-        channels: dict[ChannelId, Channel], configs: Configs, port_id: str
-    ) -> int:
-        """Resolve the LO frequency associated with a TWPA output port.
-
-        Looks for a channel on the same physical port with a configured LO.
-        Returns ``0`` if none is found.
-        """
-        port_num = int(port_id[1:])  # "o1" -> 1
-        for ch in channels.values():
-            ch_addr = port.PortAddress.from_path(ch.path)
-            if ch_addr.ports[0] - 1 != port_num:
-                continue
-            probe_ch = (
-                channels.get(ch.probe)
-                if isinstance(ch, AcquisitionChannel) and ch.probe is not None
-                else ch
-            )
-            if (
-                isinstance(probe_ch, IqChannel)
-                and probe_ch.lo is not None
-                and (lo_cfg := configs.get(probe_ch.lo)) is not None
-            ):
-                return int(lo_cfg.frequency)
-            break
-        return 0
 
     @staticmethod
     def _set_option(mod: Module, name: str, metadata: list, value: Any) -> None:
@@ -223,53 +171,9 @@ class ModuleConfig(Model):
             # including input ones, if QRM
             mod.disconnect_inputs()
 
-        # apply all the configurations
+        for config, value in self.ports.items():
+            mod.parameters[config].set(value)
+
+        # apply all the other configurations
         for name, field in type(self).model_fields.items():
-            if name == "twpa":
-                continue
             self._set_option(mod, name, field.metadata, getattr(self, name))
-
-        # apply TWPA continuous-wave pumps, if any
-        if self.twpa:
-            for port_path, cfg in self.twpa.items():
-                self._apply_twpa_cw(mod, port_path, cfg)
-
-    @staticmethod
-    def _apply_twpa_cw(mod: Module, port_path: str, cfg: dict) -> None:
-        """Configure a dedicated sequencer in continuous-waveform mode for TWPA pump.
-
-        Args:
-            mod: the Qblox module.
-            port_path: the physical output port path (e.g. ``"out1"``).
-            cfg: dictionary with ``frequency``, ``lo_freq``, ``power`` keys.
-        """
-        from .sequencer import SequencerConfig
-
-        port_id = int(port_path[3:])
-        nco_freq = int(cfg["frequency"]) - int(cfg["lo_freq"])
-
-        # Assign the last sequencer to the CW pump, to keep lower-indexed ones free
-        # for Q1ASM sequences.
-        seq_idx = len(mod.sequencers) - 1
-        sequencer = mod.sequencers[seq_idx]
-
-        # Configure the sequencer for CW mode via the `SequencerConfig`
-        cw_cfg = SequencerConfig.build_cw(address=port_path, nco_freq=nco_freq)
-        cw_cfg.apply(sequencer)
-
-        # Enable the LO on the module for this port
-        lo_param = f"out{port_id}_lo_en"
-        if lo_param in mod.parameters:
-            mod.parameters[lo_param].set(True)
-
-        # Arm and start the CW pump
-        mod.arm_sequencer(seq_idx)
-        mod.start_sequencer()
-
-    @staticmethod
-    def disable_twpa_cw(mod: Module) -> None:
-        """Disable continuous-waveform mode on all sequencers of a module."""
-        for seq in mod.sequencers:
-            for param in ("cont_mode_en_awg_path0", "cont_mode_en_awg_path1"):
-                if param in seq.parameters:
-                    seq.parameters[param].set(False)

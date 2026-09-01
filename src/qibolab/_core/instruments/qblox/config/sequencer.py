@@ -3,6 +3,7 @@ from typing import cast
 
 import numpy as np
 from pydantic import ConfigDict
+from qblox_instruments.qcodes_drivers.module import Module
 from qblox_instruments.qcodes_drivers.sequencer import Sequencer
 
 from qibolab._core.components.channels import Channel, IqChannel
@@ -204,3 +205,46 @@ class SequencerConfig(Model):
                     # Parameter not available on this sequencer type
                     # (e.g. cont_mode_* on a baseband sequencer)
                     pass
+
+
+def apply_cw(
+    module: Module,
+    seq_idx: int,
+    address: str,
+    nco_freq: int,
+    amplitude: float = 0.5,
+) -> None:
+    """Configure a sequencer in continuous-waveform (CW) mode and arm it.
+
+    The sequencer plays a flat-envelope waveform forever, bypassing the Q1ASM
+    sequence processor. The NCO provides the IF tone (``nco_freq``); the
+    module-level LO upconverts it to the target RF frequency.
+
+    Args:
+        module: the Qblox module holding the sequencer.
+        seq_idx: index of the sequencer to use for the CW tone.
+        address: physical output port (e.g. ``"out1"``).
+        nco_freq: IF frequency in Hz (``frequency - lo_freq``).
+        amplitude: flat-envelope amplitude in [-1, 1]; 0.5 leaves headroom.
+    """
+    sequencer = module.sequencers[seq_idx]
+    SequencerConfig.build_cw(
+        address=address, nco_freq=nco_freq, amplitude=amplitude
+    ).apply(sequencer)
+
+    # Enable the LO for this port, to upconvert the IF tone to RF.
+    port_id = int(address[3:])
+    lo_param = f"out{port_id}_lo_en"
+    if lo_param in module.parameters:
+        module.parameters[lo_param].set(True)
+
+    # Arm the sequencer; the caller is responsible for starting the module.
+    module.arm_sequencer(seq_idx)
+
+
+def stop_cw(module: Module) -> None:
+    """Disable continuous-waveform mode on every sequencer of a module."""
+    for seq in module.sequencers:
+        for param in ("cont_mode_en_awg_path0", "cont_mode_en_awg_path1"):
+            if param in seq.parameters:
+                seq.parameters[param].set(False)
