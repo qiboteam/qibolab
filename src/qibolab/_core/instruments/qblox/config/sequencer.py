@@ -80,21 +80,21 @@ class SequencerConfig(Model):
         acquisition: AcquisitionType,
         rf: bool,
         sequence: Q1Sequence | None = None,
-        twpa: bool = False,
+        twpa: str | None = None,
     ) -> "SequencerConfig":
-        config = configs[channel_id]
+        config = configs.get(channel_id)
 
-        is_cw = twpa and (sequence is None or sequence.is_cw)
+        is_cw = twpa is not None and (sequence is None or sequence.is_cw)
 
         # conditional configurations
         cfg = cls(
             # connect to physical address
             address=address.local_address,
             # TODO: mixer calibration not yet propagated
-            offset_awg_path0=0.5 if twpa else 0.0,
+            offset_awg_path0=1.0 if is_cw else 0.0,
             offset_awg_path1=0.0,
-            gain_awg_path0=1.0 if twpa else None,
-            gain_awg_path1=1.0 if twpa else None,
+            gain_awg_path0=1.0 if is_cw else None,
+            gain_awg_path1=1.0 if is_cw else None,
             # TODO: properly document - the first 4 marker bits are used to toggle
             # outputs, enabling suitable amplification
             marker_ovr_en=True,
@@ -134,70 +134,31 @@ class SequencerConfig(Model):
         # note that probe channels also include readout ones (probe+acquisition), thus
         # there is no need to set it separately for the acquisition (which is on the
         # same IO sequencer)
-        probe = channels[channel_id].iqout(channel_id)
-        if probe is not None:
-            probe_config = cast(IqConfig, configs[probe])
-            probe_ = cast(IqChannel, channels[probe])
+        if twpa is not None:
+            osc_config = cast(OscillatorConfig, configs[twpa])
+            freq = osc_config.frequency
+            probe_ = cast(IqChannel, channels[channel_id])
             if probe_.lo is not None:
                 lo_freq = cast(OscillatorConfig, configs[probe_.lo]).frequency
-                cfg.nco_freq = int(probe_config.frequency - lo_freq)
+                cfg.nco_freq = int(freq - lo_freq)
             else:
-                cfg.nco_freq = int(probe_config.frequency)
-            if isinstance(probe_config, IqConfig):
+                cfg.nco_freq = int(freq)
+        else:
+            probe = channels[channel_id].iqout(channel_id)
+            if probe is not None:
+                probe_config = cast(IqConfig, configs[probe])
+                probe_ = cast(IqChannel, channels[probe])
+                if probe_.lo is not None:
+                    lo_freq = cast(OscillatorConfig, configs[probe_.lo]).frequency
+                    cfg.nco_freq = int(probe_config.frequency - lo_freq)
+                else:
+                    cfg.nco_freq = int(probe_config.frequency)
                 cfg.mixer_corr_gain_ratio = probe_config.scale_q
                 # imbalance corrections are stored in radians, while the Qblox parameter
                 # is in degrees (accepting values in the [-45, 45] range)
                 cfg.mixer_corr_phase_offset_degree = np.degrees(probe_config.phase_q)
 
         return cfg
-
-    @classmethod
-    def build_cw(
-        cls,
-        address: str,
-        nco_freq: int,
-        amplitude: float = 0.5,
-    ) -> "SequencerConfig":
-        """Build a sequencer configuration for continuous-waveform (CW) mode.
-
-        The sequencer plays a flat-envelope waveform forever, bypassing the
-        Q1ASM sequence processor.  The NCO provides the IF tone; the module-level
-        LO upconverts it to the target RF frequency.
-
-        Args:
-            address: physical port path (e.g. ``"out1"``).
-            nco_freq: IF frequency in Hz (``frequency - lo_freq``).
-            amplitude: flat-envelope amplitude in [-1, 1]; 0.5 leaves headroom.
-        """
-        # Flat envelope waveform, length must be a multiple of 4
-        sequence = {
-            "waveforms": {"0": {"data": [0.0] * 4, "index": 0}},
-            "weights": {},
-            "acquisitions": {},
-            "program": "stop\n",
-        }
-
-        return cls(
-            address=address,
-            sequence=sequence,
-            sync_en=False,
-            mod_en_awg=True,
-            nco_freq=nco_freq,
-            nco_phase_offs=0.0,
-            # amplitude via AWG offset (flat envelope)
-            offset_awg_path0=amplitude,
-            offset_awg_path1=0.0,
-            gain_awg_path0=1.0,
-            gain_awg_path1=1.0,
-            # enable continuous-waveform mode on both paths
-            cont_mode_en_awg_path0=True,
-            cont_mode_en_awg_path1=True,
-            cont_mode_waveform_idx_awg_path0=0,
-            cont_mode_waveform_idx_awg_path1=0,
-            # turn on the RF output switch
-            marker_ovr_en=True,
-            marker_ovr_value=15,
-        )
 
     def apply(self, seq: Sequencer):
         """Configure sequencer-wide settings."""
