@@ -156,14 +156,17 @@ class Cluster(Controller):
     As described in:
     https://docs.qblox.com/en/main/getting_started/setup.html#connecting-to-multiple-instruments
     """
-    twpas: set[ChannelId] = Field(default_factory=set)
+    twpas: dict[str, str] = Field(default_factory=dict)
     """TWPA pump channels.
 
-    Set of channel identifiers configured as TWPA pumps.
+    Maps TWPA channel identifiers (or output port paths, e.g. ``"8/o1"``) to the
+    name of the corresponding :class:`OscillatorConfig` in
+    :attr:`Parameters.configs`.
 
     Each TWPA channel generates either a continuous-wave tone in the background
     or a synchronized single-pulse sweep when targeted by channel sweepers.
     """
+
     _cluster: qblox.Cluster | None = None
 
     @property
@@ -287,7 +290,7 @@ class Cluster(Controller):
                     options_,
                     self.sampling_rate,
                     merged_vzs=not phase_sweeper_present,
-                    twpas=self.twpas,
+                    twpas=self._twpa_channels,
                 )
 
                 for channelid, seq in sequences_.items():
@@ -327,6 +330,32 @@ class Cluster(Controller):
             # update results - concatenating shots, if needed
             results |= concat_shots(psres, options)
         return results
+
+    @property
+    def _twpa_channels(self) -> set[ChannelId]:
+        """Channel identifiers corresponding to TWPA channels."""
+        twpa_set = set(self.twpas)
+        for ch, channel in self.channels.items():
+            addr = PortAddress.from_path(channel.path)
+            if (
+                ch in self.twpas
+                or f"{addr.slot}/{addr.local_address}" in self.twpas
+                or f"{addr.slot}/o{addr.ports[0]}" in self.twpas
+            ):
+                twpa_set.add(ch)
+        return twpa_set
+
+    def _twpa_config(self, ch: ChannelId, address: PortAddress) -> str | None:
+        """Find TWPA OscillatorConfig name for a channel or port path, if any."""
+        if ch in self.twpas:
+            return self.twpas[ch]
+        path = f"{address.slot}/{address.local_address}"
+        if path in self.twpas:
+            return self.twpas[path]
+        short_path = f"{address.slot}/o{address.ports[0]}"
+        if short_path in self.twpas:
+            return self.twpas[short_path]
+        return None
 
     def _disconnect_and_desync_sequencers(self) -> None:
         """Clear the relevant module settings before applying a new sequence."""
@@ -411,6 +440,7 @@ class Cluster(Controller):
                 if exec_mode and ch not in sequences:
                     continue
 
+                twpa_config_name = self._twpa_config(ch, address)
                 seqcfg = seqcfgs[slot][idx] = config.SequencerConfig.build(
                     address,
                     ch,
@@ -419,7 +449,7 @@ class Cluster(Controller):
                     acquisition,
                     module.is_rf_type,
                     sequence=sequences_[ch],
-                    twpa=ch in self.twpas,
+                    twpa=twpa_config_name,
                 )
                 seqcfg.apply(sequencer)
                 # populate channel-to-sequencer mapping

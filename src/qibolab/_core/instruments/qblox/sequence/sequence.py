@@ -204,7 +204,7 @@ def compile(
 ) -> dict[ChannelId, Q1Sequence]:
     duration = sequence.duration
     sweeper_channels = {ch: [] for ch in swept_channels(sweepers)}
-    seqs = {
+    return {
         ch: Q1Sequence.from_pulses(
             seq,
             sweepers,
@@ -216,16 +216,17 @@ def compile(
         )
         for ch, seq in (sweeper_channels | sequence.by_channel).items()
         if ch not in twpas
-    }
-    for ch in twpas:
-        if ch in sweeper_channels:
-            seqs[ch] = Q1Sequence.from_twpa(
+    } | {
+        ch: (
+            Q1Sequence.cw()
+            if ch not in sweeper_channels
+            else Q1Sequence.from_twpa(
                 options,
                 sweepers,
                 sampling_rate,
                 ch,
                 duration,
             )
-        else:
-            seqs[ch] = Q1Sequence.cw()
-    return seqs
+        )
+        for ch in twpas
+    }
