@@ -107,10 +107,10 @@ def test_compile_twpa_cw():
         options=options,
         sampling_rate=1.0,
         merged_vzs=True,
-        twpas={"twpa_ch": "twpa_pump"},
+        twpas={"twpa": ("8/o1", None)},
     )
-    assert "twpa_ch" in seqs
-    assert seqs["twpa_ch"].is_cw is True
+    assert "twpa" in seqs
+    assert seqs["twpa"].is_cw is True
 
 
 def test_compile_twpa_swept():
@@ -119,7 +119,7 @@ def test_compile_twpa_swept():
     sweeper = Sweeper(
         parameter=Parameter.frequency,
         values=np.array([6.0e9, 6.1e9]),
-        channels=["twpa_ch"],
+        channels=["twpa"],
     )
     seqs = compile(
         sequence=ps,
@@ -127,10 +127,10 @@ def test_compile_twpa_swept():
         options=options,
         sampling_rate=1.0,
         merged_vzs=True,
-        twpas={"twpa_ch": "twpa_pump"},
+        twpas={"twpa": ("8/o1", None)},
     )
-    assert "twpa_ch" in seqs
-    assert seqs["twpa_ch"].is_cw is False
+    assert "twpa" in seqs
+    assert seqs["twpa"].is_cw is False
 
 
 # ---------------------------------------------------------------------------
@@ -140,22 +140,21 @@ def test_compile_twpa_swept():
 
 def test_sequencer_config_build_twpa_cw():
     address = PortAddress.from_path("8/o1")
-    channels = {"twpa_ch": IqChannel(path="8/o1", lo="lo1")}
+    channels = {}
     configs = {
-        "twpa_pump": OscillatorConfig(frequency=6.5e9, power=10.0),
-        "lo1": OscillatorConfig(frequency=5.0e9, power=10.0),
+        "twpa": OscillatorConfig(frequency=6.5e9, power=10.0),
     }
 
     seq = Q1Sequence.cw()
     cfg = SequencerConfig.build(
         address=address,
-        channel_id="twpa_ch",
+        channel_id="twpa",
         channels=channels,
         configs=configs,
         acquisition=AcquisitionType.INTEGRATION,
         rf=True,
         sequence=seq,
-        twpa="twpa_pump",
+        twpa=True,
     )
 
     assert cfg.sync_en is False
@@ -164,34 +163,63 @@ def test_sequencer_config_build_twpa_cw():
     assert cfg.offset_awg_path0 == 1.0
     assert cfg.gain_awg_path0 == 1.0
     assert cfg.gain_awg_path1 == 1.0
-    assert cfg.nco_freq == 1_500_000_000
+    assert cfg.nco_freq == 0
+    assert cfg.mixer_corr_gain_ratio is None
+    assert cfg.mixer_corr_phase_offset_degree is None
+
+
+def test_sequencer_config_build_twpa_with_mixer():
+    from qibolab._core.components import IqMixerConfig
+
+    address = PortAddress.from_path("8/o1")
+    channels = {}
+    configs = {
+        "twpa": OscillatorConfig(frequency=6.5e9, power=10.0),
+    }
+    mixer = IqMixerConfig(scale_q=1.05, phase_q=2.5, offset_i=0.01, offset_q=-0.02)
+
+    seq = Q1Sequence.cw()
+    cfg = SequencerConfig.build(
+        address=address,
+        channel_id="twpa",
+        channels=channels,
+        configs=configs,
+        acquisition=AcquisitionType.INTEGRATION,
+        rf=True,
+        sequence=seq,
+        twpa=True,
+        mixer=mixer,
+    )
+
+    assert cfg.nco_freq == 0
+    assert cfg.mixer_corr_gain_ratio == 1.05
+    assert cfg.mixer_corr_phase_offset_degree == 2.5
 
 
 def test_sequencer_config_build_twpa_swept():
     address = PortAddress.from_path("8/o1")
-    channels = {"twpa_ch": IqChannel(path="8/o1", lo="lo1")}
+    channels = {}
     configs = {
-        "twpa_pump": OscillatorConfig(frequency=6.5e9, power=10.0),
-        "lo1": OscillatorConfig(frequency=5.0e9, power=10.0),
+        "twpa": OscillatorConfig(frequency=6.5e9, power=10.0),
     }
 
     options = ExecutionParameters(nshots=10, relaxation_time=1000)
     sweeper = Sweeper(
         parameter=Parameter.frequency,
         values=np.array([6.0e9, 6.1e9]),
-        channels=["twpa_ch"],
+        channels=["twpa"],
     )
-    seq = Q1Sequence.from_twpa(options, [[sweeper]], 1.0, "twpa_ch", 100.0)
+    seq = Q1Sequence.from_twpa(options, [[sweeper]], 1.0, "twpa", 100.0)
 
     cfg = SequencerConfig.build(
         address=address,
-        channel_id="twpa_ch",
+        channel_id="twpa",
         channels=channels,
         configs=configs,
         acquisition=AcquisitionType.INTEGRATION,
         rf=True,
         sequence=seq,
-        twpa="twpa_pump",
+        twpa=True,
     )
 
     assert cfg.sync_en is True
@@ -199,7 +227,7 @@ def test_sequencer_config_build_twpa_swept():
     assert cfg.offset_awg_path0 == 0.0
     assert cfg.gain_awg_path0 is None
     assert cfg.gain_awg_path1 is None
-    assert cfg.nco_freq == 1_500_000_000
+    assert cfg.nco_freq == 0
 
 
 # ---------------------------------------------------------------------------
@@ -213,24 +241,27 @@ def test_cluster_twpa_fields_defaults():
 
 
 def test_cluster_twpa_custom():
-    c = Cluster(address="addr", name="my_cluster", twpas={"twpa_ch": "twpa_pump"})
-    assert c.twpas == {"twpa_ch": "twpa_pump"}
-
-
-def test_cluster_twpa_resolution():
     c = Cluster(
         address="addr",
         name="my_cluster",
-        channels={
-            "ch1": IqChannel(path="8/o1"),
-            "ch2": IqChannel(path="7/o2"),
-        },
-        twpas={
-            "ch1": "pump1",
-            "7/o2": "pump2",
-        },
+        twpas={"twpa1": ("8/o1", None), "twpa2": ("7/o1", "mixer2")},
     )
-    assert c._twpa_channels == {"ch1", "ch2", "7/o2"}
-    assert c._twpa_config("ch1", PortAddress.from_path("8/o1")) == "pump1"
-    assert c._twpa_config("ch2", PortAddress.from_path("7/o2")) == "pump2"
-    assert c._twpa_config("unknown", PortAddress.from_path("1/o1")) is None
+    assert c.twpas == {"twpa1": ("8/o1", None), "twpa2": ("7/o1", "mixer2")}
+
+
+def test_cluster_twpa_channels_by_module():
+    c = Cluster(
+        address="addr",
+        name="my_cluster",
+        channels={"drive": IqChannel(path="8/o2")},
+        twpas={"twpa": ("8/o1", None), "twpa2": ("7/o1", "mixer2")},
+    )
+    by_mod = c._channels_by_module
+    assert 8 in by_mod
+    assert 7 in by_mod
+    assert [ch for ch, _ in by_mod[8]] == ["drive", "twpa"]
+    assert [ch for ch, _ in by_mod[7]] == ["twpa2"]
+    assert c._los["twpa"] == "twpa"
+    assert c._los["twpa2"] == "twpa2"
+    assert "twpa" not in c._mixers
+    assert c._mixers["twpa2"] == "mixer2"
