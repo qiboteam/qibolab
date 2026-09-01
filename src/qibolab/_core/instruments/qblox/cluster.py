@@ -7,6 +7,7 @@ from itertools import groupby
 from typing import cast
 
 import qblox_instruments as qblox
+from pydantic import Field
 from qblox_instruments.qcodes_drivers.module import Module
 from qcodes.instrument import find_or_create_instrument
 
@@ -16,6 +17,7 @@ from qibolab._core.components import (
     DcChannel,
     DcConfig,
     IqChannel,
+    OscillatorConfig,
 )
 from qibolab._core.execution_parameters import (
     AcquisitionType,
@@ -30,7 +32,6 @@ from qibolab._core.sweeper import ParallelSweepers, Parameter, normalize_sweeper
 
 from . import config
 from .batching import batch_sequences_by_cluster_memory_limits
-from .components import QbloxClusterConfig
 from .config import PortAddress
 from .identifiers import SequencerMap, SlotId
 from .log import Logger
@@ -156,6 +157,25 @@ class Cluster(Controller):
     As described in:
     https://docs.qblox.com/en/main/getting_started/setup.html#connecting-to-multiple-instruments
     """
+    twpas: dict[str, str] = Field(default_factory=dict)
+    """TWPA pump sources.
+
+    Maps QCM-RF output ports (addressed by their cluster-relative path, e.g.
+    ``"8/o1"``) to the name of the :class:`OscillatorConfig` (in
+    :attr:`Parameters.configs`) holding the pump tone.
+
+    Each entry generates a continuous-wave tone in the background, on a
+    dedicated sequencer, independent of any Q1ASM sequence. This is the
+    driver-native replacement for delegating the pump to an external
+    instrument.
+    """
+    turn_off_on_disconnect: bool = True
+    """Whether to stop the TWPA continuous-wave pumps on disconnect.
+
+    Mirrors :attr:`qibolab.LocalOscillator.turn_off_on_disconnect`, but scoped
+    to the TWPA continuous-wave pumps only. If ``False``, the pumps keep playing
+    after :meth:`Cluster.disconnect`.
+    """
     _cluster: qblox.Cluster | None = None
 
     @property
@@ -190,8 +210,6 @@ class Cluster(Controller):
         self._cluster = find_or_create_instrument(
             qblox.Cluster, recreate=True, name=self.name, identifier=self.address
         )
-        # cleared on disconnect
-        self._twpa_cluster_config = None
 
     def disconnect(self) -> None:
         """Disconnect and reset the instrument."""
@@ -204,17 +222,12 @@ class Cluster(Controller):
         for module in self._modules.values():
             module.stop_sequencer()
 
-        # Stop TWPA continuous-wave pumps, unless configured to keep them running.
-        # The flag is read from the `QbloxClusterConfig` associated with this
-        # cluster, if available in the last `play()`'s configurations.
-        ccfg = getattr(self, "_twpa_cluster_config", None)
-        if ccfg is not None and ccfg.turn_off_on_disconnect:
-            for module in self._modules.values():
-                self._stop_twpa_cw(module)
+        # Stop the TWPA continuous-wave pumps, unless configured to keep them running.
+        if self.turn_off_on_disconnect:
+            self._stop_twpa_cw()
 
         self._cluster.close()
         self._cluster = None
-        self._twpa_cluster_config = None
 
     def _set_dc_offsets_to_0(self) -> None:
         flux_slot_to_ports: dict[SlotId, set[int]] = defaultdict(set)
@@ -230,9 +243,13 @@ class Cluster(Controller):
                 offset_parameter = f"out{port}_offset"
                 module.parameters[offset_parameter].set(0.0)
 
-    def _stop_twpa_cw(self, module) -> None:
-        """Stop continuous-waveform (TWPA pump) on all sequencers of a module."""
-        config.module.ModuleConfig.disable_twpa_cw(module)
+    def _stop_twpa_cw(self) -> None:
+        """Stop the TWPA continuous-wave pumps on every module.
+
+        Mirrors :meth:`_set_dc_offsets_to_0`, operating cluster-wide.
+        """
+        for module in self._modules.values():
+            config.sequencer.stop_cw(module)
 
     def play(
         self,
@@ -275,10 +292,10 @@ class Cluster(Controller):
             },
         )
 
-        # configure the modules (including TWPA continuous-wave pumps, if any)
+        # configure the modules
         self._configure_modules(configs)
-        # remember the cluster config for the `disconnect()` turn-off handling
-        self._twpa_cluster_config = self._cluster_config(configs)
+        # configure the TWPA continuous-wave pumps, if any
+        self._configure_twpa(configs)
 
         # Execute each batch sequentially, and concatenate results
         log = Logger(configs)
@@ -360,7 +377,6 @@ class Cluster(Controller):
 
         Returns a dictionary mapping slots to their respective ModuleConfig.
         """
-        cluster_config = self._cluster_config(configs)
         modcfgs = {}
         for slot, chs in self._channels_by_module.items():
             module = self._modules[slot]
@@ -369,23 +385,67 @@ class Cluster(Controller):
             los = config.module.los(self._los, configs, ids)
             mixers = config.module.mixers(self._mixers, configs, ids)
             modcfg = modcfgs[slot] = config.ModuleConfig.build(
-                channels,
-                configs,
-                los,
-                mixers,
-                twpa_sources=(
-                    cluster_config.twpa_sources if cluster_config is not None else None
-                ),
+                channels, configs, los, mixers
             )
             modcfg.apply(module)
         return modcfgs
 
-    def _cluster_config(self, configs: Configs) -> QbloxClusterConfig | None:
-        """Retrieve the :class:`QbloxClusterConfig` for this cluster, if any."""
-        cfg = configs.get(self.name)
-        if isinstance(cfg, QbloxClusterConfig):
-            return cfg
-        return None
+    def _configure_twpa(self, configs: Configs) -> None:
+        """Configure the TWPA continuous-wave pumps (see :attr:`twpa_sources`).
+
+        Each source port gets a dedicated sequencer running a flat-envelope tone
+        in continuous-waveform mode, independent of any Q1ASM sequence. The
+        sequencer provides the IF tone (NCO); the module LO upconverts it to the
+        target RF frequency.
+        """
+        if not self.twpas:
+            return
+
+        by_slot: dict[SlotId, list[PortAddress]] = defaultdict(list)
+        for path in self.twpas.values():
+            addr = PortAddress.from_path(path)
+            by_slot[addr.slot].append(addr)
+
+        for slot, addresses in by_slot.items():
+            module = self._modules[slot]
+            for i, address in enumerate(addresses):
+                path = f"{slot}/{address.local_address}"
+                osc_config = self._twpa_osc(configs, path)
+                lo_freq = self._twpa_lo_freq(slot, address, configs)
+
+                # Assign the highest-indexed sequencers, to keep lower-indexed
+                # ones free for Q1ASM sequences.
+                seq_idx = len(module.sequencers) - 1 - i
+                config.sequencer.apply_cw(
+                    module,
+                    seq_idx,
+                    address.local_address,
+                    int(osc_config.frequency) - int(lo_freq),
+                )
+
+            module.start_sequencer()
+
+    def _twpa_osc(self, configs: Configs, path: str) -> OscillatorConfig:
+        osc_config = configs.get(self.twpas[path])
+        if osc_config is None:
+            raise ValueError(
+                f"TWPA source '{self.twpas[path]}' (port {path}) not found in configs."
+            )
+        return osc_config
+
+    def _twpa_lo_freq(
+        self, slot: SlotId, address: PortAddress, configs: Configs
+    ) -> int:
+        """Determine the LO frequency associated with a TWPA port, if any."""
+        port_id = address.ports[0] - 1
+        for channel in self.channels.values():
+            ch_address = PortAddress.from_path(channel.path)
+            if ch_address.slot == slot and ch_address.ports[0] - 1 == port_id:
+                lo_name = cast(IqChannel, channel).lo
+                if lo_name is not None:
+                    return int(cast(OscillatorConfig, configs[lo_name]).frequency)
+                break
+        return 0
 
     def _configure_sequencers(
         self,
