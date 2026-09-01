@@ -1,4 +1,4 @@
-from collections.abc import Iterable
+from collections.abc import Collection, Iterable
 from typing import Annotated
 
 import numpy as np
@@ -17,8 +17,9 @@ from qibolab._core.sweeper import (
 )
 
 from ..q1asm import Program, parse
+from ..q1asm.ast_ import Line, Stop
 from .acquisition import Acquisitions, MeasureId, Weight, Weights, acquisitions
-from .program import program
+from .program import program, twpa_program
 from .waveforms import Waveform, WaveformIndex, waveforms
 
 __all__ = ["Q1Sequence"]
@@ -115,9 +116,51 @@ class Q1Sequence(Model):
         )
 
     @classmethod
+    def from_twpa(
+        cls,
+        options: ExecutionParameters,
+        sweepers: list[ParallelSweepers],
+        sampling_rate: float,
+        channel: ChannelId,
+        duration: float,
+    ) -> "Q1Sequence":
+        duration_samples = int(duration * sampling_rate)
+        _, sweepers_ = _apply_sampling_rate([], sweepers, sampling_rate)
+        return cls(
+            waveforms={},
+            weights={},
+            acquisitions={},
+            program=twpa_program(
+                options,
+                sweepers_,
+                {channel},
+                duration_samples,
+            ),
+        )
+
+    @classmethod
+    def cw(cls) -> "Q1Sequence":
+        return cls(
+            waveforms={0: Waveform(data=np.zeros(4), index=0)},
+            weights={},
+            acquisitions={},
+            program=Program(elements=[Line.instr(Stop())]),
+        )
+
+    @classmethod
     def empty(cls) -> "Q1Sequence":
         return cls(
             waveforms={}, weights={}, acquisitions={}, program=Program(elements=[])
+        )
+
+    @property
+    def is_cw(self) -> bool:
+        return (
+            len(self.program.elements) == 1
+            and isinstance(self.program.elements[0], Line)
+            and isinstance(self.program.elements[0].instruction, Stop)
+            and len(self.waveforms) > 0
+            and len(self.acquisitions) == 0
         )
 
     @property
@@ -157,10 +200,11 @@ def compile(
     options: ExecutionParameters,
     sampling_rate: float,
     merged_vzs: bool,
+    twpas: Collection[ChannelId] = (),
 ) -> dict[ChannelId, Q1Sequence]:
     duration = sequence.duration
     sweeper_channels = {ch: [] for ch in swept_channels(sweepers)}
-    return {
+    seqs = {
         ch: Q1Sequence.from_pulses(
             seq,
             sweepers,
@@ -171,4 +215,17 @@ def compile(
             merged_vzs,
         )
         for ch, seq in (sweeper_channels | sequence.by_channel).items()
+        if ch not in twpas
     }
+    for ch in twpas:
+        if ch in sweeper_channels:
+            seqs[ch] = Q1Sequence.from_twpa(
+                options,
+                sweepers,
+                sampling_rate,
+                ch,
+                duration,
+            )
+        else:
+            seqs[ch] = Q1Sequence.cw()
+    return seqs
