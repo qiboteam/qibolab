@@ -1,11 +1,8 @@
 """Tests for TWPA continuous-waveform (CW) pump support in the Qblox driver."""
 
-import pytest
-
-from qibolab._core.components.configs import OscillatorConfig
-from qibolab._core.instruments.qblox.components import QbloxClusterConfig
+from qibolab._core.components import IqChannel, OscillatorConfig
+from qibolab._core.instruments.qblox.cluster import Cluster
 from qibolab._core.instruments.qblox.config.sequencer import SequencerConfig
-from qibolab._core.parameters import ConfigKinds, Parameters
 
 # ---------------------------------------------------------------------------
 # `SequencerConfig.build_cw`
@@ -54,49 +51,50 @@ def test_build_cw_serialization():
 
 
 # ---------------------------------------------------------------------------
-# `QbloxClusterConfig`
+# `Cluster` instrument attributes
 # ---------------------------------------------------------------------------
 
 
-@pytest.fixture(autouse=True)
-def _register_qblox_cluster_config():
-    """Ensure `QbloxClusterConfig` is registered in `ConfigKinds`."""
-    ConfigKinds.reset()
-    ConfigKinds.extend([QbloxClusterConfig])
-    yield
-    ConfigKinds.reset()
+def test_cluster_twpa_fields_defaults():
+    c = Cluster(address="addr", name="my_cluster")
+    assert c.twpas == {}
+    assert c.turn_off_on_disconnect is True
 
 
-def test_qblox_cluster_config_deserialization():
-    raw = {
-        "kind": "qblox-cluster",
-        "twpa_sources": {"o1": "twpa_pump"},
-        "turn_off_on_disconnect": False,
-    }
-    cfg = ConfigKinds.adapted().validate_python(raw)
-    assert isinstance(cfg, QbloxClusterConfig)
-    assert cfg.kind == "qblox-cluster"
-    assert cfg.twpa_sources == {"o1": "twpa_pump"}
-    assert cfg.turn_off_on_disconnect is False
+def test_cluster_twpa_sources_accept_slot_port_paths():
+    """Keys of ``twpa_sources`` must be slot-qualified paths (e.g. ``"8/o1"``)."""
+    c = Cluster(address="addr", name="my_cluster", twpas={"8/o1": "pump"})
+    assert c.twpas == {"8/o1": "pump"}
 
 
-def test_qblox_cluster_config_defaults():
-    cfg = QbloxClusterConfig()
-    assert cfg.twpa_sources == {}
-    assert cfg.turn_off_on_disconnect is True
+def test_cluster_turn_off_on_disconnect_flag():
+    c = Cluster(address="addr", name="my_cluster", turn_off_on_disconnect=False)
+    assert c.turn_off_on_disconnect is False
 
 
-def test_qblox_cluster_config_in_parameters():
-    """`QbloxClusterConfig` should be resolvable when mixed with built-in configs."""
-    p = Parameters(
-        configs={
-            "my_cluster": {
-                "kind": "qblox-cluster",
-                "twpa_sources": {"o1": "twpa"},
-            },
-            "twpa": {"kind": "oscillator", "frequency": 6.36e9, "power": -10.0},
-        }
-    )
-    assert isinstance(p.configs["my_cluster"], QbloxClusterConfig)
-    assert isinstance(p.configs["twpa"], OscillatorConfig)
-    assert p.configs["my_cluster"].twpa_sources == {"o1": "twpa"}
+# ---------------------------------------------------------------------------
+# `_configure_twpa` (requires a connected cluster, so here we only validate
+# the "no sources" short-circuit and the LO resolution helper)
+# ---------------------------------------------------------------------------
+
+
+def test_configure_twpa_no_sources_is_noop():
+    c = Cluster(address="addr", name="my_cluster")
+    c._configure_twpa({})  # must not raise
+
+
+def test_twpa_lo_freq_resolves_from_channel():
+    c = Cluster(address="addr", name="my_cluster")
+    c.channels = {"8/drive": IqChannel(path="8/o1", lo="lo1")}
+    configs = {"lo1": OscillatorConfig(frequency=5.0e9, power=-10.0)}
+    from qibolab._core.instruments.qblox.config import PortAddress
+
+    assert c._twpa_lo_freq(8, PortAddress.from_path("8/o1"), configs) == 5_000_000_000
+
+
+def test_twpa_lo_freq_missing_returns_zero():
+    c = Cluster(address="addr", name="my_cluster")
+    c.channels = {"8/drive": IqChannel(path="8/o1", lo=None)}
+    from qibolab._core.instruments.qblox.config import PortAddress
+
+    assert c._twpa_lo_freq(8, PortAddress.from_path("8/o1"), {}) == 0
