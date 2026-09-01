@@ -24,6 +24,7 @@ jobs:
     timeout-minutes: 45
     env:
       PR_NUMBER: ${{ github.event.pull_request.number }}
+      MAX_AI_CREDITS: 100
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -54,6 +55,7 @@ jobs:
           # write files, so the file-writing is done in a separate follow-up
           # prompt below (same session, so it has the review in context).
           copilot --yolo -p "/review PR #${PR_NUMBER}" \
+            --max-ai-credits "${MAX_AI_CREDITS}" \
             --share=review-session.md
 
       - name: Write review files (second prompt, same session)
