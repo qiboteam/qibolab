@@ -1,0 +1,74 @@
+# AI code review using GitHub Copilot CLI.
+#
+# Trigger: add the "run-qibobot" label to a pull request.
+#
+name: ai-review
+
+on:
+  pull_request:
+    types: [labeled]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+  copilot-requests: write
+
+jobs:
+  ai-review:
+    if: contains(github.event.pull_request.labels.*.name, 'run-qibobot')
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Copilot CLI
+        run: npm install -g @github/copilot
+
+      - name: Run Copilot CLI review (BYOK)
+        env:
+          COPILOT_PROVIDER_BASE_URL: ${{ secrets.COPILOT_PROVIDER_BASE_URL }}
+          COPILOT_PROVIDER_TYPE: openai
+          COPILOT_PROVIDER_API_KEY: ${{ secrets.COPILOT_PROVIDER_API_KEY }}
+          COPILOT_PROVIDER_MAX_PROMPT_TOKENS: ${{ secrets.COPILOT_PROVIDER_MAX_PROMPT_TOKENS }}
+          COPILOT_PROVIDER_MAX_OUTPUT_TOKENS: ${{ secrets.COPILOT_PROVIDER_MAX_OUTPUT_TOKENS }}
+          COPILOT_MODEL: ${{ secrets.COPILOT_MODEL }}
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_PAT }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          copilot --yolo -p "/review PR #${PR_NUMBER}. Write a clear markdown review of your findings to review-summary.md." \
+            --share=review-session.md
+
+      - name: Post review comment
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ -f review-summary.md ]; then
+            gh pr comment "$PR_NUMBER" --body-file review-summary.md
+          else
+            echo "No review summary produced."
+          fi
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-review-output
+          path: |
+            review-summary.md
+            review-session.md
+          if-no-files-found: ignore
