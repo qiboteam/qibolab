@@ -17,9 +17,9 @@ from ..q1asm.ast_ import (
 )
 from .acquisition import AcquisitionSpec, MeasureId
 from .experiment import experiment
+from .finalize import DEFAULT_PIPELINE, transform
 from .loops import LoopSpec, Registers, loop, loops
 from .sweepers import Param, params, params_reshape, sweep_sequence, update_instructions
-from .transpile import transpile
 from .waveforms import WaveformIndices
 
 __all__ = ["Program"]
@@ -124,22 +124,25 @@ def program(
     singleshot = options.averaging_mode is AveragingMode.SINGLESHOT
     pulses = {p[0].id for p in sweepseq}
 
-    return transpile(
-        [
-            el
-            for block in [
-                setup(loops_, params_, channel, pulses),
-                loop(
-                    experiment_,
-                    loops_,
-                    indexed_params,
-                    options.relaxation_time,
-                    singleshot,
-                    channel,
-                    pulses,
-                ),
-                finalization(),
-            ]
-            for el in block
-        ]
+    return Program.from_elements(
+        transform(
+            [
+                el
+                for block in [
+                    setup(loops_, params_, channel, pulses),
+                    loop(
+                        experiment_,
+                        loops_,
+                        indexed_params,
+                        options.relaxation_time,
+                        singleshot,
+                        channel,
+                        pulses,
+                    ),
+                    finalization(),
+                ]
+                for el in block
+            ],
+            DEFAULT_PIPELINE,
+        )
     )

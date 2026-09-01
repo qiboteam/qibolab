@@ -1,0 +1,151 @@
+from collections.abc import Callable
+from typing import Generic, TypeAlias, TypeVar
+
+from qibolab._core.serialize import Model
+
+from ...q1asm.ast_ import Block, Line
+
+State = TypeVar("State")
+"""Generic carried-on state."""
+Match: TypeAlias = Callable[[Line, State], tuple[bool, State]]
+"""Matching condition."""
+LineMap: TypeAlias = Callable[[Line, State], tuple[Block, State]]
+"""Transformation acting on individual lines."""
+BlockMap: TypeAlias = Callable[[list[Line], State], tuple[Block, State]]
+"""Transformation acting on a block of instructions."""
+
+
+class LineRule(Model, Generic[State]):
+    """Line-matching transformation.
+
+    This rule applies to a single line. But both the matching condition and the
+    transformation can be affected by a carried-on state.
+    """
+
+    match: Match[State]
+    """Matching condition."""
+    map: LineMap[State]
+    "The transformation applied."
+
+    def map_annotate(self, line: Line, state: State) -> tuple[Block, State]:
+        """Apply map preserving annotations, i.e. label and comment."""
+        block, state = self.map(line, state)
+        if len(block) == 0:
+            return block, state
+        lineable = block[0]
+        instr = lineable.instruction if isinstance(lineable, Line) else lineable
+        annotated = [
+            el
+            for el in (
+                (
+                    Line(instruction=instr, label=line.label, comment=line.comment),
+                    *(el for el in block[1:]),
+                )
+            )
+        ]
+        return annotated, state
+
+
+class BlockRule(Model, Generic[State]):
+    """Block-matching transformation.
+
+    This rule applies to an entire block, which is identified by matching a certain
+    opening condition on a single line, and a similar closing condition.
+
+    However, both of them also depend on a state, which they can also modify. In this
+    way, each condition can become effectively multi-line.
+    The state itself is only depending on previously-processed ones. But, opening it
+    early and closing late, it is still possible to make as general as needed, at the
+    price of shadowing other similar blocks in the same step. In the extreme case, the
+    block can open at the first instruction seen, and close at the last one, getting the
+    whole program as input.
+    """
+
+    initial: Match[State]
+    """Opening condition."""
+    final: Match[State]
+    """Closing condition."""
+    map: BlockMap[State]
+    "The transformation applied."
+
+
+Step: TypeAlias = tuple[LineRule, ...] | BlockRule
+"""Transformation step.
+
+It is supposed to iterate through the entire set of instructions exactly one.
+
+It can be composed of:
+
+- a set of alternatives line transformations
+- a single block-matching transformation
+
+Semantics
+---------
+
+The reason for the type of allowed stepes is to unambiguously define how they match the
+instructions. Keep the intuition straightforward is explicitly favored over efficiency.
+
+If multiple line-oriented transformations are specified, they are tested first-to-last
+against each instruction line. The first one which matches, applies the transformation,
+otherwise, a trivial transformation is applied, and the line is output into its own
+block (1-element list).
+
+Instead, having block-matching transformations, which essentially consist in an opening
+guard and a look-ahead, it is creating potential ambiguity for overlapping blocks, and
+internal matching lines.
+This ambiguity is not completely eliminated by the current choice, since overlapping
+blocks may exist for the same rule. In which case, only the block starting first is
+considered, and the initial matching for new blocks is disabled until the current block
+is closed.
+
+.. note::
+    It would be possible to combine multiple block-matching rules and even line-matching
+    ones just applying the algorithmic choice mentioned last. But this is intentionally
+    not supported.
+"""
+
+
+Pipeline: TypeAlias = tuple[Step]
+"""Series of transformation from Q1ASM-like code into executable.
+
+A pipeline is transforming a possibly internal extension of Q1ASM into a different one.
+
+It can be composed by multiple :class:`Step`, which are expected to sequentially read
+the entire list of instructions.
+
+The main purposes are intended to be:
+
+- transform minor extensions into valid instructions
+
+    - e.g. turning long waits into equivalent loops, which are respecting the
+      limitations for the wait instructions
+
+- supplying predictable instructions, that are consciously neglected in the code
+  generation, assuming a downstream pipeline centralization
+
+    - e.g. adding ``nop`` instructions after registers' manipulations, to guarantee the
+      validity at consumption site
+
+- optimizing the execution, when known patterns are identified
+
+    - some optimizations are already possible at the level of the generation, but
+      sometimes it may be convenient to inspect the code a posteriori, since some
+      patterns may arise from close combinations that are generated by independent
+      branches in the call stack
+    - e.g. phases shifts by immediates can be generated by multiple instructions, and it
+      can not be possible to simply combine them ahead of time, but it could be easier
+      during a post-inspection
+
+.. note::
+    Some transformations could be locally disabled by providing markers in the comments
+    which are recognized during the rule applications, and just stripped, with no other
+    consequent action.
+
+    In general, comments provide free space for optimization hints. Both at line and
+    block level.
+
+.. todo::
+    A potential option is to apply each step either to a single block, or to a list of
+    them, concatenating the result. This second input would allow to segment the program
+    in a preparation step, to be easier to process in a subsequent one.
+"""
