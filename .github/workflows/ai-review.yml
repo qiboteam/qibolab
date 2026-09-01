@@ -1,0 +1,125 @@
+# AI code review using GitHub Copilot CLI.
+#
+# Trigger: add the "run-qibot" label to a pull request.
+#
+name: ai-review
+
+on:
+  pull_request:
+    types: [labeled]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+  copilot-requests: write
+
+jobs:
+  ai-review:
+    if: contains(github.event.pull_request.labels.*.name, 'run-qibot')
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+      MAX_AI_CREDITS: 100
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Copilot CLI
+        run: npm install -g @github/copilot
+
+      - name: Run Copilot CLI review (BYOK)
+        env:
+          COPILOT_PROVIDER_BASE_URL: ${{ secrets.COPILOT_PROVIDER_BASE_URL }}
+          COPILOT_PROVIDER_TYPE: openai
+          COPILOT_PROVIDER_API_KEY: ${{ secrets.COPILOT_PROVIDER_API_KEY }}
+          COPILOT_PROVIDER_MAX_PROMPT_TOKENS: ${{ secrets.COPILOT_PROVIDER_MAX_PROMPT_TOKENS }}
+          COPILOT_PROVIDER_MAX_OUTPUT_TOKENS: ${{ secrets.COPILOT_PROVIDER_MAX_OUTPUT_TOKENS }}
+          COPILOT_MODEL: ${{ secrets.COPILOT_MODEL }}
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_PAT }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          # Step 1: run the review. The /review command is a specialized agent
+          # that outputs its findings to the conversation; it does NOT reliably
+          # write files, so the file-writing is done in a separate follow-up
+          # prompt below (same session, so it has the review in context).
+          copilot --yolo -p "/review PR #${PR_NUMBER}" \
+            --max-ai-credits "${MAX_AI_CREDITS}" \
+            --share=review-session.md
+
+      - name: Write review files (second prompt, same session)
+        if: always()
+        env:
+          COPILOT_PROVIDER_BASE_URL: ${{ secrets.COPILOT_PROVIDER_BASE_URL }}
+          COPILOT_PROVIDER_TYPE: openai
+          COPILOT_PROVIDER_API_KEY: ${{ secrets.COPILOT_PROVIDER_API_KEY }}
+          COPILOT_PROVIDER_MAX_PROMPT_TOKENS: ${{ secrets.COPILOT_PROVIDER_MAX_PROMPT_TOKENS }}
+          COPILOT_PROVIDER_MAX_OUTPUT_TOKENS: ${{ secrets.COPILOT_PROVIDER_MAX_OUTPUT_TOKENS }}
+          COPILOT_MODEL: ${{ secrets.COPILOT_MODEL }}
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_PAT }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          # Step 2: in the same session, explicitly write the review findings
+          # to two files, then self-verify they exist and are valid.
+          copilot --yolo --continue -p "Based on the review you just performed, write your findings to two files in the current working directory using your file-writing tools (do not just print them in your reply):
+          1. review-summary.md: a concise, high-level markdown summary of your findings (no per-line detail, no code snippets).
+          2. review-comments.json: a JSON array of objects for feedback tied to a specific line of the diff. Each object must have:
+             - path: file path exactly as it appears in the diff, relative to the repo root.
+             - line: the line number in the file version implied by side (RIGHT = new file, LEFT = old file).
+             - side: \"RIGHT\" for added/context lines in the new file, \"LEFT\" for removed lines in the old file.
+             - body: a markdown comment explaining the issue. When you can propose a concrete fix, include a \`\`\`suggestion fenced code block with the exact replacement code for that line (or line range).
+          Only include comments for lines that are actually part of the pull request diff. If there is no line-specific feedback, write an empty array [] to review-comments.json. After writing, verify both files exist and that review-comments.json is a valid JSON array; if either is missing or malformed, fix it. Do not start a new review." \
+            --max-ai-credits "${MAX_AI_CREDITS}" \
+            --share=review-session-verify.md
+
+      - name: Verify review files were created
+        if: always()
+        run: |
+          missing=0
+          for f in review-summary.md review-comments.json; do
+            if [ ! -f "$f" ]; then
+              echo "ERROR: expected file '$f' was not created by the review step."
+              missing=1
+            fi
+          done
+          if [ -f review-comments.json ]; then
+            if ! python3 -c "import json,sys; d=json.load(open('review-comments.json')); sys.exit(0 if isinstance(d, list) else 1)"; then
+              echo "ERROR: review-comments.json is not a valid JSON array."
+              missing=1
+            fi
+          fi
+          if [ "$missing" -ne 0 ]; then
+            echo "The Copilot CLI did not produce valid review files. Check the review step logs."
+            exit 1
+          fi
+          echo "Both review files are present and valid."
+
+      - name: Post review comment
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          python3 .github/scripts/post_review.py
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-review-output
+          path: |
+            review-summary.md
+            review-comments.json
+            review-session.md
+            review-session-verify.md
+          if-no-files-found: ignore
