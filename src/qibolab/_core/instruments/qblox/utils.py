@@ -53,7 +53,7 @@ def batch_shots(
     acq_memory_shot = per_shot_memory(sequence, sweepers, options)
     max_shots = int(ACQUISITION_MEMORY // acq_memory_shot)
     nfull, remainder = np.divmod(options.nshots, max_shots)
-    return [max_shots] * int(nfull) + [int(remainder)]
+    return [max_shots] * int(nfull) + ([int(remainder)] if remainder == 0 else [])
 
 
 def concat_shots(
