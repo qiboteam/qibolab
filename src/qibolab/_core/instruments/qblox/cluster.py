@@ -21,7 +21,6 @@ from qibolab._core.components import (
     IqChannel,
     IqConfig,
     OscillatorConfig,
-    IqMixerConfig,
 )
 from qibolab._core.execution_parameters import (
     AcquisitionType,
@@ -400,9 +399,6 @@ class Cluster(Controller):
                             f"{acquisition_sequencers[slot]}."
                         )
 
-                is_twpa = ch in self.twpas
-                mixer = cast(IqMixerConfig | None, configs.get(self._mixers.get(ch)))
-
                 seqcfgs[slot][idx] = config.SequencerConfig.build(
                     address,
                     ch,
@@ -411,8 +407,6 @@ class Cluster(Controller):
                     acquisition,
                     module.is_rf_type,
                     sequence=sequences_[ch],
-                    twpa=is_twpa,
-                    mixer=mixer,
                 )
 
                 # populate channel-to-sequencer mapping
