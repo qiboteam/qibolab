@@ -51,7 +51,7 @@ Then we can define the following parameters (the exact content is not yet releva
 it will be explained in the :ref:`related section <main_doc_parameters>`).
 
 .. admonition:: Parameters dictionary
-   :collapsible: closed
+    :collapsible: closed
 
     .. testcode:: python
 

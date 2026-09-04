@@ -80,7 +80,8 @@ Qibolab provides some utility functions, accessible through
 file with a specific format.
 Here is an example
 
-.. dropdown:: Parameters
+.. admonition:: Parameters dictionary
+  :collapsible: closed
 
   .. code-block::  json
 
