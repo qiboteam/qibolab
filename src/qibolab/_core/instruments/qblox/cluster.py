@@ -13,6 +13,7 @@ from qcodes.instrument import find_or_create_instrument
 
 from qibolab._core.components import (
     AcquisitionChannel,
+    Channel,
     Configs,
     DcChannel,
     DcConfig,
@@ -297,11 +298,12 @@ class Cluster(Controller):
                 )
 
                 for channelid, seq in sequences_.items():
-                    if channelid in self.twpas:
-                        path, _ = self.twpas[channelid]
-                        slot = PortAddress.from_path(path).slot
-                    else:
-                        slot = PortAddress.from_path(self.channels[channelid].path).slot
+                    path = (
+                        self.twpas[channelid][0]
+                        if channelid in self.twpas
+                        else self.channels[channelid].path
+                    )
+                    slot = PortAddress.from_path(path).slot
                     validate_sequence(seq, self._modules[slot].is_qrm_type)
 
                 log.sequences(sequences_)
@@ -410,8 +412,8 @@ class Cluster(Controller):
         for slot, chs in self._channels_by_module.items():
             module = self._modules[slot]
 
-            # each channel is going to be assigned to its own sequencer, channels can
-            # not be outnumbered
+            # each channel is going to be assigned to its own sequencer; thus, channels
+            # can not be outnumbered
             assert len(module.sequencers) >= len(chs)
 
             # configure all sequencers, and store association to channels
@@ -570,16 +572,7 @@ class Cluster(Controller):
         address the LO through the API. While the LO identifier is used
         to retrieve the configuration.
         """
-        channels = self.channels
-        los = {
-            ch: lo
-            for ch, lo in (
-                (ch, cast(IqChannel, channels[iq]).lo)
-                for ch, iq in ((ch, channels[ch].iqout(ch)) for ch in channels)
-                if iq is not None
-            )
-            if lo is not None
-        }
+        los = _iqout_reference(self.channels, "lo")
         for twpa_id in self.twpas:
             los[twpa_id] = twpa_id
         return los
@@ -587,18 +580,23 @@ class Cluster(Controller):
     @cached_property
     def _mixers(self) -> dict[ChannelId, str]:
         """Extract channel to mixer mapping."""
-        # TODO: identical to the `._los` property, deduplicate it please...
-        channels = self.channels
-        mixers = {
-            ch: mix
-            for ch, mix in (
-                (ch, cast(IqChannel, channels[iq]).mixer)
-                for ch, iq in ((ch, channels[ch].iqout(ch)) for ch in channels)
-                if iq is not None
-            )
-            if mix is not None
-        }
+        mixers = _iqout_reference(self.channels, "mixer")
         for twpa_id, (_, mixer_name) in self.twpas.items():
             if mixer_name is not None:
                 mixers[twpa_id] = mixer_name
         return mixers
+
+
+def _iqout_reference(
+    channels: dict[ChannelId, Channel], name: str
+) -> dict[ChannelId, str]:
+    """Retrieve given attribute for all modulated output channels."""
+    return {
+        ch: cast(str, value)
+        for ch, value in (
+            (ch, getattr(channels[iq], name))
+            for ch, iq in ((ch, channels[ch].iqout(ch)) for ch in channels)
+            if iq is not None
+        )
+        if value is not None
+    }
