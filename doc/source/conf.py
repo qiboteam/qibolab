@@ -49,7 +49,6 @@ extensions = [
     "sphinx_copybutton",
     "sphinx.ext.todo",
     "sphinx.ext.viewcode",
-    "sphinx_design",
     "sphinxcontrib.bibtex",
 ]
 bibtex_bibfiles = ["refs.bib"]
