@@ -37,12 +37,12 @@ Then, to install the package
 
         pip install .
 
-- otherwise, to modify the source code, it is possible to install using ``poetry`` or ``pip``
+- otherwise, to modify the source code, it is possible to install using ``uv`` or ``pip``
 
   .. code-block:: bash
 
-        poetry install    # recommended
-        pip install -e .  # not recommended
+        uv sync         # recommended
+        pip install -e . # not recommended
 
 _______________________
 
