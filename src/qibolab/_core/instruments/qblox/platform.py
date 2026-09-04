@@ -14,6 +14,8 @@ __all__ = ["Channels", "Twpa", "Twpas", "infer_los", "infer_mixers", "map_ports"
 
 Channels = dict[ChannelId, Channel]
 Twpas = dict[str, tuple[str, str | None]]
+SlotMap = dict[str | int, list[QubitId]]
+ClusterMap = dict[str, tuple[int, SlotMap]]
 
 
 class Twpa(Model):
@@ -35,43 +37,42 @@ def _chtype(mod: str, input: bool) -> tuple[str, type[Channel]]:
     raise ValueError
 
 
-def _port_channels(mod: str, port: int | str, slot: int) -> dict:
+def _port_path(port: int | str, slot: int) -> str:
+    port = f"o{port}" if isinstance(port, int) else port
+    return f"{slot}/{port}"
+
+
+def _port_channels(mod: str, port: int | str, slot: int) -> dict[str, Channel]:
     if isinstance(port, str) and port.startswith("io"):
         return {
             "probe": IqChannel(path=f"{slot}/o{port[2:]}"),
             "acquisition": AcquisitionChannel(path=f"{slot}/i{port[2:]}"),
         }
-    port = f"o{port}" if isinstance(port, int) else port
-    name, cls = _chtype(mod, port[0] == "i")
-    return {name: cls(path=f"{slot}/{port}")}
+    path = _port_path(port, slot)
+    name, cls = _chtype(mod, isinstance(port, str) and port[0] == "i")
+    return {name: cls(path=path)}
 
 
-def _port_path(port: int | str, slot: int) -> str:
-    if isinstance(port, str) and port.startswith("io"):
-        return f"{slot}/o{port[2:]}"
-    port = f"o{port}" if isinstance(port, int) else port
-    return f"{slot}/{port}"
-
-
-def _premap(cluster: dict) -> tuple[dict, Twpas]:
-    d = defaultdict(lambda: defaultdict(dict))
+def _premap(
+    cluster: ClusterMap,
+) -> tuple[dict[QubitId, dict[str, Channel]], Twpas]:
+    channels = defaultdict(lambda: defaultdict(dict))
     twpas: Twpas = {}
 
     for mod, props in cluster.items():
         slot = props[0]
-        for port, els in props[1].items():
-            els_list = els if isinstance(els, (list, tuple, set)) else [els]
-            for el in els_list:
+        for port, elements in props[1].items():
+            for el in elements:
                 if isinstance(el, Twpa):
                     twpas[el.name] = (_port_path(port, slot), el.mixer)
                 else:
-                    d[el] |= _port_channels(mod, port, slot)
+                    channels[el] |= _port_channels(mod, port, slot)
 
-    return d, twpas
+    return channels, twpas
 
 
 def map_ports(
-    cluster: dict, qubits: dict, couplers: dict | None = None
+    cluster: ClusterMap, qubits: dict, couplers: dict | None = None
 ) -> tuple[Channels, Twpas]:
     """Extract channels and TWPAs from compact representation.
 
