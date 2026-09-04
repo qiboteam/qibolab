@@ -49,22 +49,15 @@ jobs:
       run: |
         rm -rf _work/*
     - uses: actions/checkout@v3
-    - name: Set up Python
-      uses: actions/setup-python@v4
+    - name: Install uv
+      uses: astral-sh/setup-uv@v10.0.1
       with:
         python-version: "3.11"
-    - name: Install and configure poetry
-      uses: snok/install-poetry@v1
-      with:
-        virtualenvs-create: false
     - name: Install qibolab main
-      run: |
-        python -m venv testenv
-        source testenv/bin/activate
-        poetry install --no-interaction --all-extras --with tests
+      run: uv sync --all-extras --group tests
     - name: Execute on ${{ matrix.platform }}
       run: |
-        source testenv/bin/activate
+        source .venv/bin/activate
         export platform=${{ matrix.platform }}
         git clone https://github.com/qiboteam/qibolab_platforms_qrc
         queues=`cat qibolab_platforms_qrc/queues.json`
