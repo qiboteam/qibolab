@@ -81,8 +81,10 @@ class SequencerConfig(Model):
         rf: bool,
         sequence: Q1Sequence | None = None,
     ) -> "SequencerConfig":
-        config = configs.get(channel_id)
+        config = configs[channel_id]
 
+        # channels can be used in continuous waveform mode; typically, this is done to
+        # pump TWPAs
         is_cw = sequence is not None and sequence.is_cw
 
         # conditional configurations
@@ -130,21 +132,21 @@ class SequencerConfig(Model):
             cfg.demod_en_acq = acquisition is not AcquisitionType.RAW
 
         # set NCO frequency and mixer corrections
-        if channel_id in channels:
-            probe = channels[channel_id].iqout(channel_id)
-            if probe is not None:
-                probe_config = cast(IqConfig, configs[probe])
-                probe_ = cast(IqChannel, channels[probe])
-                if probe_.lo is not None:
-                    lo_freq = cast(OscillatorConfig, configs[probe_.lo]).frequency
-                    cfg.nco_freq = int(probe_config.frequency - lo_freq)
-                else:
-                    cfg.nco_freq = int(probe_config.frequency)
-                if isinstance(probe_config, IqConfig):
-                    cfg.mixer_corr_gain_ratio = probe_config.scale_q
-                    # imbalance corrections are stored in radians, while the Qblox parameter
-                    # is in degrees (accepting values in the [-45, 45] range)
-                    cfg.mixer_corr_phase_offset_degree = np.degrees(probe_config.phase_q)
+        # note that probe channels also include readout ones (probe+acquisition), thus
+        # there is no need to set it separately for the acquisition (which is on the
+        # same IO sequencer)
+        probe = channels[channel_id].iqout(channel_id)
+        if probe is not None:
+            probe_config = configs[probe]
+            probe_ = cast(IqChannel, channels[probe])
+            assert probe_.lo is not None
+            lo_freq = cast(OscillatorConfig, configs[probe_.lo]).frequency
+            cfg.nco_freq = int(probe_config.frequency - lo_freq)
+            if isinstance(probe_config, IqConfig):
+                cfg.mixer_corr_gain_ratio = probe_config.scale_q
+                # imbalance corrections are stored in radians, while the Qblox parameter
+                # is in degrees (accepting values in the [-45, 45] range)
+                cfg.mixer_corr_phase_offset_degree = np.degrees(probe_config.phase_q)
 
         return cfg
 
