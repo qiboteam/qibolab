@@ -3,12 +3,11 @@
 from collections import UserList, defaultdict
 from collections.abc import Callable, Iterable
 from functools import cache
-from typing import Any
+from typing import Any, Self
 
 import numpy as np
 from pydantic import TypeAdapter
 from pydantic_core import core_schema
-from typing_extensions import Self
 
 from qibolab._core.pulses.pulse import PulseId, VirtualZ
 
