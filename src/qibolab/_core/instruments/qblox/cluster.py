@@ -92,7 +92,7 @@ class Cluster(Controller):
     _applied_seqcfgs: dict[SlotId, dict[int, config.SequencerConfig]] | None = None
     """Sequencer configurations applied on the hardware, ``None`` if unknown."""
 
-    @property
+    @cached_property
     def all_channels(self) -> dict[ChannelId, Channel]:
         """All channels including virtual channels constructed for TWPAs.
 
