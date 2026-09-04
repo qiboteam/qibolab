@@ -85,7 +85,7 @@ class Cluster(Controller):
 
     _cluster: qblox.Cluster | None = None
 
-    @property
+    @cached_property
     def all_channels(self) -> dict[ChannelId, Channel]:
         """All channels including virtual channels constructed for TWPAs.
 

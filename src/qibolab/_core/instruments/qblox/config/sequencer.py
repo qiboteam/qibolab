@@ -59,7 +59,6 @@ class SequencerConfig(Model):
     thresholded_acq_threshold: float | None = None
     demod_en_acq: bool | None = None
     nco_freq: int | None = None
-    nco_phase_offs: float | None = None
     mod_en_awg: bool | None = None
     mixer_corr_gain_ratio: float | None = None
     mixer_corr_phase_offset_degree: float | None = None
