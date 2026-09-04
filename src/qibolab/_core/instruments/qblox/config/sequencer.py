@@ -10,7 +10,6 @@ from qibolab._core.components.configs import (
     AcquisitionConfig,
     Configs,
     IqConfig,
-    MixerOffsetConfig,
     OscillatorConfig,
 )
 from qibolab._core.execution_parameters import AcquisitionType
@@ -81,12 +80,10 @@ class SequencerConfig(Model):
         acquisition: AcquisitionType,
         rf: bool,
         sequence: Q1Sequence | None = None,
-        twpa: bool = False,
-        mixer: MixerOffsetConfig | None = None,
     ) -> "SequencerConfig":
         config = configs.get(channel_id)
 
-        is_cw = twpa and (sequence is None or sequence.is_cw)
+        is_cw = sequence is not None and sequence.is_cw
 
         # conditional configurations
         cfg = cls(
@@ -133,9 +130,7 @@ class SequencerConfig(Model):
             cfg.demod_en_acq = acquisition is not AcquisitionType.RAW
 
         # set NCO frequency and mixer corrections
-        if twpa:
-            cfg.nco_freq = 0
-        elif channel_id in channels:
+        if channel_id in channels:
             probe = channels[channel_id].iqout(channel_id)
             if probe is not None:
                 probe_config = cast(IqConfig, configs[probe])
@@ -145,10 +140,11 @@ class SequencerConfig(Model):
                     cfg.nco_freq = int(probe_config.frequency - lo_freq)
                 else:
                     cfg.nco_freq = int(probe_config.frequency)
-                cfg.mixer_corr_gain_ratio = probe_config.scale_q
-                # imbalance corrections are stored in radians, while the Qblox parameter
-                # is in degrees (accepting values in the [-45, 45] range)
-                cfg.mixer_corr_phase_offset_degree = np.degrees(probe_config.phase_q)
+                if isinstance(probe_config, IqConfig):
+                    cfg.mixer_corr_gain_ratio = probe_config.scale_q
+                    # imbalance corrections are stored in radians, while the Qblox parameter
+                    # is in degrees (accepting values in the [-45, 45] range)
+                    cfg.mixer_corr_phase_offset_degree = np.degrees(probe_config.phase_q)
 
         return cfg
 
