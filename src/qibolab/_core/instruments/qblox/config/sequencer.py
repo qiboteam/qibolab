@@ -174,9 +174,4 @@ class SequencerConfig(Model):
                 or name in _UNTRACKED_SEQUENCER_ATTRS
                 or value != getattr(old, name)
             ):
-                try:
-                    seq.parameters[name].set(value)
-                except KeyError:
-                    # Parameter not available on this sequencer type
-                    # (e.g. cont_mode_* on a baseband sequencer)
-                    pass
+                seq.parameters[name].set(value)
