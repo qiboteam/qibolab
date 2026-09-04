@@ -139,8 +139,12 @@ def test_compile_twpa_swept():
 
 
 def test_sequencer_config_build_twpa_cw():
+    c = Cluster(
+        address="addr",
+        name="my_cluster",
+        twpas={"twpa": ("8/o1", None)},
+    )
     address = PortAddress.from_path("8/o1")
-    channels = {}
     configs = {
         "twpa": OscillatorConfig(frequency=6.5e9, power=10.0),
     }
@@ -149,12 +153,11 @@ def test_sequencer_config_build_twpa_cw():
     cfg = SequencerConfig.build(
         address=address,
         channel_id="twpa",
-        channels=channels,
+        channels=c.all_channels,
         configs=configs,
         acquisition=AcquisitionType.INTEGRATION,
         rf=True,
         sequence=seq,
-        twpa=True,
     )
 
     assert cfg.sync_en is False
@@ -171,24 +174,28 @@ def test_sequencer_config_build_twpa_cw():
 def test_sequencer_config_build_twpa_with_mixer():
     from qibolab._core.components import IqMixerConfig
 
+    c = Cluster(
+        address="addr",
+        name="my_cluster",
+        twpas={"twpa": ("8/o1", "mixer2")},
+    )
     address = PortAddress.from_path("8/o1")
-    channels = {}
     configs = {
         "twpa": OscillatorConfig(frequency=6.5e9, power=10.0),
+        "mixer2": IqMixerConfig(
+            scale_q=1.05, phase_q=2.5, offset_i=0.01, offset_q=-0.02
+        ),
     }
-    mixer = IqMixerConfig(scale_q=1.05, phase_q=2.5, offset_i=0.01, offset_q=-0.02)
 
     seq = Q1Sequence.cw()
     cfg = SequencerConfig.build(
         address=address,
         channel_id="twpa",
-        channels=channels,
+        channels=c.all_channels,
         configs=configs,
         acquisition=AcquisitionType.INTEGRATION,
         rf=True,
         sequence=seq,
-        twpa=True,
-        mixer=mixer,
     )
 
     assert cfg.nco_freq == 0
@@ -197,8 +204,12 @@ def test_sequencer_config_build_twpa_with_mixer():
 
 
 def test_sequencer_config_build_twpa_swept():
+    c = Cluster(
+        address="addr",
+        name="my_cluster",
+        twpas={"twpa": ("8/o1", None)},
+    )
     address = PortAddress.from_path("8/o1")
-    channels = {}
     configs = {
         "twpa": OscillatorConfig(frequency=6.5e9, power=10.0),
     }
@@ -214,12 +225,11 @@ def test_sequencer_config_build_twpa_swept():
     cfg = SequencerConfig.build(
         address=address,
         channel_id="twpa",
-        channels=channels,
+        channels=c.all_channels,
         configs=configs,
         acquisition=AcquisitionType.INTEGRATION,
         rf=True,
         sequence=seq,
-        twpa=True,
     )
 
     assert cfg.sync_en is True
