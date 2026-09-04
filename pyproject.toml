@@ -1,81 +1,71 @@
-[build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
-
-[tool.poetry]
+[project]
 name = "qibolab"
 version = "0.2.17"
 description = "Quantum hardware module and drivers for Qibo"
-authors = ["The Qibo team"]
-license = "Apache License 2.0"
+authors = [{name = "The Qibo team"}]
+license = "Apache-2.0"
+license-files = ["LICENSE"]
 readme = "README.md"
-homepage = "https://qibo.science/"
-repository = "https://github.com/qiboteam/qibolab/"
-documentation = "https://qibo.science/docs/qibolab/stable"
 keywords = []
 classifiers = [
-  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
   "Topic :: Scientific/Engineering :: Physics",
 ]
-packages = [{ include = "qibolab", from = "src" }]
-include = ["src/*.lark"]
+requires-python = ">=3.11,<3.14"
+dependencies = [
+  "numpy>=2.0.0,<3.0.0",
+  "scipy>=1.13.0,<2.0.0",
+  "pydantic>=2.4.0,<3.0.0",
+]
 
-[tool.poetry.dependencies]
-python = ">=3.11,<3.14"
-numpy = "^2.0.0"
-scipy = "^1.13.0"
-pydantic = "^2.4.0"
-qibo = { version = "^0.3.0", optional = true }
-qutip = { version = "^5.0.2", optional = true }
-dynamiqs = { version = "^0.3.4", optional = true }
-pyserial = { version = "^3.5", optional = true }
+[project.urls]
+Homepage = "https://qibo.science/"
+Repository = "https://github.com/qiboteam/qibolab/"
+Documentation = "https://qibo.science/docs/qibolab/stable"
 
-[tool.poetry.group.dev]
-optional = true
-
-[tool.poetry.group.dev.dependencies]
-pudb = "^2025.1"
-ipython = "^8.12.0"
-
-[tool.poetry.group.docs]
-optional = true
-
-[tool.poetry.group.docs.dependencies]
-sphinx = "^8.2"
-furo = "^2025.7.19"
-recommonmark = "^0.7.1"
-sphinxcontrib-bibtex = "^2.5.0"
-sphinx-markdown-tables = "^0.0.17"
-nbsphinx = "^0.9.1"
-ipython = "^8.12.0"
-sphinx-copybutton = "^0.5.1"
-# extras
-qcodes = "^0.52.0"
-qcodes_contrib_drivers = "^0.23.0"
-qutip = "^5.0.2"
-
-[tool.poetry.group.tests]
-optional = true
-
-[tool.poetry.group.tests.dependencies]
-pytest = ">=7.2.2"
-pytest-cov = "^4.0.0"
-pytest-env = ">=0.8.1"
-pytest-mock = ">=3.10.0"
-qcodes = "^0.52.0"
-qcodes_contrib_drivers = "^0.23.0"
-requests = "^2.32.0"
-
-[tool.poetry.group.analysis]
-optional = true
-
-[tool.poetry.group.analysis.dependencies]
-ruff = "^0.16.0"
-
-[tool.poetry.extras]
+[project.optional-dependencies]
 backend = ["qibo"]
 emulator = ["qutip", "dynamiqs"]
 qrng = ["pyserial"]
+
+[dependency-groups]
+dev = [
+  "pudb>=2025.1,<2026.0",
+  "ipython>=8.12.0,<9.0.0",
+]
+docs = [
+  "sphinx>=8.2,<9.0",
+  "furo>=2025.7.19,<2026.0.0",
+  "recommonmark>=0.7.1,<0.8.0",
+  "sphinxcontrib-bibtex>=2.5.0,<3.0.0",
+  "sphinx-markdown-tables>=0.0.17,<0.0.18",
+  "nbsphinx>=0.9.1,<0.10.0",
+  "ipython>=8.12.0,<9.0.0",
+  "sphinx-copybutton>=0.5.1,<0.6.0",
+  # extras
+  "qcodes>=0.52.0,<0.53.0",
+  "qcodes_contrib_drivers>=0.23.0,<0.24.0",
+  "qutip>=5.0.2,<6.0.0",
+]
+tests = [
+  "pytest>=7.2.2",
+  "pytest-cov>=4.0.0,<5.0.0",
+  "pytest-env>=0.8.1",
+  "pytest-mock>=3.10.0",
+  "qcodes>=0.52.0,<0.53.0",
+  "qcodes_contrib_drivers>=0.23.0,<0.24.0",
+  "requests>=2.32.0,<3.0.0",
+]
+analysis = [
+  "ruff>=0.16.0,<0.17.0",
+]
+
+[build-system]
+requires = ["uv_build>=0.12.9,<0.13.0"]
+build-backend = "uv_build"
 
 [tool.poe.tasks]
 test = "pytest"
