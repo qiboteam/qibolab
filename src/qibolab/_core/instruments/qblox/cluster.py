@@ -175,7 +175,12 @@ class Cluster(Controller):
 
     @property
     def all_channels(self) -> dict[ChannelId, Channel]:
-        """All channels including virtual channels constructed for TWPAs."""
+        """All channels including virtual channels constructed for TWPAs.
+
+        In most situations, TWPA channels can be considered as regular ones: they have a
+        Q1 sequence associated (program and waveforms), in both continuous wave (cw) and
+        swept modes. They also have LOs and mixers, as much as the other drive channels.
+        """
         twpa_channels: dict[ChannelId, Channel] = {
             twpa_id: IqChannel(path=port_path, lo=twpa_id, mixer=mixer_name)
             for twpa_id, (port_path, mixer_name) in self.twpas.items()
@@ -225,7 +230,6 @@ class Cluster(Controller):
 
         for module in self._modules.values():
             module.stop_sequencer()
-
         self._cluster.close()
         self._cluster = None
 
@@ -428,9 +432,7 @@ class Cluster(Controller):
                     continue
 
                 is_twpa = ch in self.twpas
-                mixer = None
-                if is_twpa and ch in self._mixers:
-                    mixer = cast(IqMixerConfig, configs[self._mixers[ch]])
+                mixer = cast(IqMixerConfig | None, configs.get(self._mixers.get(ch)))
 
                 seqcfg = seqcfgs[slot][idx] = config.SequencerConfig.build(
                     address,
@@ -536,6 +538,11 @@ class Cluster(Controller):
 
         Channels are otherwise a set, where the association is stored in
         the :attr:`qibolab.Channel.port` attributes of each channel.
+
+        Probe channels are explicitly ignored, since this driver is considering a
+        transmission line as a single object, and it is associated to the acquisition
+        channel. Configurations for the probe channels will be retrieved through the
+        reference in the acquisition.
         """
         addresses = {
             name: PortAddress.from_path(ch.path)
@@ -546,11 +553,7 @@ class Cluster(Controller):
             k: [el[1] for el in g]
             for k, g in groupby(
                 sorted(
-                    (
-                        (address.slot, (ch, address))
-                        for ch, address in addresses.items()
-                    ),
-                    key=lambda el: el[0],
+                    ((address.slot, (ch, address)) for ch, address in addresses.items())
                 ),
                 key=lambda el: el[0],
             )
