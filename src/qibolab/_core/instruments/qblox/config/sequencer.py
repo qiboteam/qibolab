@@ -80,12 +80,10 @@ class SequencerConfig(Model):
         acquisition: AcquisitionType,
         rf: bool,
         sequence: Q1Sequence | None = None,
-        twpa: bool = False,
-        mixer: IqMixerConfig | None = None,
     ) -> "SequencerConfig":
         config = configs.get(channel_id)
 
-        is_cw = twpa and (sequence is None or sequence.is_cw)
+        is_cw = sequence is not None and sequence.is_cw
 
         # conditional configurations
         cfg = cls(
@@ -132,12 +130,7 @@ class SequencerConfig(Model):
             cfg.demod_en_acq = acquisition is not AcquisitionType.RAW
 
         # set NCO frequency and mixer corrections
-        if twpa:
-            cfg.nco_freq = 0
-            if mixer is not None:
-                cfg.mixer_corr_gain_ratio = mixer.scale_q
-                cfg.mixer_corr_phase_offset_degree = mixer.phase_q
-        elif channel_id in channels:
+        if channel_id in channels:
             probe = channels[channel_id].iqout(channel_id)
             if probe is not None:
                 freq = configs[probe].frequency
