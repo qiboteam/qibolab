@@ -21,7 +21,8 @@ platform. All parameters related to the Hamiltonian to be simulated are coded di
 the section ``configs``. Here is an example
 
 
-.. dropdown:: Parameters dictionary
+.. admonition:: Parameters dictionary
+    :collapsible: closed
 
     .. testcode::  python
 

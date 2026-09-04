@@ -50,10 +50,8 @@ and an input acquisition channel.
 Then we can define the following parameters (the exact content is not yet relevant, and
 it will be explained in the :ref:`related section <main_doc_parameters>`).
 
-.. TODO: Sphinx 8.2 introduces built-in support for collapsible elements - but it
-   requires dropping py3.10; whenever available, we can drop sphinx-design dependency
-
-.. dropdown:: Parameters dictionary
+.. admonition:: Parameters dictionary
+    :collapsible: closed
 
     .. testcode:: python
 

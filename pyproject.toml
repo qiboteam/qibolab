@@ -21,7 +21,7 @@ packages = [{ include = "qibolab", from = "src" }]
 include = ["src/*.lark"]
 
 [tool.poetry.dependencies]
-python = ">=3.10,<3.14"
+python = ">=3.11,<3.14"
 numpy = "^2.0.0"
 scipy = "^1.13.0"
 pydantic = "^2.4.0"
@@ -41,7 +41,7 @@ ipython = "^8.12.0"
 optional = true
 
 [tool.poetry.group.docs.dependencies]
-sphinx = "^8.0"
+sphinx = "^8.2"
 furo = "^2025.7.19"
 recommonmark = "^0.7.1"
 sphinxcontrib-bibtex = "^2.5.0"
@@ -53,7 +53,6 @@ sphinx-copybutton = "^0.5.1"
 qcodes = "^0.52.0"
 qcodes_contrib_drivers = "^0.23.0"
 qutip = "^5.0.2"
-sphinx-design = "^0.6.1"
 
 [tool.poetry.group.tests]
 optional = true
@@ -101,7 +100,7 @@ addopts = [
 ]
 
 [tool.ruff]
-target-version = "py310"
+target-version = "py311"
 line-length = 88
 
 [tool.ruff.lint]
