@@ -143,10 +143,10 @@ class SequencerConfig(Model):
             assert probe_.lo is not None
             lo_freq = cast(OscillatorConfig, configs[probe_.lo]).frequency
             cfg.nco_freq = int(freq - lo_freq)
-            assert probe_.mixer is not None
-            mixer = cast(IqMixerConfig, configs[probe_.mixer])
-            cfg.mixer_corr_gain_ratio = mixer.scale_q
-            cfg.mixer_corr_phase_offset_degree = mixer.phase_q
+            if probe_.mixer is not None:
+                mixer = cast(IqMixerConfig, configs[probe_.mixer])
+                cfg.mixer_corr_gain_ratio = mixer.scale_q
+                cfg.mixer_corr_phase_offset_degree = mixer.phase_q
 
         return cfg
 
