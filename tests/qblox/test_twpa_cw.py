@@ -256,6 +256,16 @@ def test_cluster_twpa_channels_by_module():
         channels={"drive": IqChannel(path="8/o2")},
         twpas={"twpa": ("8/o1", None), "twpa2": ("7/o1", "mixer2")},
     )
+    assert "drive" in c.all_channels
+    assert "twpa" in c.all_channels
+    assert "twpa2" in c.all_channels
+    assert c.all_channels["twpa"].path == "8/o1"
+    assert c.all_channels["twpa"].lo == "twpa"
+    assert c.all_channels["twpa"].mixer is None
+    assert c.all_channels["twpa2"].path == "7/o1"
+    assert c.all_channels["twpa2"].lo == "twpa2"
+    assert c.all_channels["twpa2"].mixer == "mixer2"
+
     by_mod = c._channels_by_module
     assert 8 in by_mod
     assert 7 in by_mod

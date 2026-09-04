@@ -174,6 +174,15 @@ class Cluster(Controller):
     _cluster: qblox.Cluster | None = None
 
     @property
+    def all_channels(self) -> dict[ChannelId, Channel]:
+        """All channels including virtual channels constructed for TWPAs."""
+        twpa_channels: dict[ChannelId, Channel] = {
+            twpa_id: IqChannel(path=port_path, lo=twpa_id, mixer=mixer_name)
+            for twpa_id, (port_path, mixer_name) in self.twpas.items()
+        }
+        return self.channels | twpa_channels
+
+    @property
     def cluster(self) -> qblox.Cluster:
         """Ensure cluster object access.
 
@@ -298,12 +307,7 @@ class Cluster(Controller):
                 )
 
                 for channelid, seq in sequences_.items():
-                    path = (
-                        self.twpas[channelid][0]
-                        if channelid in self.twpas
-                        else self.channels[channelid].path
-                    )
-                    slot = PortAddress.from_path(path).slot
+                    slot = PortAddress.from_path(self.all_channels[channelid].path).slot
                     validate_sequence(seq, self._modules[slot].is_qrm_type)
 
                 log.sequences(sequences_)
@@ -368,14 +372,7 @@ class Cluster(Controller):
         for slot, chs in self._channels_by_module.items():
             module = self._modules[slot]
             ids = {id for id, _ in chs}
-            channels = {
-                id: (
-                    self.channels[id]
-                    if id in self.channels
-                    else IqChannel(path=self.twpas[id][0])
-                )
-                for id in ids
-            }
+            channels = {id: ch for id, ch in self.all_channels.items() if id in ids}
             los = config.module.los(self._los, configs, ids)
             mixers = config.module.mixers(self._mixers, configs, ids)
             modcfg = modcfgs[slot] = config.ModuleConfig.build(
@@ -432,15 +429,13 @@ class Cluster(Controller):
 
                 is_twpa = ch in self.twpas
                 mixer = None
-                if is_twpa:
-                    _, mixer_name = self.twpas[ch]
-                    if mixer_name is not None and mixer_name in configs:
-                        mixer = cast(IqMixerConfig, configs[mixer_name])
+                if is_twpa and ch in self._mixers:
+                    mixer = cast(IqMixerConfig, configs[self._mixers[ch]])
 
                 seqcfg = seqcfgs[slot][idx] = config.SequencerConfig.build(
                     address,
                     ch,
-                    self.channels,
+                    self.all_channels,
                     configs,
                     acquisition,
                     module.is_rf_type,
@@ -544,12 +539,9 @@ class Cluster(Controller):
         """
         addresses = {
             name: PortAddress.from_path(ch.path)
-            for name, ch in self.channels.items()
+            for name, ch in self.all_channels.items()
             if name not in self._probes
         }
-        for twpa_id, (path, _) in self.twpas.items():
-            addresses[twpa_id] = PortAddress.from_path(path)
-
         return {
             k: [el[1] for el in g]
             for k, g in groupby(
@@ -572,19 +564,12 @@ class Cluster(Controller):
         address the LO through the API. While the LO identifier is used
         to retrieve the configuration.
         """
-        los = _iqout_reference(self.channels, "lo")
-        for twpa_id in self.twpas:
-            los[twpa_id] = twpa_id
-        return los
+        return _iqout_reference(self.all_channels, "lo")
 
     @cached_property
     def _mixers(self) -> dict[ChannelId, str]:
         """Extract channel to mixer mapping."""
-        mixers = _iqout_reference(self.channels, "mixer")
-        for twpa_id, (_, mixer_name) in self.twpas.items():
-            if mixer_name is not None:
-                mixers[twpa_id] = mixer_name
-        return mixers
+        return _iqout_reference(self.all_channels, "mixer")
 
 
 def _iqout_reference(
