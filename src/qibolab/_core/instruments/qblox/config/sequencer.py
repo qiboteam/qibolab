@@ -157,9 +157,4 @@ class SequencerConfig(Model):
         for name in self.model_fields_set - applied:
             value = getattr(self, name)
             if value is not None:
-                try:
-                    seq.parameters[name].set(value)
-                except KeyError:
-                    # Parameter not available on this sequencer type
-                    # (e.g. cont_mode_* on a baseband sequencer)
-                    pass
+                seq.parameters[name].set(value)
