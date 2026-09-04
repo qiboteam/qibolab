@@ -285,3 +285,92 @@ def test_cluster_twpa_channels_by_module():
     assert c._los["twpa2"] == "twpa2"
     assert "twpa" not in c._mixers
     assert c._mixers["twpa2"] == "mixer2"
+
+
+# ---------------------------------------------------------------------------
+# `map_ports` and `Twpa` helpers
+# ---------------------------------------------------------------------------
+
+
+def test_map_ports_with_twpa():
+    from qibolab._core.instruments.qblox.platform import Twpa, map_ports
+    from qibolab._core.qubits import Qubit
+
+    cluster = {
+        "qcm_rf0": (
+            8,
+            {
+                "o1": [Twpa(name="twpa")],
+                "o2": ["q0"],
+            },
+        ),
+        "qcm_rf1": (
+            7,
+            {
+                1: [Twpa(name="twpa2", mixer="mixer2")],
+                2: ["q1"],
+            },
+        ),
+        "qrm_rf0": (
+            6,
+            {
+                "io1": ["q0", "q1"],
+            },
+        ),
+    }
+
+    qubits = {
+        "q0": Qubit(drive="0/drive", probe="0/probe", acquisition="0/acquisition"),
+        "q1": Qubit(drive="1/drive", probe="1/probe", acquisition="1/acquisition"),
+    }
+
+    channels, twpas = map_ports(cluster, qubits)
+
+    # Channels checks
+    assert "0/drive" in channels
+    assert channels["0/drive"].path == "8/o2"
+    assert "1/drive" in channels
+    assert channels["1/drive"].path == "7/o2"
+    assert "0/probe" in channels
+    assert channels["0/probe"].path == "6/o1"
+    assert "0/acquisition" in channels
+    assert channels["0/acquisition"].path == "6/i1"
+    assert channels["0/acquisition"].probe == "0/probe"
+
+    # Twpas checks
+    assert twpas == {
+        "twpa": ("8/o1", None),
+        "twpa2": ("7/o1", "mixer2"),
+    }
+
+
+def test_infer_los_and_mixers_with_twpa():
+    from qibolab._core.instruments.qblox.platform import Twpa, infer_los, infer_mixers
+
+    cluster = {
+        "qcm_rf0": (
+            8,
+            {
+                "o1": [Twpa(name="twpa")],
+                "o2": ["q0"],
+            },
+        ),
+        "qrm_rf0": (
+            6,
+            {
+                "io1": ["q0"],
+            },
+        ),
+    }
+
+    los = infer_los(cluster)
+    mixers = infer_mixers(cluster)
+
+    assert los == {
+        ("q0", False): "qcm_rf0/o2/lo",
+        ("q0", True): "qrm_rf0/o1/lo",
+    }
+    assert mixers == {
+        ("q0", False): "qcm_rf0/o2/mixer",
+        ("q0", True): "qrm_rf0/o1/mixer",
+    }
