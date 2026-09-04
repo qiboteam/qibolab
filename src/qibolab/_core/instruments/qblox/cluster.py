@@ -57,93 +57,6 @@ __all__ = ["Cluster"]
 SAMPLING_RATE = 1
 
 
-def _compute_duration(
-    ps: PulseSequence,
-    sweepers: list[ParallelSweepers],
-    options: ExecutionParameters,
-    configs: Configs,
-) -> float:
-    """Compute the total program duration including time of flight and
-    synchronization waiting time.
-    """
-
-    # TODO: include the time of flight calculation at the level of
-    # Platform.execute rather than in the qblox driver. This will require
-    # propagating the changes also to qibocal.
-    time_of_flight = max(
-        [time_of_flights(configs)[ch[0]] for ch in ps if hasattr(ch[1], "acquisition")],
-        default=0.0,
-    )
-
-    # TODO: wait_sync duration is determined as explained in this comment
-    # https://github.com/qiboteam/qibolab/pull/1389#issuecomment-3884129213.
-    # It should be checked with Qblox if the sync time can indeed be of the
-    # order of 900 ns.
-    wait_sync_duration = 900
-    duration = options.estimate_duration(
-        [ps], sweepers, time_of_flight + wait_sync_duration
-    )
-    return duration
-
-
-def _add_time_of_flight(sequence: PulseSequence, configs: Configs) -> PulseSequence:
-    time_of_flights_ = time_of_flights(configs)
-    return PulseSequence(
-        [
-            (
-                ch,
-                ev
-                if not isinstance(ev, Readout)
-                else ev.model_copy(update={"time_of_flight": time_of_flights_[ch]}),
-            )
-            for ch, ev in sequence
-        ]
-    )
-
-
-def _batch_sequences(
-    sequences: list[PulseSequence],
-    sweepers: list[ParallelSweepers],
-    options: ExecutionParameters,
-    qcm_channels: set[ChannelId],
-    qrm_channels: set[ChannelId],
-    configs: Configs,
-) -> list[PulseSequence]:
-    batched_seqs = (
-        batch_sequences_by_cluster_memory_limits(
-            sequences,
-            sweepers,
-            options,
-            qcm_channels,
-            qrm_channels,
-        )
-        if options.averaging_mode.average
-        else sequences
-    )
-    return [_add_time_of_flight(b, configs).align_to_delays() for b in batched_seqs]
-
-
-def _merge_phases_if_no_phase_sweeper(
-    sweepers: list[ParallelSweepers],
-    sequences: list[PulseSequence],
-) -> tuple[list[PulseSequence], bool]:
-    """
-    Process pulse sequences based on the presence of phase sweepers.
-
-    If any sweeper in the provided list is a phase or relative_phase sweeper,
-    the sequences are returned unchanged. Otherwise, the phases in the sequences
-    are summed to simplify the pulse sequences.
-    """
-    phase_sweeper_present = any(
-        sweeper.parameter in {Parameter.relative_phase, Parameter.phase}
-        for parallel_sweepers in sweepers
-        for sweeper in parallel_sweepers
-    )
-    return [
-        ps if phase_sweeper_present else ps.to_vzs().collect_vzs() for ps in sequences
-    ], phase_sweeper_present
-
-
 class ClusterConfigs(Model):
     modules: dict[int, config.ModuleConfig]
     sequencers: dict[int, dict[int, config.SequencerConfig]]
@@ -588,3 +501,90 @@ def _iqout_reference(
         )
         if value is not None
     }
+
+
+def _compute_duration(
+    ps: PulseSequence,
+    sweepers: list[ParallelSweepers],
+    options: ExecutionParameters,
+    configs: Configs,
+) -> float:
+    """Compute the total program duration including time of flight and
+    synchronization waiting time.
+    """
+
+    # TODO: include the time of flight calculation at the level of
+    # Platform.execute rather than in the qblox driver. This will require
+    # propagating the changes also to qibocal.
+    time_of_flight = max(
+        [time_of_flights(configs)[ch[0]] for ch in ps if hasattr(ch[1], "acquisition")],
+        default=0.0,
+    )
+
+    # TODO: wait_sync duration is determined as explained in this comment
+    # https://github.com/qiboteam/qibolab/pull/1389#issuecomment-3884129213.
+    # It should be checked with Qblox if the sync time can indeed be of the
+    # order of 900 ns.
+    wait_sync_duration = 900
+    duration = options.estimate_duration(
+        [ps], sweepers, time_of_flight + wait_sync_duration
+    )
+    return duration
+
+
+def _add_time_of_flight(sequence: PulseSequence, configs: Configs) -> PulseSequence:
+    time_of_flights_ = time_of_flights(configs)
+    return PulseSequence(
+        [
+            (
+                ch,
+                ev
+                if not isinstance(ev, Readout)
+                else ev.model_copy(update={"time_of_flight": time_of_flights_[ch]}),
+            )
+            for ch, ev in sequence
+        ]
+    )
+
+
+def _batch_sequences(
+    sequences: list[PulseSequence],
+    sweepers: list[ParallelSweepers],
+    options: ExecutionParameters,
+    qcm_channels: set[ChannelId],
+    qrm_channels: set[ChannelId],
+    configs: Configs,
+) -> list[PulseSequence]:
+    batched_seqs = (
+        batch_sequences_by_cluster_memory_limits(
+            sequences,
+            sweepers,
+            options,
+            qcm_channels,
+            qrm_channels,
+        )
+        if options.averaging_mode.average
+        else sequences
+    )
+    return [_add_time_of_flight(b, configs).align_to_delays() for b in batched_seqs]
+
+
+def _merge_phases_if_no_phase_sweeper(
+    sweepers: list[ParallelSweepers],
+    sequences: list[PulseSequence],
+) -> tuple[list[PulseSequence], bool]:
+    """
+    Process pulse sequences based on the presence of phase sweepers.
+
+    If any sweeper in the provided list is a phase or relative_phase sweeper,
+    the sequences are returned unchanged. Otherwise, the phases in the sequences
+    are summed to simplify the pulse sequences.
+    """
+    phase_sweeper_present = any(
+        sweeper.parameter in {Parameter.relative_phase, Parameter.phase}
+        for parallel_sweepers in sweepers
+        for sweeper in parallel_sweepers
+    )
+    return [
+        ps if phase_sweeper_present else ps.to_vzs().collect_vzs() for ps in sequences
+    ], phase_sweeper_present
