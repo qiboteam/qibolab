@@ -9,6 +9,7 @@ from qibolab._core.components.channels import Channel, IqChannel
 from qibolab._core.components.configs import (
     AcquisitionConfig,
     Configs,
+    IqConfig,
     IqMixerConfig,
     OscillatorConfig,
 )
@@ -81,8 +82,10 @@ class SequencerConfig(Model):
         rf: bool,
         sequence: Q1Sequence | None = None,
     ) -> "SequencerConfig":
-        config = configs.get(channel_id)
+        config = configs[channel_id]
 
+        # channels can be used in continuous waveform mode; typically, this is done to
+        # pump TWPAs
         is_cw = sequence is not None and sequence.is_cw
 
         # conditional configurations
@@ -130,20 +133,20 @@ class SequencerConfig(Model):
             cfg.demod_en_acq = acquisition is not AcquisitionType.RAW
 
         # set NCO frequency and mixer corrections
-        if channel_id in channels:
-            probe = channels[channel_id].iqout(channel_id)
-            if probe is not None:
-                freq = configs[probe].frequency
-                probe_ = cast(IqChannel, channels[probe])
-                if probe_.lo is not None:
-                    lo_freq = cast(OscillatorConfig, configs[probe_.lo]).frequency
-                    cfg.nco_freq = int(freq - lo_freq)
-                else:
-                    cfg.nco_freq = int(freq)
-                if probe_.mixer is not None:
-                    mixer = cast(IqMixerConfig, configs[probe_.mixer])
-                    cfg.mixer_corr_gain_ratio = mixer.scale_q
-                    cfg.mixer_corr_phase_offset_degree = mixer.phase_q
+        # note that probe channels also include readout ones (probe+acquisition), thus
+        # there is no need to set it separately for the acquisition (which is on the
+        # same IO sequencer)
+        probe = channels[channel_id].iqout(channel_id)
+        if probe is not None:
+            freq = cast(IqConfig, configs[probe]).frequency
+            probe_ = cast(IqChannel, channels[probe])
+            assert probe_.lo is not None
+            lo_freq = cast(OscillatorConfig, configs[probe_.lo]).frequency
+            cfg.nco_freq = int(freq - lo_freq)
+            assert probe_.mixer is not None
+            mixer = cast(IqMixerConfig, configs[probe_.mixer])
+            cfg.mixer_corr_gain_ratio = mixer.scale_q
+            cfg.mixer_corr_phase_offset_degree = mixer.phase_q
 
         return cfg
 
