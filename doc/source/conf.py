@@ -24,8 +24,6 @@ author = "The Qibo team"
 
 release = qibolab.__version__
 
-github_username = "qiboteam"
-github_repository = "qibolab"
 
 # -- General configuration ---------------------------------------------------
 
