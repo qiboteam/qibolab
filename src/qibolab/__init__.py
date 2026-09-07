@@ -35,4 +35,7 @@ def __getattr__(name: str) -> Any:
 
         return MetaBackend
 
-    return globals()[name]
+    try:
+        return globals()[name]
+    except KeyError:
+        raise AttributeError(f"Module {__name__} has no attribute {name}.")

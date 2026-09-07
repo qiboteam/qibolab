@@ -15,13 +15,13 @@ jobs:
 
     steps:
       - id: classify
-        uses: qiboteam/workflows/actions/docs/version@v2
+        uses: qiboteam/workflows/actions/docs/version@uv
 
   deploy-docs:
     needs: [version]
-    uses: qiboteam/workflows/.github/workflows/latest-stable.yml@v2
+    uses: qiboteam/workflows/.github/workflows/latest-stable.yml@uv
     with:
       python-version: "3.11"
       trigger-label: "${{needs.version.outputs.version}}"
       project: qibolab
-      poetry-extras: --with docs --all-extras
+      uv-extras: --no-dev --group docs --all-extras

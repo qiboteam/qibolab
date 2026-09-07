@@ -12,10 +12,10 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
         python-version: ["3.11", "3.12", "3.13"]
-    uses: qiboteam/workflows/.github/workflows/wheels.yml@v2
+    uses: qiboteam/workflows/.github/workflows/wheels.yml@uv
     with:
       os: ${{ matrix.os }}
       python-version: ${{ matrix.python-version }}
       publish: ${{ github.event_name == 'release' && github.event.action == 'published' && matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11' }}
-      poetry-extras: "--with docs,tests,analysis --all-extras"
+      uv-extras: "--no-dev --group docs --group tests --group analysis --all-extras"
     secrets: inherit
