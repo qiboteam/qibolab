@@ -36,10 +36,7 @@ dev = [
   "ipython>=8.12.0,<9.0.0",
 ]
 docs = [
-  # We need sphinx 9.1 for autodoc_use_type_comments used in doctest.
-  # sphinx 9.0 requires python >= 3.12, but doctest is nor run for 3.11 so that is fine.
-  "sphinx>=9.1,<10.0; python_version >= '3.12'",
-  "sphinx>=9.0,<10.0; python_version < '3.12'",
+  "sphinx>=9.0,<10.0",
   "furo>=2025.7.19,<2026.0.0",
   "recommonmark>=0.7.1,<0.8.0",
   "sphinxcontrib-bibtex>=2.5.0,<3.0.0",
