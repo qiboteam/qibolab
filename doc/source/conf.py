@@ -27,8 +27,6 @@ release = qibolab.__version__
 
 # -- General configuration ---------------------------------------------------
 
-# https://stackoverflow.com/questions/56336234/build-fail-sphinx-error-contents-rst-not-found
-# master_doc = "index"
 
 autodoc_mock_imports = ["icarusq_rfsoc_driver", "keysight", "qm", "qibosoq"]
 
