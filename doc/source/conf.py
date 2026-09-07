@@ -99,6 +99,14 @@ intersphinx_mapping = {"python": ("https://docs.python.org/3", None)}
 #
 autodoc_member_order = "bysource"
 
+# Do not reconstruct annotations from source/type comments. This can add
+# Pydantic's internal types to Qibolab classes, while those types may not be
+# defined in files where Qibolab is used, causing subsequently built models
+# to be incomplete.
+# NOTE: In Sphinx 10 this will default, and thus once that becomes the dependency this
+# line can be removed.
+autodoc_use_type_comments = False
+
 
 # app setup hook
 
