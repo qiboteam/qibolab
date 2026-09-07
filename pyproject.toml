@@ -43,7 +43,6 @@ optional = true
 [tool.poetry.group.docs.dependencies]
 sphinx = "^8.2"
 furo = "^2025.7.19"
-recommonmark = "^0.7.1"
 sphinxcontrib-bibtex = "^2.5.0"
 sphinx-markdown-tables = "^0.0.17"
 nbsphinx = "^0.9.1"
