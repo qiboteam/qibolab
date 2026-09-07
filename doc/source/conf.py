@@ -4,16 +4,8 @@
 # list see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
-# -- Path setup --------------------------------------------------------------
-
-# If extensions (or modules to document with autodoc) are in another directory,
-# add these directories to sys.path here. If the directory is relative to the
-# documentation root, use os.path.abspath to make it absolute, like shown here.
-#
-import os
 from pathlib import Path
 
-from recommonmark.transform import AutoStructify
 from sphinx.ext import apidoc
 
 import qibolab
@@ -26,13 +18,9 @@ author = "The Qibo team"
 
 release = qibolab.__version__
 
-github_username = "qiboteam"
-github_repository = "qibolab"
 
 # -- General configuration ---------------------------------------------------
 
-# https://stackoverflow.com/questions/56336234/build-fail-sphinx-error-contents-rst-not-found
-# master_doc = "index"
 
 autodoc_mock_imports = ["icarusq_rfsoc_driver", "keysight", "qm", "qibosoq"]
 
@@ -45,7 +33,6 @@ extensions = [
     "sphinx.ext.coverage",
     "sphinx.ext.napoleon",
     "sphinx.ext.intersphinx",
-    "recommonmark",
     "sphinx_copybutton",
     "sphinx.ext.todo",
     "sphinx.ext.viewcode",
@@ -53,8 +40,6 @@ extensions = [
 ]
 bibtex_bibfiles = ["refs.bib"]
 
-# Add any paths that contain templates here, relative to this directory.
-templates_path = ["_templates"]
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -110,18 +95,11 @@ html_static_path = ["_static"]
 intersphinx_mapping = {"python": ("https://docs.python.org/3", None)}
 
 
-# -- Doctest ------------------------------------------------------------------
-#
-
-doctest_path = [os.path.abspath("../examples")]
-
 # -- Autodoc ------------------------------------------------------------------
 #
 autodoc_member_order = "bysource"
 
 
-# Adapted this from
-# https://github.com/readthedocs/recommonmark/blob/ddd56e7717e9745f11300059e4268e204138a6b1/docs/conf.py
 # app setup hook
 
 
@@ -134,8 +112,6 @@ def run_apidoc(_):
 
 
 def setup(app):
-    app.add_config_value("recommonmark_config", {"enable_eval_rst": True}, True)
-    app.add_transform(AutoStructify)
     app.add_css_file("css/style.css")
 
     app.connect("builder-inited", run_apidoc)
