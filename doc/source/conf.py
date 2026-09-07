@@ -10,7 +10,6 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-import os
 from pathlib import Path
 
 from recommonmark.transform import AutoStructify
@@ -109,11 +108,6 @@ html_static_path = ["_static"]
 
 intersphinx_mapping = {"python": ("https://docs.python.org/3", None)}
 
-
-# -- Doctest ------------------------------------------------------------------
-#
-
-doctest_path = [os.path.abspath("../examples")]
 
 # -- Autodoc ------------------------------------------------------------------
 #
