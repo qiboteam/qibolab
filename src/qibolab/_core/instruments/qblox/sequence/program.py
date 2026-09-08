@@ -5,16 +5,7 @@ from qibolab._core.identifier import ChannelId
 from qibolab._core.pulses.pulse import PulseId, PulseLike
 from qibolab._core.sweeper import ParallelSweepers
 
-from ..q1asm.ast_ import (
-    Block,
-    Instruction,
-    Line,
-    Move,
-    Nop,
-    Program,
-    Stop,
-    Wait,
-)
+from ..q1asm.ast_ import Block, Instruction, Line, Move, Program, Stop, Wait
 from .acquisition import AcquisitionSpec, MeasureId
 from .experiment import experiment
 from .loops import LoopSpec, Registers, loop, loops
@@ -73,9 +64,6 @@ def setup(
             for p in params
             if p.channel in channel or p.pulse in pulses
         ]
-        # wait one clock cycle before parameters' update
-        # cf. .loops._sweep_update()
-        + [Nop()]
         + [
             inst
             for p in params
