@@ -17,6 +17,7 @@ from ..q1asm.ast_ import (
     Move,
     Play,
     Register,
+    SetAwgOffs,
     SetPhDelta,
     UpdParam,
     Wait,
@@ -29,6 +30,7 @@ from .sweepers import (
     ParameterizedPulse,
     ParamRole,
     SweepSequence,
+    is_offset_rectangular,
     reset_instructions,
     update_instructions,
 )
@@ -68,6 +70,74 @@ def _play_pulse(
         [_play_waveforms(pulse, waveforms)]
         if len(duration_sweep) == 0
         else _play_duration_swept(duration_sweep)
+    )
+
+
+def _process_rectangular_pulse(
+    pulse: Pulse, params: set[Param], merged_vzs: bool
+) -> list[Instruction] | list[Line]:
+    """Emit Q1ASM for an offset rectangular pulse.
+
+    Uses ``set_awg_offs`` to generate the pulse instead of generic waveforms.
+    """
+    uid = pulse.id
+    duration_sweep = {
+        p.role: p.reg for p in params if p.role.value[1] is Parameter.duration
+    }
+    amplitude_sweep = {
+        p.role: p.reg for p in params if p.role.value[1] is Parameter.amplitude
+    }
+
+    if merged_vzs:
+        assert pulse.relative_phase == 0.0
+        phase_pre: list[Instruction] = []
+        phase_post: list[Instruction] = []
+    else:
+        phase = int(convert(pulse.relative_phase, Parameter.relative_phase))
+        minus_phase = int(convert(-pulse.relative_phase, Parameter.relative_phase))
+        phase_pre = (
+            [
+                Add(
+                    a=Registers.phase_delta.value,
+                    b=phase,
+                    destination=Registers.phase_delta.value,
+                )
+            ]
+            if phase != 0
+            else []
+        ) + [SetPhDelta(value=Registers.phase_delta.value)]
+        phase_post = [Move(source=minus_phase, destination=Registers.phase_delta.value)]
+
+    if duration_sweep:
+        hold: list[Instruction] = [Wait(duration=duration_sweep[ParamRole.DURATION])]
+    else:
+        hold = [Wait(duration=int(pulse.duration) - 4)] if pulse.duration > 4 else []
+
+    if amplitude_sweep:
+        offs_start: Instruction = SetAwgOffs(
+            value_0=amplitude_sweep[ParamRole.AMPLITUDE],
+            value_1=Registers.zero.value,
+        )
+    else:
+        offs_start = SetAwgOffs(
+            value_0=int(convert(pulse.amplitude, Parameter.amplitude)), value_1=0
+        )
+
+    return (
+        phase_pre
+        + [
+            offs_start,
+            Line(
+                instruction=UpdParam(duration=4),
+                comment=f"id: 0x{uid.hex[:5]}",
+            ),
+        ]
+        + hold
+        + [
+            SetAwgOffs(value_0=0, value_1=0),
+            UpdParam(duration=4),
+        ]
+        + phase_post
     )
 
 
@@ -183,6 +253,8 @@ def play(
     """Process the individual pulse in experiment."""
     pulse = parpulse[0]
     params = parpulse[1]
+    if is_offset_rectangular(pulse, params):
+        return _process_rectangular_pulse(pulse, params, merged_vzs)
     if isinstance(pulse, Pulse):
         return _process_pulse(pulse, params, waveforms, merged_vzs)
     if isinstance(pulse, Delay):
@@ -204,13 +276,18 @@ def event(
     acquisitions: dict[MeasureId, AcquisitionSpec],
     merged_vzs: bool,
 ) -> Block:
+    pulse = parpulse[0]
     params = parpulse[1]
+    is_rect = is_offset_rectangular(pulse, params)
+    sweep_params = [
+        p for p in params if not (is_rect and p.role == ParamRole.AMPLITUDE)
+    ]
     return [
         inst
         for block in (
-            *(update_instructions(p.role, p.reg) for p in params),
+            *(update_instructions(p.role, p.reg) for p in sweep_params),
             *(play(parpulse, waveforms, acquisitions, merged_vzs),),
-            *(reset_instructions(p.role, p.reg) for p in reversed(list(params))),
+            *(reset_instructions(p.role, p.reg) for p in reversed(sweep_params)),
         )
         for inst in block
     ]

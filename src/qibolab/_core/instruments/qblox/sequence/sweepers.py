@@ -2,6 +2,8 @@ from collections.abc import Callable, Iterable
 from enum import Enum, auto
 from itertools import groupby
 
+import numpy as np
+
 from qibolab._core.identifier import ChannelId
 from qibolab._core.instruments.qblox.q1asm.ast_ import (
     Add,
@@ -13,17 +15,46 @@ from qibolab._core.instruments.qblox.q1asm.ast_ import (
     Value,
 )
 from qibolab._core.instruments.qblox.sequence.asm import Registers
+from qibolab._core.pulses.envelope import Rectangular
 from qibolab._core.pulses.pulse import (
     Pulse,
     PulseId,
     PulseLike,
+    Readout,
 )
 from qibolab._core.serialize import Model
 from qibolab._core.sweeper import ParallelSweepers, Parameter, Range, Sweeper
 
 from .asm import MAX_PARAM, convert
 
-__all__ = []
+__all__ = ["is_offset_rectangular"]
+
+
+def is_offset_rectangular(
+    pulse: PulseLike,
+    sweep_or_params: Sweeper | set["Param"] | None = None,
+) -> bool:
+    """Check if pulse is compiled as an offset rectangular pulse.
+
+    Rectangular pulses with duration >= 4 ns can be generated using
+    ``set_awg_offs`` without consuming waveform memory.
+    """
+    if not (
+        isinstance(pulse, Pulse)
+        and isinstance(pulse.envelope, Rectangular)
+        and not isinstance(pulse, Readout)
+    ):
+        return False
+    if isinstance(sweep_or_params, Sweeper):
+        assert sweep_or_params.values is not None
+        return bool(np.all(sweep_or_params.values >= 4))
+    if isinstance(sweep_or_params, (set, frozenset)):
+        roles = {p.role for p in sweep_or_params}
+        if ParamRole.PULSE_I in roles:
+            return False
+        if ParamRole.DURATION in roles:
+            return True
+    return pulse.duration >= 4
 
 
 class ParamRole(Enum):
@@ -61,7 +92,10 @@ class ParamRole(Enum):
     def unique(cls, sweep: Sweeper) -> bool:
         return sweep.parameter is not Parameter.duration or (
             sweep.pulses is not None
-            and not any(isinstance(p, Pulse) for p in sweep.pulses)
+            and not any(
+                isinstance(p, Pulse) and not is_offset_rectangular(p, sweep)
+                for p in sweep.pulses
+            )
         )
 
     @property
@@ -148,11 +182,15 @@ def _pulse_duration(sweep: Sweeper) -> list[tuple[Range, "ParamRole"]]:
 
 def _registers(sweep: Sweeper) -> list[tuple[Range, ParamRole]]:
     """Reserve registers for sweeping."""
-    return (
-        [(sweep.irange, ParamRole.from_sweeper(sweep))]
-        if ParamRole.unique(sweep)
-        else _pulse_duration(sweep)
-    )
+    if sweep.parameter is Parameter.duration:
+        if sweep.pulses is not None and all(
+            is_offset_rectangular(p, sweep) for p in sweep.pulses
+        ):
+            return [((sweep - 4.0).irange, ParamRole.DURATION)]
+        if ParamRole.unique(sweep):
+            return [(sweep.irange, ParamRole.DURATION)]
+        return _pulse_duration(sweep)
+    return [(sweep.irange, ParamRole.from_sweeper(sweep))]
 
 
 def _unravel_sweeps(sweepers: list[ParallelSweepers]) -> Iterable[tuple[int, Param]]:

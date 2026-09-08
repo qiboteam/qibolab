@@ -59,6 +59,10 @@ def setup(
                 instruction=Move(source=0, destination=Registers.phase_delta.value),
                 comment="init delta phase register",
             ),
+            Line(
+                instruction=Move(source=0, destination=Registers.zero.value),
+                comment="init zero register",
+            ),
         ]
         + [
             Line(
