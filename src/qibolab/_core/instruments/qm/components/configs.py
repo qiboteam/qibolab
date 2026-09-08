@@ -1,3 +1,4 @@
+from functools import reduce
 from typing import Any, Literal
 
 import numpy as np
@@ -8,7 +9,10 @@ from qibolab._core.components import (
     DcConfig,
     OscillatorConfig,
 )
-from qibolab._core.components.filters import ExponentialFilter
+from qibolab._core.components.filters import (
+    ExponentialFilter,
+    FiniteImpulseResponseFilter,
+)
 
 __all__ = [
     "MwFemOscillatorConfig",
@@ -60,30 +64,57 @@ class OpxOutputConfig(DcConfig):
 
     def filter(self, cluster: str) -> dict[str, list[float | tuple[float, float]]]:
         if cluster == "opx1":
-            feedback_filters = [
-                -i.feedback[1] for i in self.filters if isinstance(i, ExponentialFilter)
-            ]
-            iir = {
-                "feedback": normalize_feedback(feedback_filters, self.feedback_max)
-                if len(feedback_filters) > 0
-                else []
-            }
-        elif cluster in {"opx1000", "LF", "MW"}:
-            iir = {
-                "exponential": [
-                    (filt.amplitude, filt.tau)
-                    for filt in self.filters
-                    if isinstance(filt, ExponentialFilter)
-                ]
-            }
-        else:
-            raise NotImplementedError(f"Cluster type {cluster} not yet supported")
+            return self._opx1_filter()
+        if cluster in {"opx1000", "LF", "MW"}:
+            return self._opx1000_filter()
+        raise NotImplementedError(f"Cluster type {cluster} not yet supported")
 
+    def _opx1_filter(self) -> dict[str, list[float | tuple[float, float]]]:
+        """Digital filters for the (legacy) OPX+.
+
+        This generation has no dedicated hardware stage for the
+        exponential correction, so it is folded into the generic FIR
+        ``feedforward`` (and its pole into ``feedback``) together with
+        any other configured filter.
+        """
+        feedback_filters = [
+            -i.feedback[1] for i in self.filters if isinstance(i, ExponentialFilter)
+        ]
         return {
             "feedforward": normalize_feedforward(self.feedforward, self.feedforward_max)
             if len(self.feedforward) > 0
+            else [],
+            "feedback": normalize_feedback(feedback_filters, self.feedback_max)
+            if len(feedback_filters) > 0
+            else [],
+        }
+
+    def _opx1000_filter(self) -> dict[str, list[float | tuple[float, float]]]:
+        """Digital filters for OPX1000 (LF/MW FEM) clusters.
+
+        Unlike the OPX+, these expose a native ``exponential`` IIR
+        stage. ``ExponentialFilter``s are thus excluded from the FIR
+        ``feedforward`` convolution, to avoid double-applying the same
+        correction through both stages.
+        """
+        fir_filters = [
+            f for f in self.filters if isinstance(f, FiniteImpulseResponseFilter)
+        ]
+        feedforward = (
+            reduce(np.convolve, [f.feedforward for f in fir_filters])
+            if len(fir_filters) > 0
             else []
-        } | iir
+        )
+        return {
+            "feedforward": normalize_feedforward(feedforward, self.feedforward_max)
+            if len(feedforward) > 0
+            else [],
+            "exponential": [
+                (filt.amplitude, filt.tau)
+                for filt in self.filters
+                if isinstance(filt, ExponentialFilter)
+            ],
+        }
 
 
 class OctaveOscillatorConfig(OscillatorConfig):
