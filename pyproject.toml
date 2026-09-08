@@ -33,7 +33,7 @@ qrng = ["pyserial>=3.5.0,<4.0.0"]
 [dependency-groups]
 dev = [
   "pudb>=2025.1,<2026.0",
-  "ipython>=8.12.0,<9.0.0",
+  "ipython>=9.0.0,<10.0.0",
 ]
 docs = [
   "sphinx>=9.0,<10.0",
@@ -42,20 +42,20 @@ docs = [
   "sphinxcontrib-bibtex>=2.5.0,<3.0.0",
   "sphinx-markdown-tables>=0.0.17,<0.0.18",
   "nbsphinx>=0.9.1,<0.10.0",
-  "ipython>=8.12.0,<9.0.0",
+  "ipython>=9.0.0,<10.0.0",
   "sphinx-copybutton>=0.5.1,<0.6.0",
   # extras
-  "qcodes>=0.52.0,<0.53.0",
-  "qcodes_contrib_drivers>=0.23.0,<0.24.0",
+  "qcodes>=0.58.0,<0.60.0", # qcodes 0.59 requires python >= 3.12
+  "qcodes_contrib_drivers>=0.24.1,<0.26.0", # qcodes_contrib_drivers 0.25 requires python >= 3.12
   "qutip>=5.0.2,<6.0.0",
 ]
 tests = [
   "pytest>=7.2.2",
-  "pytest-cov>=4.0.0,<5.0.0",
+  "pytest-cov>=7.0.0,<8.0.0",
   "pytest-env>=0.8.1",
   "pytest-mock>=3.10.0",
-  "qcodes>=0.52.0,<0.53.0",
-  "qcodes_contrib_drivers>=0.23.0,<0.24.0",
+  "qcodes>=0.58.0,<0.60.0", # qcodes 0.59 requires python >= 3.12
+  "qcodes_contrib_drivers>=0.24.1,<0.26.0", # qcodes_contrib_drivers 0.25 requires python >= 3.12
   "requests>=2.32.0,<3.0.0",
 ]
 analysis = [
