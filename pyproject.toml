@@ -50,10 +50,10 @@ docs = [
   "qutip>=5.0.2,<6.0.0",
 ]
 tests = [
-  "pytest>=7.2.2",
+  "pytest>=9.0.0,<10.0.0",
   "pytest-cov>=7.0.0,<8.0.0",
-  "pytest-env>=0.8.1",
-  "pytest-mock>=3.10.0",
+  "pytest-env>=1.0.0,<2.0.0",
+  "pytest-mock>=3.10.0,<4.0.0",
   "qcodes>=0.58.0,<0.60.0", # qcodes 0.59 requires python >= 3.12
   "qcodes_contrib_drivers>=0.24.1,<0.26.0", # qcodes_contrib_drivers 0.25 requires python >= 3.12
   "requests>=2.32.0,<3.0.0",
