@@ -51,7 +51,8 @@ class RFSoCConfig(Config):
 
     The position of each entry in ``boards`` is its board index. In a
     multi-board configuration, board 0 is the master and every other board is
-    a slave. A configuration containing one board uses immediate start mode.
+    a slave. Only boards present in the sequence are submitted. A single active
+    board uses master mode, regardless of its configured board index.
     """
 
     kind: Literal["qibosoq"] = "qibosoq"
@@ -256,7 +257,7 @@ class RFSoC(Controller):
         opcode: rfsoc.OperationCode,
         options: ExecutionParameters,
     ) -> list[tuple[list, list]]:
-        """Build one command per board and execute all commands concurrently."""
+        """Execute active boards, retaining configured indices in the results."""
         settings = self._board_settings(configs)
         board_count = len(settings.boards)
 
@@ -285,6 +286,19 @@ class RFSoC(Controller):
             )
             for board in range(board_count)
         ]
+        active_boards = [
+            board
+            for board, local_sequence in enumerate(board_sequences)
+            if local_sequence
+        ]
+        if not active_boards:
+            return [([], []) for _ in range(board_count)]
+        if len(active_boards) > 1 and 0 not in active_boards:
+            raise ValueError(
+                "Multi-board execution requires configured master board 0 in "
+                "the sequence. Physical PMOD roles cannot be reassigned."
+            )
+
         board_channel_maps = [
             {
                 ch: channel
@@ -297,8 +311,8 @@ class RFSoC(Controller):
 
         for board, connection in enumerate(settings.boards):
             start = (
-                rfsoc.StartMode.START_IMMEDIATE
-                if board_count == 1
+                rfsoc.StartMode.START_MASTER
+                if len(active_boards) == 1
                 else (
                     rfsoc.StartMode.START_MASTER
                     if board == 0
@@ -322,11 +336,13 @@ class RFSoC(Controller):
             for board_sequence in board_sequences
         ]
         equalized_relaxation_times_us = _equalized_relaxation_times(
-            sequence_durations_ns,
-            [cfg.relaxation_time for cfg in board_cfgs],
+            [sequence_durations_ns[board] for board in active_boards],
+            [board_cfgs[board].relaxation_time for board in active_boards],
         )
 
-        for board, relaxation_time_us in enumerate(equalized_relaxation_times_us):
+        for board, relaxation_time_us in zip(
+            active_boards, equalized_relaxation_times_us
+        ):
             previous_relaxation_time_us = board_cfgs[board].relaxation_time
             board_cfgs[board] = replace(
                 board_cfgs[board],
@@ -343,11 +359,12 @@ class RFSoC(Controller):
                     sequence_durations_ns[board] * NS_TO_US + relaxation_time_us,
                 )
 
-        commands = []
-        hosts = []
-        ports = []
+        commands = {}
+        hosts = {}
+        ports = {}
 
-        for board, connection in enumerate(settings.boards):
+        for board in active_boards:
+            connection = settings.boards[board]
             board_sequence = board_sequences[board]
             board_channels = board_channel_maps[board]
             cfg = board_cfgs[board]
@@ -363,43 +380,51 @@ class RFSoC(Controller):
 
             # Keep dataclass objects here. execute_multiple -> execute ->
             # convert_commands owns serialization in the new qibosoq client.
-            commands.append(
-                {
-                    "operation_code": opcode,
-                    "cfg": cfg,
-                    "sequence": convert(
-                        board_sequence,
-                        self.sampling_rate,
-                        board_channels,
-                        configs,
-                    ),
-                    "qubits": qubits,
-                    "sweepers": [
-                        convert(parsweep, board_sequence, board_channels)
-                        for parsweep in converted_sweepers
-                    ],
-                }
-            )
-            hosts.append(connection.host)
-            ports.append(connection.port)
+            commands[board] = {
+                "operation_code": opcode,
+                "cfg": cfg,
+                "sequence": convert(
+                    board_sequence,
+                    self.sampling_rate,
+                    board_channels,
+                    configs,
+                ),
+                "qubits": qubits,
+                "sweepers": [
+                    convert(parsweep, board_sequence, board_channels)
+                    for parsweep in converted_sweepers
+                ],
+            }
+            hosts[board] = connection.host
+            ports[board] = connection.port
 
         try:
             # execute_multiple staggers submissions. Arm all slaves first and
             # submit the master last so that its trigger cannot precede them.
-            execution_order = [*range(1, board_count), 0] if board_count > 1 else [0]
-            for board in execution_order:
-                print(commands)
+            execution_order = (
+                [board for board in active_boards if board != 0] + [0]
+                if len(active_boards) > 1
+                else active_boards
+            )
             ordered_results = client.execute_multiple(
                 [commands[board] for board in execution_order],
                 [hosts[board] for board in execution_order],
                 [ports[board] for board in execution_order],
                 max_retries=settings.max_retries,
             )
-            results_by_board: list[tuple[list, list] | None] = [None] * board_count
+            if len(ordered_results) != len(execution_order):
+                raise RuntimeError(
+                    "Unexpected board-result count: expected "
+                    f"{len(execution_order)}, got {len(ordered_results)}."
+                )
+            # Empty placeholders keep board 1 results mapped to board 1,
+            # including when it is the only submitted board.
+            results_by_board: list[tuple[list, list]] = [
+                ([], []) for _ in range(board_count)
+            ]
             for board, result in zip(execution_order, ordered_results):
                 results_by_board[board] = result
-            assert all(result is not None for result in results_by_board)
-            return cast(list[tuple[list, list]], results_by_board)
+            return results_by_board
         except RuntimeError as exc:
             cause = exc.__cause__ or exc
             if isinstance(cause, client.RuntimeLoopError) or (
