@@ -25,16 +25,17 @@ __all__ = ["is_offset_rectangular"]
 
 
 def is_offset_rectangular(pulse: PulseLike, sweep: Sweeper | None = None) -> bool:
-    """Whether the pulse is compiled through AWG offsets instead of waveforms.
+    """Decides whether the pulse is compiled through AWG offsets instead of waveforms.
 
-    Rectangular pulses use ``set_awg_offs`` and occupy no waveform memory, but the
-    route relies on a stop instruction at least 4 ns after the start one, so pulses
-    (or duration-sweeper values) shorter than 4 ns fall back to waveform playback.
+    To conserve waveform memory, rectangular pulses of at least 4 ns use
+    ``set_awg_offs`` instead of a waveform expressed as an array of floats. Shorter
+    pulses cannot use this optimization because the required ``upd_param`` instruction
+    (see experiment._process_rectangular) takes 4 ns to execute.
     """
     if not (isinstance(pulse, Pulse) and isinstance(pulse.envelope, Rectangular)):
         return False
     if sweep is not None:
-        assert sweep.values is not None
+        assert sweep.parameter is Parameter.duration and sweep.values is not None
         return bool(np.all(sweep.values >= 4))
     return pulse.duration >= 4
 
@@ -72,8 +73,22 @@ class ParamRole(Enum):
 
     @classmethod
     def unique(cls, sweep: Sweeper) -> bool:
+        """Whether the sweeper can be served by a single value register.
+
+        Most sweepers require only one register. The primary exception is a duration
+        sweep over pulses played from waveform memory. These compile into ``play <I>,
+        <Q>, 4`` followed by ``wait <duration - 4>``, requiring three registers (the wait
+        duration and the `<I>` and `<Q>` waveform indices).
+
+        Duration sweeps remain single-register if they do not play waveforms, such as
+        standalone wait instructions or square pulses executed via offsets
+        (``set_awg_offs``).
+        """
+        # non-duration parameters always map to a single register
         return sweep.parameter is not Parameter.duration or (
             sweep.pulses is not None
+            # non-unique as soon as at least one target is a *played* pulse, i.e. a
+            # Pulse that is not realized through offsets
             and not any(
                 isinstance(p, Pulse) and not is_offset_rectangular(p, sweep)
                 for p in sweep.pulses
@@ -164,15 +179,16 @@ def _pulse_duration(sweep: Sweeper) -> list[tuple[Range, "ParamRole"]]:
 
 def _registers(sweep: Sweeper) -> list[tuple[Range, ParamRole]]:
     """Reserve registers for sweeping."""
-    # offset-compiled rectangular pulses are realized as `upd_param(4)` followed
-    # by a `wait`, so the duration sweep only drives the wait (reduced by 4 ns);
-    # pulses with values below 4 ns keep the waveform-index register allocation
     if (
         sweep.parameter is Parameter.duration
         and sweep.pulses is not None
         and all(is_offset_rectangular(p, sweep) for p in sweep.pulses)
     ):
+        # offset-based rectangular pulses are realized as `upd_param(4)` followed by a
+        # `wait`. The duration sweep applies to wait part, so 4 ns has to be subtracted.
+        assert sweep.values is not None and sweep.values.min() >= 4
         return [((sweep - 4.0).irange, ParamRole.DURATION)]
+
     return (
         [(sweep.irange, ParamRole.from_sweeper(sweep))]
         if ParamRole.unique(sweep)
