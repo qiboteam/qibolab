@@ -27,17 +27,18 @@ __all__ = ["is_offset_rectangular"]
 def is_offset_rectangular(pulse: PulseLike, sweep: Sweeper | None = None) -> bool:
     """Decides whether the pulse is compiled through AWG offsets instead of waveforms.
 
-    To conserve waveform memory, rectangular pulses of at least 4 ns use
+    To conserve waveform memory, rectangular pulses of at least 8 ns use
     ``set_awg_offs`` instead of a waveform expressed as an array of floats. Shorter
-    pulses cannot use this optimization because the required ``upd_param`` instruction
-    (see experiment._process_rectangular) takes 4 ns to execute.
+    pulses cannot use this optimization because the ``upd_param`` instruction takes 4 ns
+    and the ``wait`` at least 4 ns in the Q1 core (see experiment._process_rectangular)
+    .
     """
     if not (isinstance(pulse, Pulse) and isinstance(pulse.envelope, Rectangular)):
         return False
     if sweep is not None:
         assert sweep.parameter is Parameter.duration and sweep.values is not None
-        return bool(np.all(sweep.values >= 4))
-    return pulse.duration >= 4
+        return bool(np.all(sweep.values >= 8))
+    return pulse.duration >= 8
 
 
 class ParamRole(Enum):
@@ -185,8 +186,9 @@ def _registers(sweep: Sweeper) -> list[tuple[Range, ParamRole]]:
         and all(is_offset_rectangular(p, sweep) for p in sweep.pulses)
     ):
         # offset-based rectangular pulses are realized as `upd_param(4)` followed by a
-        # `wait`. The duration sweep applies to wait part, so 4 ns has to be subtracted.
-        assert sweep.values is not None and sweep.values.min() >= 4
+        # `wait(>=4)`. The duration sweep applies to wait part, so 4 ns has to be
+        # subtracted.
+        assert sweep.values is not None and np.all(sweep.values >= 8)
         return [((sweep - 4.0).irange, ParamRole.DURATION)]
 
     return (
