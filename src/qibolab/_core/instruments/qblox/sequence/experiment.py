@@ -109,7 +109,7 @@ def _process_rectangular(pulse: Pulse, params: set[Param]) -> list[Lineable]:
     amplitude_sweep = {p.role: p.reg for p in params if p.role is ParamRole.AMPLITUDE}
 
     # The rectangular pulse is played only on path 0 (the I-channel). The Q-channel is
-    # always 0. The zero needs to math the register or fixed value of the amplitude.
+    # always 0. The zero needs to match the register or fixed value of the amplitude.
     if amplitude_sweep:
         # If the amplitude is swept, then pulse.amplitude is just a placeholder.
         amplitude = amplitude_sweep[ParamRole.AMPLITUDE]
@@ -124,9 +124,9 @@ def _process_rectangular(pulse: Pulse, params: set[Param]) -> list[Lineable]:
     if duration_sweep:
         # the register range was set to (sweep - 4) in `_registers`, so no need to
         # subtract 4 here.
-        wait_instruction = Wait(duration=duration_sweep[ParamRole.DURATION])
+        wait_instruction = [Wait(duration=duration_sweep[ParamRole.DURATION])]
     elif pulse.duration > 4:
-        wait_instruction = Wait(duration=int(pulse.duration) - 4)
+        wait_instruction = [Wait(duration=int(pulse.duration) - 4)]
     else:
         assert pulse.duration == 4
         wait_instruction = []
