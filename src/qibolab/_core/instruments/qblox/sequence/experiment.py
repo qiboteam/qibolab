@@ -113,7 +113,7 @@ def _process_rectangular(pulse: Pulse, params: set[Param]) -> list[Lineable]:
     if amplitude_sweep:
         # If the amplitude is swept, then pulse.amplitude is just a placeholder.
         amplitude = amplitude_sweep[ParamRole.AMPLITUDE]
-        zero = Registers.bin_reset.value
+        zero = Registers.zero.value
     else:
         # If the amplitude is fixed, convert the normalized amplitude assigned to the
         # pulse to units of set_awg_offs.
