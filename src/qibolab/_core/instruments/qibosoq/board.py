@@ -44,6 +44,7 @@ class BoardSettings(BaseModel):
 
     host: str = Field(min_length=1)
     port: int = Field(default=6000, ge=1, le=65535)
+    delay_ns: float = Field(default=0.0, ge=0.0, allow_inf_nan=False)
 
 
 class RFSoCConfig(Config):
@@ -328,37 +329,6 @@ class RFSoC(Controller):
             _update_cfg(cfg, options)
             board_cfgs.append(cfg)
 
-        # Equalize the repeated program period across all boards. The start
-        # delay is not part of this period: only the board-local pulse sequence
-        # and the relaxation time are considered.
-        sequence_durations_ns = [
-            float(board_sequence.duration) if board_sequence else 0.0
-            for board_sequence in board_sequences
-        ]
-        equalized_relaxation_times_us = _equalized_relaxation_times(
-            [sequence_durations_ns[board] for board in active_boards],
-            [board_cfgs[board].relaxation_time for board in active_boards],
-        )
-
-        for board, relaxation_time_us in zip(
-            active_boards, equalized_relaxation_times_us
-        ):
-            previous_relaxation_time_us = board_cfgs[board].relaxation_time
-            board_cfgs[board] = replace(
-                board_cfgs[board],
-                relaxation_time=relaxation_time_us,
-            )
-            added_relaxation_time_us = relaxation_time_us - previous_relaxation_time_us
-            if added_relaxation_time_us > 0:
-                log.info(
-                    "Board %d relaxation time increased by %.9g us "
-                    "to %.9g us so that all board programs last %.9g us.",
-                    board,
-                    added_relaxation_time_us,
-                    relaxation_time_us,
-                    sequence_durations_ns[board] * NS_TO_US + relaxation_time_us,
-                )
-
         commands = {}
         hosts = {}
         ports = {}
@@ -411,6 +381,9 @@ class RFSoC(Controller):
                 [hosts[board] for board in execution_order],
                 [ports[board] for board in execution_order],
                 max_retries=settings.max_retries,
+                delays_ns=[
+                    settings.boards[board].delay_ns for board in execution_order
+                ],
             )
             if len(ordered_results) != len(execution_order):
                 raise RuntimeError(
@@ -499,47 +472,6 @@ def _update_cfg(cfg, options: ExecutionParameters):
         cfg.reps = options.nshots
     if options.relaxation_time is not None:
         cfg.relaxation_time = options.relaxation_time * NS_TO_US
-
-
-def _equalized_relaxation_times(
-    sequence_durations_ns: list[float],
-    relaxation_times_us: list[float],
-) -> list[float]:
-    """Increase relaxation times until all board program periods are equal.
-
-    For board ``b``, the program period is defined as the duration of its
-    board-local pulse sequence plus its relaxation time. Sequence durations
-    are expressed in ns by Qibolab, while qibosoq relaxation times are in us.
-    No relaxation time is ever reduced.
-    """
-    if len(sequence_durations_ns) != len(relaxation_times_us):
-        raise ValueError(
-            "Sequence-duration and relaxation-time lists must have equal length."
-        )
-    if not sequence_durations_ns:
-        return []
-    if any(duration < 0 for duration in sequence_durations_ns):
-        raise ValueError("Sequence durations cannot be negative.")
-    if any(relaxation < 0 for relaxation in relaxation_times_us):
-        raise ValueError("Relaxation times cannot be negative.")
-
-    sequence_durations_us = [
-        duration_ns * NS_TO_US for duration_ns in sequence_durations_ns
-    ]
-    periods_us = [
-        duration_us + relaxation_us
-        for duration_us, relaxation_us in zip(
-            sequence_durations_us, relaxation_times_us
-        )
-    ]
-    target_period_us = max(periods_us)
-
-    return [
-        max(relaxation_us, target_period_us - duration_us)
-        for duration_us, relaxation_us in zip(
-            sequence_durations_us, relaxation_times_us
-        )
-    ]
 
 
 def _firmware_loops(
