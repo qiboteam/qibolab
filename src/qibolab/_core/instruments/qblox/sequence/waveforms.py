@@ -184,8 +184,7 @@ def waveforms(
     pulses_swept: list[tuple[Pulse, Sweeper]] = []
     for p in sequence:
         if isinstance(p, (Pulse, Readout)):
-            # offset-compiled rectangular pulses occupy no waveform memory,
-            # while sub-4 ns ones fall back to playback (cf. is_offset_rectangular)
+            # offset-based rectangular pulses do not have a corresponding waveform.
             if is_offset_rectangular(p, duration_swept.get(p.id)):
                 continue
             if p.id in duration_swept:
