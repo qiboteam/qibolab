@@ -10,6 +10,8 @@ from qibolab._core.pulses import Pulse, PulseId, PulseLike, Readout
 from qibolab._core.serialize import ArrayList, Model
 from qibolab._core.sweeper import Sweeper
 
+from .sweepers import is_offset_rectangular
+
 __all__ = []
 
 QuadratureIndex = int
@@ -182,6 +184,10 @@ def waveforms(
     pulses_swept: list[tuple[Pulse, Sweeper]] = []
     for p in sequence:
         if isinstance(p, (Pulse, Readout)):
+            # offset-compiled rectangular pulses occupy no waveform memory,
+            # while sub-4 ns ones fall back to playback (cf. is_offset_rectangular)
+            if is_offset_rectangular(p, duration_swept.get(p.id)):
+                continue
             if p.id in duration_swept:
                 pulses_swept.append(
                     (_pulse(p, p.id in amplitude_swept), duration_swept[p.id])
