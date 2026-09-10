@@ -127,8 +127,7 @@ def test_rectangular_amplitude_sweeper():
     # gain is not used, the amplitude register feeds the offset directly
     assert not any(isinstance(i, SetAwgGain) for i in instrs)
     assert any(
-        isinstance(i, SetAwgOffs) and i.value_1 == Registers.bin_reset.value
-        for i in instrs
+        isinstance(i, SetAwgOffs) and i.value_1 == Registers.zero.value for i in instrs
     )
 
 
