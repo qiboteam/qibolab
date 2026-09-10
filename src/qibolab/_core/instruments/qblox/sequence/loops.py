@@ -122,7 +122,7 @@ _SHOTS_BIN_RESET: list[Line] = [
     ),
     Line(
         instruction=Move(
-            source=Registers.bin_reset.value,
+            source=Registers.zero.value,
             destination=Registers.bin.value,
         ),
         comment="shots average: reset bin counter",
