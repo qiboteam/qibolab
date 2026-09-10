@@ -1,6 +1,7 @@
 """Tests for TWPA pump support in the Qblox driver (CW and swept modes)."""
 
 import numpy as np
+import pytest
 
 from qibolab._core.components import IqChannel, OscillatorConfig
 from qibolab._core.execution_parameters import AcquisitionType, ExecutionParameters
@@ -38,7 +39,7 @@ def test_q1sequence_from_twpa_frequency_swept():
     options = ExecutionParameters(nshots=100, relaxation_time=50_000)
     sweeper = Sweeper(
         parameter=Parameter.frequency,
-        values=np.array([6.0e9, 6.1e9, 6.2e9]),
+        values=np.array([100e6, 200e6, 300e6]),
         channels=["twpa_ch"],
     )
     seq = Q1Sequence.from_twpa(
@@ -64,6 +65,23 @@ def test_q1sequence_from_twpa_frequency_swept():
     # Check loop logic and SetFreq are present
     assert any(isinstance(ins, SetFreq) for ins in instructions)
     assert any(isinstance(ins, Loop) for ins in instructions)
+
+
+def test_q1sequence_from_twpa_frequency_out_of_range():
+    options = ExecutionParameters(nshots=100, relaxation_time=50_000)
+    sweeper = Sweeper(
+        parameter=Parameter.frequency,
+        values=np.array([6.0e9, 6.1e9, 6.2e9]),
+        channels=["twpa_ch"],
+    )
+    with pytest.raises(ValueError, match="Frequency must be a float between"):
+        Q1Sequence.from_twpa(
+            options=options,
+            sweepers=[[sweeper]],
+            sampling_rate=1.0,
+            channel="twpa_ch",
+            duration=1000.0,
+        )
 
 
 def test_q1sequence_from_twpa_offset_swept():
@@ -118,7 +136,7 @@ def test_compile_twpa_swept():
     options = ExecutionParameters(nshots=10, relaxation_time=1000)
     sweeper = Sweeper(
         parameter=Parameter.frequency,
-        values=np.array([6.0e9, 6.1e9]),
+        values=np.array([100e6, 200e6]),
         channels=["twpa"],
     )
     seqs = compile(
@@ -217,7 +235,7 @@ def test_sequencer_config_build_twpa_swept():
     options = ExecutionParameters(nshots=10, relaxation_time=1000)
     sweeper = Sweeper(
         parameter=Parameter.frequency,
-        values=np.array([6.0e9, 6.1e9]),
+        values=np.array([100e6, 200e6]),
         channels=["twpa"],
     )
     seq = Q1Sequence.from_twpa(options, [[sweeper]], 1.0, "twpa", 100.0)
