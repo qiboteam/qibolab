@@ -2,6 +2,8 @@ from collections.abc import Callable, Iterable
 from enum import Enum, auto
 from itertools import groupby
 
+import numpy as np
+
 from qibolab._core.identifier import ChannelId
 from qibolab._core.instruments.qblox.q1asm.ast_ import (
     Add,
@@ -13,17 +15,28 @@ from qibolab._core.instruments.qblox.q1asm.ast_ import (
     Value,
 )
 from qibolab._core.instruments.qblox.sequence.asm import Registers
-from qibolab._core.pulses.pulse import (
-    Pulse,
-    PulseId,
-    PulseLike,
-)
+from qibolab._core.pulses import Pulse, PulseId, PulseLike, Rectangular
 from qibolab._core.serialize import Model
 from qibolab._core.sweeper import ParallelSweepers, Parameter, Range, Sweeper
 
 from .asm import MAX_PARAM, convert
 
-__all__ = []
+__all__ = ["is_offset_rectangular"]
+
+
+def is_offset_rectangular(pulse: PulseLike, sweep: Sweeper | None = None) -> bool:
+    """Whether the pulse is compiled through AWG offsets instead of waveforms.
+
+    Rectangular pulses use ``set_awg_offs`` and occupy no waveform memory, but the
+    route relies on a stop instruction at least 4 ns after the start one, so pulses
+    (or duration-sweeper values) shorter than 4 ns fall back to waveform playback.
+    """
+    if not (isinstance(pulse, Pulse) and isinstance(pulse.envelope, Rectangular)):
+        return False
+    if sweep is not None:
+        assert sweep.values is not None
+        return bool(np.all(sweep.values >= 4))
+    return pulse.duration >= 4
 
 
 class ParamRole(Enum):
@@ -61,7 +74,10 @@ class ParamRole(Enum):
     def unique(cls, sweep: Sweeper) -> bool:
         return sweep.parameter is not Parameter.duration or (
             sweep.pulses is not None
-            and not any(isinstance(p, Pulse) for p in sweep.pulses)
+            and not any(
+                isinstance(p, Pulse) and not is_offset_rectangular(p, sweep)
+                for p in sweep.pulses
+            )
         )
 
     @property
@@ -148,6 +164,15 @@ def _pulse_duration(sweep: Sweeper) -> list[tuple[Range, "ParamRole"]]:
 
 def _registers(sweep: Sweeper) -> list[tuple[Range, ParamRole]]:
     """Reserve registers for sweeping."""
+    # offset-compiled rectangular pulses are realized as `upd_param(4)` followed
+    # by a `wait`, so the duration sweep only drives the wait (reduced by 4 ns);
+    # pulses with values below 4 ns keep the waveform-index register allocation
+    if (
+        sweep.parameter is Parameter.duration
+        and sweep.pulses is not None
+        and all(is_offset_rectangular(p, sweep) for p in sweep.pulses)
+    ):
+        return [((sweep - 4.0).irange, ParamRole.DURATION)]
     return (
         [(sweep.irange, ParamRole.from_sweeper(sweep))]
         if ParamRole.unique(sweep)
