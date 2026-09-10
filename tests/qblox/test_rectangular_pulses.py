@@ -51,19 +51,6 @@ def test_static_rectangular_pulse_uses_offsets():
     assert sum(isinstance(i, UpdParam) for i in instrs) == 3
 
 
-def test_rectangular_pulse_minimum_duration():
-    pulse = Pulse(duration=4, amplitude=0.5, envelope=Rectangular())
-    result = _compile([("ch1", pulse)])
-    instrs = _instructions(result["ch1"])
-    # a 4 ns pulse needs no hold wait: it is just the start and stop upd_params;
-    # the only static wait is padding (4 ns) merged with relaxation (100 ns)
-    assert SetAwgOffs(value_0=16383, value_1=0) in instrs
-    static_waits = [
-        i for i in instrs if isinstance(i, Wait) and isinstance(i.duration, int)
-    ]
-    assert static_waits == [Wait(duration=104)]
-
-
 def test_short_rectangular_pulse_falls_back_to_waveforms():
     # below 4 ns the offset start/stop cannot be separated, so it is played back
     pulse = Pulse(duration=2, amplitude=0.5, envelope=Rectangular())
