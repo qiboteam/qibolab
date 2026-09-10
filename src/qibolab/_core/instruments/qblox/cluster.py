@@ -229,7 +229,8 @@ class Cluster(Controller):
                     options_,
                     self.sampling_rate,
                     merged_vzs=not phase_sweeper_present,
-                    twpas=self.twpas,
+                    twpas={ch: cast(IqChannel, self.channels[ch]) for ch in self.twpas},
+                    configs=configs,
                 )
 
                 for channelid, seq in sequences_.items():

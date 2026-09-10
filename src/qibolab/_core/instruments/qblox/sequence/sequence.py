@@ -1,9 +1,10 @@
-from collections.abc import Collection, Iterable
-from typing import Annotated
+from collections.abc import Collection, Iterable, Mapping
+from typing import Annotated, cast
 
 import numpy as np
 from pydantic import PlainSerializer, PlainValidator
 
+from qibolab._core.components import Configs, IqChannel, OscillatorConfig
 from qibolab._core.execution_parameters import ExecutionParameters
 from qibolab._core.identifier import ChannelId
 from qibolab._core.pulses import Align, Pulse, PulseLike, Readout
@@ -18,6 +19,7 @@ from qibolab._core.sweeper import (
 
 from ..q1asm import Program, parse
 from ..q1asm.ast_ import Line, Stop
+from ..twpa import twpa_attenuation_and_offset
 from .acquisition import Acquisitions, MeasureId, Weight, Weights, acquisitions
 from .program import program, twpa_program
 from .sweepers import is_offset_rectangular
@@ -133,9 +135,22 @@ class Q1Sequence(Model):
         sampling_rate: float,
         channel: ChannelId,
         duration: float,
+        offset: float = 1.0,
     ) -> "Q1Sequence":
         duration_samples = int(duration * sampling_rate)
         _, sweepers_ = _apply_sampling_rate([], sweepers, sampling_rate)
+        if offset != 1.0:
+            sweepers_ = [
+                [
+                    (s * offset)
+                    if s.parameter is Parameter.offset
+                    and s.channels is not None
+                    and channel in s.channels
+                    else s
+                    for s in parsweep
+                ]
+                for parsweep in sweepers_
+            ]
         return cls(
             waveforms={},
             weights={},
@@ -252,13 +267,22 @@ def _check_no_pulses_on_twpas(
         )
 
 
+def _twpa_offset(channel: IqChannel, configs: Configs | None) -> float:
+    if configs is None or channel.lo is None:
+        return 1.0
+    lo = cast(OscillatorConfig, configs[channel.lo])
+    _, offset = twpa_attenuation_and_offset(lo.power)
+    return offset
+
+
 def compile(
     sequence: PulseSequence,
     sweepers: list[ParallelSweepers],
     options: ExecutionParameters,
     sampling_rate: float,
     merged_vzs: bool,
-    twpas: Collection[ChannelId] = (),
+    twpas: Mapping[ChannelId, IqChannel] = {},
+    configs: Configs | None = None,
 ) -> dict[ChannelId, Q1Sequence]:
     _check_no_offset_sweep_on_awg_offset_pulse_channel(sequence, sweepers)
     _check_no_pulses_on_twpas(sequence, twpas)
@@ -286,6 +310,7 @@ def compile(
                 sampling_rate,
                 ch,
                 duration,
+                offset=_twpa_offset(twpas[ch], configs),
             )
         )
         for ch in twpas

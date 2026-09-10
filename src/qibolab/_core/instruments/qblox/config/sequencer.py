@@ -18,6 +18,7 @@ from qibolab._core.serialize import Model
 
 from ..q1asm.ast_ import Acquire, Line
 from ..sequence import CW_WAVEFORM_INDEX, Q1Sequence
+from ..twpa import twpa_attenuation_and_offset
 from .port import PortAddress
 
 __all__ = []
@@ -92,12 +93,20 @@ class SequencerConfig(Model):
         # pump TWPAs
         is_cw = sequence is not None and sequence.is_continuous_wave
 
+        offset = 0.0
+        if is_cw:
+            offset = 1.0
+            lo = getattr(channels[channel_id], "lo", None)
+            if lo is not None:
+                lo_config = cast(OscillatorConfig, configs[lo])
+                _, offset = twpa_attenuation_and_offset(lo_config.power)
+
         # conditional configurations
         cfg = cls(
             # connect to physical address
             address=address.local_address,
             # TODO: mixer calibration not yet propagated
-            offset_awg_path0=1.0 if is_cw else 0.0,
+            offset_awg_path0=offset,
             offset_awg_path1=0.0,
             # TODO: properly document - the first 4 marker bits are used to toggle
             # outputs, enabling suitable amplification
