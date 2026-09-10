@@ -125,11 +125,8 @@ def _process_rectangular(pulse: Pulse, params: set[Param]) -> list[Lineable]:
         # the register range was set to (sweep - 4) in `_registers`, so no need to
         # subtract 4 here.
         wait_instruction = [Wait(duration=duration_sweep[ParamRole.DURATION])]
-    elif pulse.duration > 4:
-        wait_instruction = [Wait(duration=int(pulse.duration) - 4)]
     else:
-        assert pulse.duration == 4
-        wait_instruction = []
+        wait_instruction = [Wait(duration=int(pulse.duration) - 4)]
 
     return [
         SetAwgOffs(value_0=amplitude, value_1=zero),
