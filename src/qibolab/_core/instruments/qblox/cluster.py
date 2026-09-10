@@ -220,6 +220,7 @@ class Cluster(Controller):
                     self.sampling_rate,
                     merged_vzs=not phase_sweeper_present,
                     twpas=self.twpas,
+                    configs=configs,
                 )
 
                 for channelid, seq in sequences_.items():

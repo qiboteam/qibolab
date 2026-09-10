@@ -6,7 +6,7 @@ import pytest
 from qibolab._core.components import IqChannel, OscillatorConfig
 from qibolab._core.execution_parameters import AcquisitionType, ExecutionParameters
 from qibolab._core.instruments.qblox.cluster import Cluster
-from qibolab._core.instruments.qblox.config.port import PortAddress
+from qibolab._core.instruments.qblox.config.port import PortAddress, PortConfig
 from qibolab._core.instruments.qblox.config.sequencer import SequencerConfig
 from qibolab._core.instruments.qblox.q1asm.ast_ import (
     Loop,
@@ -18,6 +18,7 @@ from qibolab._core.instruments.qblox.q1asm.ast_ import (
     WaitSync,
 )
 from qibolab._core.instruments.qblox.sequence import Q1Sequence, compile
+from qibolab._core.instruments.qblox.twpa import twpa_attenuation_and_offset
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import Parameter, Sweeper
 
@@ -303,3 +304,157 @@ def test_cluster_twpa_channels_by_module():
     assert c._los["twpa2"] == "twpa2"
     assert "twpa" not in c._mixers
     assert c._mixers["twpa2"] == "mixer2"
+
+
+# ---------------------------------------------------------------------------
+# TWPA Attenuation and Offset Fine-tuning
+# ---------------------------------------------------------------------------
+
+
+def test_twpa_attenuation_and_offset():
+    # Power = 0 dBm (0 dB att) -> (0, 1.0)
+    assert twpa_attenuation_and_offset(0.0) == (0, 1.0)
+
+    # Even power (e.g. -10 dBm -> 10 dB att) -> (10, 1.0)
+    assert twpa_attenuation_and_offset(-10.0) == (10, 1.0)
+    assert twpa_attenuation_and_offset(-4.0) == (4, 1.0)
+
+    # Odd / arbitrary power (e.g. -5 dBm -> 5 dB target att):
+    # Port attenuation is 4 dB, offset fine-tunes 1 dB
+    att, offset = twpa_attenuation_and_offset(-5.0)
+    assert att == 4
+    assert np.isclose(offset, 10.0 ** (-1.0 / 20.0))
+
+    # Fractional power (e.g. -11.5 dBm -> 11.5 dB target att):
+    # Port attenuation is 10 dB, offset fine-tunes 1.5 dB
+    att, offset = twpa_attenuation_and_offset(-11.5)
+    assert att == 10
+    assert np.isclose(offset, 10.0 ** (-1.5 / 20.0))
+
+    # Backwards-compatibility with positive power values
+    assert twpa_attenuation_and_offset(10.0) == (10, 1.0)
+    att, offset = twpa_attenuation_and_offset(5.0)
+    assert att == 4
+    assert np.isclose(offset, 10.0 ** (-1.0 / 20.0))
+
+
+def test_port_config_twpa_attenuation():
+    ch = IqChannel(path="8/o1")
+    p1 = PortConfig.build(
+        channel=ch,
+        config=OscillatorConfig(frequency=6.5e9, power=-10.0),
+        in_=False,
+        out=True,
+        lo=OscillatorConfig(frequency=6.5e9, power=-10.0),
+        mixer=None,
+    )
+    assert p1.att == 10
+
+    p2 = PortConfig.build(
+        channel=ch,
+        config=OscillatorConfig(frequency=6.5e9, power=-5.0),
+        in_=False,
+        out=True,
+        lo=OscillatorConfig(frequency=6.5e9, power=-5.0),
+        mixer=None,
+    )
+    assert p2.att == 4
+
+    p3 = PortConfig.build(
+        channel=ch,
+        config=OscillatorConfig(frequency=6.5e9, power=-11.5),
+        in_=False,
+        out=True,
+        lo=OscillatorConfig(frequency=6.5e9, power=-11.5),
+        mixer=None,
+    )
+    assert p3.att == 10
+
+
+def test_sequencer_config_build_twpa_arbitrary_power_cw():
+    c = Cluster(
+        address="addr",
+        name="my_cluster",
+        twpas={"twpa": ("8/o1", None)},
+    )
+    address = PortAddress.from_path("8/o1")
+    configs = {
+        "twpa": OscillatorConfig(frequency=6.5e9, power=-5.0),
+    }
+
+    seq = Q1Sequence.cw()
+    cfg = SequencerConfig.build(
+        address=address,
+        channel_id="twpa",
+        channels=c.all_channels,
+        configs=configs,
+        acquisition=AcquisitionType.INTEGRATION,
+        rf=True,
+        sequence=seq,
+    )
+
+    assert cfg.sync_en is False
+    assert cfg.cont_mode_en_awg_path0 is True
+    assert cfg.cont_mode_en_awg_path1 is True
+    expected_offset = 10.0 ** (-1.0 / 20.0)
+    assert np.isclose(cfg.offset_awg_path0, expected_offset)
+
+
+def test_q1sequence_from_twpa_offset_swept_scaled():
+    options = ExecutionParameters(nshots=50, relaxation_time=100_000)
+    sweeper = Sweeper(
+        parameter=Parameter.offset,
+        values=np.array([0.1, 0.2, 0.3]),
+        channels=["twpa_ch"],
+    )
+    offset_scale = 10.0 ** (-1.0 / 20.0)
+    seq = Q1Sequence.from_twpa(
+        options=options,
+        sweepers=[[sweeper]],
+        sampling_rate=1.0,
+        channel="twpa_ch",
+        duration=500.0,
+        offset=offset_scale,
+    )
+
+    from qibolab._core.instruments.qblox.q1asm.ast_ import Move
+    from qibolab._core.instruments.qblox.sequence.asm import convert
+
+    instructions = [line.instruction for line in seq.program.elements]
+    expected_start = int(convert(0.1 * offset_scale, Parameter.offset))
+    moves = [ins for ins in instructions if isinstance(ins, Move)]
+    assert any(ins.source == expected_start for ins in moves)
+
+
+def test_compile_twpa_offset_swept_with_configs():
+    ps = PulseSequence()
+    options = ExecutionParameters(nshots=10, relaxation_time=1000)
+    sweeper = Sweeper(
+        parameter=Parameter.offset,
+        values=np.array([0.1, 0.2]),
+        channels=["twpa"],
+    )
+    configs = {
+        "twpa": OscillatorConfig(frequency=6.5e9, power=-5.0),
+    }
+    seqs = compile(
+        sequence=ps,
+        sweepers=[[sweeper]],
+        options=options,
+        sampling_rate=1.0,
+        merged_vzs=True,
+        twpas={"twpa": ("8/o1", None)},
+        configs=configs,
+    )
+    assert "twpa" in seqs
+    seq = seqs["twpa"]
+    assert seq.is_cw is False
+
+    from qibolab._core.instruments.qblox.q1asm.ast_ import Move
+    from qibolab._core.instruments.qblox.sequence.asm import convert
+
+    offset_scale = 10.0 ** (-1.0 / 20.0)
+    expected_start = int(convert(0.1 * offset_scale, Parameter.offset))
+    instructions = [line.instruction for line in seq.program.elements]
+    moves = [ins for ins in instructions if isinstance(ins, Move)]
+    assert any(ins.source == expected_start for ins in moves)

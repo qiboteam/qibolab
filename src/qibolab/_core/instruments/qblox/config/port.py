@@ -18,6 +18,7 @@ from qibolab._core.components.filters import (
 from qibolab._core.serialize import Model
 
 from ..identifiers import SlotId
+from ..twpa import twpa_attenuation_and_offset
 
 __all__ = []
 
@@ -227,7 +228,8 @@ class PortConfig(BaseModel):
         self.lo_freq = int(lo.frequency)
 
     def att_(self, lo: OscillatorConfig) -> None:
-        self.att = -int(lo.power)
+        att, _ = twpa_attenuation_and_offset(lo.power)
+        self.att = att
 
     def mixer(self, mixer: IqMixerConfig) -> None:
         self.offset_path0 = mixer.offset_i
