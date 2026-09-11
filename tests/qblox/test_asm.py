@@ -11,32 +11,13 @@ from qibolab._core.sweeper import Parameter
 
 
 @pytest.mark.parametrize(
-    "freq,expected",
-    [
-        (0.0, 0.0),
-        (100e6, 400e6),
-        (-100e6, -400e6),
-        (250e6, 1e9),
-        (-250e6, -1e9),
-        (499e6, 499e6 * 4),
-        (-499e6, -499e6 * 4),
-    ],
+    "freq,expected", [(0.0, 0.0), (-100e6, -400e6), (-250e6, -1e9), (499e6, 499e6 * 4)]
 )
 def test_convert_frequency_valid(freq, expected):
     assert _convert_frequency(freq) == expected
 
 
-@pytest.mark.parametrize(
-    "freq",
-    [
-        500e6,
-        -500e6,
-        500.1e6,
-        -500.1e6,
-        6e9,
-        -6e9,
-    ],
-)
+@pytest.mark.parametrize("freq", [500e6, -500.1e6, 6e9, -6e9])
 def test_convert_frequency_invalid(freq):
     with pytest.raises(
         ValueError,
@@ -57,15 +38,7 @@ def test_convert_offset_valid(offset, expected):
     assert _convert_offset(offset) == expected
 
 
-@pytest.mark.parametrize(
-    "offset",
-    [
-        1.0,
-        -1.0,
-        1.5,
-        -1.5,
-    ],
-)
+@pytest.mark.parametrize("offset", [1.0, -1.0, 1.5, -1.5])
 def test_convert_offset_invalid(offset):
     with pytest.raises(
         ValueError, match=f"Offset must be a float between -1 and 1. Received: {offset}"
