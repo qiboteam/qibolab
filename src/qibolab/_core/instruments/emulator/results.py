@@ -124,25 +124,73 @@ def index(ch: ChannelId, hconfig: HamiltonianConfig) -> int:
     return qubit_info(ch, hconfig)[1]
 
 
-def add_confusion_matrix(
-    qubit_list: list[Qubit], matrix_a: np.ndarray | None = None
-) -> np.ndarray:
-    """Function for applying single qubit confusion matrix from the set of qubit present in the system."""
+def _qubits_by_hilbert_index(hamiltonian: HamiltonianConfig) -> dict[int, Qubit]:
+    """Map Hilbert-space indices to their qubit configuration."""
+    return {
+        hamiltonian.hilbert_space_index(qubit_id): qubit
+        for qubit_id, qubit in hamiltonian.qubits.items()
+    }
 
-    if matrix_a is None:
-        matrix_a = qubit_list[0].confusion_matrix
 
-    qubit_list.pop(0)
-    if len(qubit_list) != 0:
-        next_q = qubit_list[0]
-        matrix_b = (
-            next_q.confusion_matrix
-            if next_q.confusion_matrix is not None
-            else np.eye(next_q.transmon_levels)
-        )
-        matrix_a = add_confusion_matrix(qubit_list, np.kron(matrix_a, matrix_b))
+def _marginalize_probabilities(
+    probabilities: NDArray, dims: list[int], measured: Iterable[int]
+) -> NDArray:
+    """Marginalize full-system probabilities to measured subsystems."""
+    measured = list(measured)
+    axis_offset = probabilities.ndim - len(dims)
+    remaining = [i for i in range(len(dims)) if i in measured]
+    axes = tuple(axis_offset + i for i in range(len(dims)) if i not in measured)
+    marginalized = probabilities.sum(axis=axes)
 
-    return matrix_a
+    leading_axes = marginalized.ndim - len(measured)
+    physical_axes = [leading_axes + remaining.index(i) for i in measured]
+    return np.transpose(marginalized, [*range(leading_axes), *physical_axes])
+
+
+def _marginalize_probability(
+    probabilities: NDArray, dims: list[int], measured: int
+) -> NDArray:
+    """Marginalize full-system probabilities to one measured subsystem."""
+    return _marginalize_probabilities(probabilities, dims, [measured])
+
+
+def _apply_confusion_matrix(probabilities: NDArray, qubit: Qubit) -> NDArray:
+    """Apply a single-qubit confusion matrix to marginalized probabilities."""
+    return np.einsum("ij,...j->...i", np.asarray(qubit.confusion_matrix), probabilities)
+
+
+def _confusion_matrix(qubits: Iterable[Qubit]) -> NDArray:
+    """Build the joint confusion matrix for measured subsystems."""
+    matrices = [np.asarray(qubit.confusion_matrix) for qubit in qubits]
+    matrix = matrices[0]
+    for other in matrices[1:]:
+        matrix = np.kron(matrix, other)
+
+    return matrix
+
+
+def _apply_joint_confusion_matrix(
+    probabilities: NDArray, qubits: Iterable[Qubit]
+) -> NDArray:
+    """Apply measured-subsystem confusion to joint probabilities."""
+    qubits = list(qubits)
+    measured_dims = probabilities.shape[-len(qubits) :]
+    probabilities = probabilities.reshape(
+        *probabilities.shape[: -len(measured_dims)], -1
+    )
+    probabilities = np.einsum("ij,...j->...i", _confusion_matrix(qubits), probabilities)
+    return probabilities.reshape(*probabilities.shape[:-1], *measured_dims)
+
+
+def _expected_population(
+    probabilities: NDArray, acquisition_type: AcquisitionType
+) -> NDArray:
+    """Convert confused probabilities to the configured cyclic result."""
+    if acquisition_type is AcquisitionType.DISCRIMINATION:
+        # States outside the ground state are classified as 1.
+        return probabilities[..., 1:].sum(axis=-1)
+
+    return np.sum(probabilities * np.arange(probabilities.shape[-1]), axis=-1)
 
 
 def select_acquisitions(
@@ -243,35 +291,26 @@ def _cyclic_results(
     # shape is (M, *S), we are ignoring the dimensions of all subsystems
     result_shape = measurements_dim + sweeps_dims
 
-    # non physical dimensions
-    exp_axis = len(result_shape)
-    # physical_dims
-    total_axis = np.arange(len(hamiltonian.dims))
-
     qubit_to_m_map = _create_qubit_meas_map(
         sequence=sequence, hamiltonian=hamiltonian, options=options
     )
+    qubits = _qubits_by_hilbert_index(hamiltonian)
 
     res = np.empty(result_shape)
     for measured_q, unique_measure_idx in qubit_to_m_map.items():
         # marginal has shape (M_i, *S, H_i)
         # where M_i is the measurements on i-th transmon
         # and H_i is the Hilbert space dimension of it
-        marginal = state_probs[unique_measure_idx, ...].sum(
-            axis=tuple(total_axis[total_axis != measured_q] + exp_axis)
+        marginal = _marginalize_probability(
+            state_probs[unique_measure_idx, ...], hamiltonian.dims, measured_q
         )
-
-        if options.acquisition_type is AcquisitionType.DISCRIMINATION:
-            # now we group all the states >= 1, so we classify as 1
-            marginal = marginal[..., 1:]
-        else:
-            # here we are element-wise multiplying the state probability vector
-            # to the state number
-            marginal *= np.arange(0, marginal.shape[-1], 1)
+        marginal = _apply_confusion_matrix(marginal, qubits[measured_q])
 
         measured_q_idx = np.where(sequence_qubit_arr == measured_q)[0]
 
-        res[measured_q_idx, ...] = marginal.sum(axis=-1)
+        res[measured_q_idx, ...] = _expected_population(
+            marginal, options.acquisition_type
+        )
 
     # adding (fake) q component in the results for INTEGRATION acquisition
     if options.acquisition_type is AcquisitionType.INTEGRATION:
@@ -300,48 +339,29 @@ def _singleshot_results(
         hamiltonian=hamiltonian,
         options=options,
     )
-
-    dim_array = np.asarray(hamiltonian.dims)
-
-    # now sampled has shape (M_unique, *S, *H_dim)
-    # dimensions of sweepers and shots
-    sweeps_dims = state_probs.shape[1 : -len(dim_array)]
-
-    # dimensions of total (not unique) measurement
-    measurements_dim = (sum(len(v) for v in measurement_to_q_map.values()),)
-
-    # shape is (M, Nshots *S), we are ignoring the dimensions of all subsystems
-    result_shape = measurements_dim + sweeps_dims
-
-    # non physical dimensions
-    exp_axis = len(result_shape)
-    # physical_dims
-    total_axis = np.arange(len(dim_array))
+    qubits = _qubits_by_hilbert_index(hamiltonian)
 
     res = []
     for measure, unique_q_idx in measurement_to_q_map.items():
+        measured_dims = [hamiltonian.dims[measured_q] for measured_q in unique_q_idx]
+        measured_qubits = [qubits[measured_q] for measured_q in unique_q_idx]
         # marginal has shape (*S, *H_mi)
         # results at the i-th unique measurement
-        # and *H_mi is the list of all the dimensions of the measured transmons
-        marginal = state_probs[measure, ...].sum(
-            # subtract 1 since we loose the M dimension
-            axis=tuple(total_axis[~np.isin(total_axis, unique_q_idx)] + exp_axis - 1),
+        # and *H_mi is the list of all measured transmon dimensions
+        marginal = _marginalize_probabilities(
+            state_probs[measure, ...], hamiltonian.dims, unique_q_idx
         )
-
-        # reshaping to (*S, |*H_mi|)
-        marginal = marginal.reshape((*sweeps_dims, -1))
+        marginal = _apply_joint_confusion_matrix(marginal, measured_qubits)
 
         # shots function returns a vector of shape:
         # (Nshots, *S)
-        sampled = shots(marginal, options.nshots)
-
-        # sorting the unique qubit indices to match the order of the Hilbert space dimensions
-        unique_q_idx_sorting = np.argsort(unique_q_idx)
-        # now marginal has dimensions (Q_i, Nshots, *S)
-        marginal = np.stack(
-            np.unravel_index(sampled, dim_array[unique_q_idx[unique_q_idx_sorting]])
+        sampled = shots(
+            marginal.reshape(*marginal.shape[: -len(measured_dims)], -1), options.nshots
         )
-        res.append(marginal[unique_q_idx_sorting])
+
+        # now measured has dimensions (Q_i, Nshots, *S)
+        measured = np.stack(np.unravel_index(sampled, measured_dims))
+        res.append(measured)
 
     # stacking the results vertically
     # now it had dimensions (M, Nshot, *S)
@@ -396,26 +416,6 @@ def results(
     # now we reshape corrected_probabilities as (M, *S, *H_dim)
     probabilities = np.moveaxis(probabilities, -(len(hamiltonian.dims) + 1), 0)
 
-    if options.acquisition_type is AcquisitionType.DISCRIMINATION:
-        confusion_matrices = []
-        for i, qb in enumerate(hamiltonian.qubits.values()):
-            # appending the confusion matrix
-            confusion_matrices.append(qb.confusion_matrix)
-            # appending the array index
-            confusion_matrices.append([i + hamiltonian.nqubits, i])
-
-        # applying confusion matrices to the probability vector
-        # now corrected_probabilities ha dimensions (M_unique, *S, *H_dim)
-        corrected_probabilities = np.einsum(
-            *confusion_matrices,
-            probabilities[acq_direct_map],
-            [Ellipsis] + list(range(hamiltonian.nqubits)),
-            [Ellipsis] + list(range(hamiltonian.nqubits, 2 * hamiltonian.nqubits)),
-        )
-    else:
-        # corrected_probabilities ha dimensions (M_unique, *S, *H_dim)
-        corrected_probabilities = probabilities[acq_direct_map]
-
     results = (
         _singleshot_results
         if options.averaging_mode is AveragingMode.SINGLESHOT
@@ -426,7 +426,7 @@ def results(
         zip(
             acq_id,
             results(
-                state_probs=corrected_probabilities,
+                state_probs=probabilities[acq_direct_map],
                 sequence=sequence,
                 hamiltonian=hamiltonian,
                 options=options,
