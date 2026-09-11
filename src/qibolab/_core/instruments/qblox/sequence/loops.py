@@ -63,7 +63,7 @@ def loops(
     The counters implement the ``length`` of the iteration, which, for a general
     sweeper, is fully characterized by a ``(start, step, length)`` tuple.
 
-    Those related to :attr:`Registers.bin` and :attr:`Registers.bin_reset` are actually
+    Those related to :attr:`Registers.bin` and :attr:`Registers.zero` are actually
     not loop counter on their own, but they are required to properly store the
     acquisitions in different bins.
     """

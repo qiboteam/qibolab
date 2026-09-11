@@ -154,8 +154,8 @@ def _process_pulse(
     duration_sweep = {
         p.role: p.reg for p in params if p.role.value[1] is Parameter.duration
     }
-    # Rectangular pulses with duration >= 4 ns are implemented using `set_awg_offs`.
-    # For all other pulses, waveforms are played.
+    # Rectangular pulses with duration >= 8 ns are implemented using `set_awg_offs`. For
+    # all other pulses, waveforms are played.
     pulse_instructions = (
         _process_rectangular(pulse, params)
         if _offset_rectangular(pulse, waveforms)
