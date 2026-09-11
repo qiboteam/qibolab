@@ -1,4 +1,4 @@
-from qibolab._core.dummy.platform import create_dummy
+from qibolab._core.dummy.platform import create_dummy_platform
 from qibolab._core.platform.components import Hardware
 from qibolab._core.platform.load import (
     PLATFORM,
@@ -10,12 +10,15 @@ from qibolab._core.platform.load import (
 from qibolab._core.platform.parameters import initialize_parameters, reset_parameters
 from qibolab._core.platform.platform import Platform
 
+create_dummy = create_dummy_platform  # deprecated alias, remove in next release
+
 __all__ = [
     "PLATFORM",
     "PLATFORMS_PATH",
     "Hardware",
     "Platform",
     "create_dummy",
+    "create_dummy_platform",
     "create_platform",
     "initialize_parameters",
     "load_hardware",
