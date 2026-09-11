@@ -122,8 +122,8 @@ def _process_rectangular(pulse: Pulse, params: set[Param]) -> list[Lineable]:
 
     # The first `upd_param` below takes 4 ns so these don't have to be in the wait
     if duration_sweep:
-        # the register range was set to (sweep - 4) in `_registers`, so no need to
-        # subtract 4 here.
+        # the register values are already shifted by the 4 ns of the leading
+        # `upd_param` (see `sweepers._duration_shift`).
         wait_instruction = [Wait(duration=duration_sweep[ParamRole.DURATION])]
     else:
         wait_instruction = [Wait(duration=int(pulse.duration) - 4)]
