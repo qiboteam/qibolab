@@ -52,7 +52,7 @@ def test_static_rectangular_pulse_uses_offsets():
 
 
 def test_short_rectangular_pulse_falls_back_to_waveforms():
-    # below 4 ns the offset start/stop cannot be separated, so it is played back
+    # below 8 ns the offset start/stop cannot be separated, so it is played back
     pulse = Pulse(duration=2, amplitude=0.5, envelope=Rectangular())
     result = _compile([("ch1", pulse)])
     q1seq = result["ch1"]
@@ -64,11 +64,11 @@ def test_short_rectangular_pulse_falls_back_to_waveforms():
 
 
 def test_short_duration_swept_rectangular_pulse_falls_back():
-    # a duration sweeper containing values below 4 ns falls back to waveforms
-    pulse = Pulse(duration=8, amplitude=0.5, envelope=Rectangular())
+    # a duration sweeper containing values below 8 ns falls back to waveforms
+    pulse = Pulse(duration=10, amplitude=0.5, envelope=Rectangular())
     sweeper = Sweeper(
         parameter=Parameter.duration,
-        range=(2, 10, 2),
+        range=(6, 12, 2),
         pulses=[pulse],
     )
     result = _compile([("ch1", pulse)], [[sweeper]])
