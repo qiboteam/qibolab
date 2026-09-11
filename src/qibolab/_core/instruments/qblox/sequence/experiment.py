@@ -1,3 +1,4 @@
+from qibolab._core.pulses import Rectangular
 from qibolab._core.pulses.pulse import (
     Acquisition,
     Align,
@@ -14,9 +15,11 @@ from ..q1asm.ast_ import (
     Block,
     Instruction,
     Line,
+    Lineable,
     Move,
     Play,
     Register,
+    SetAwgOffs,
     SetPhDelta,
     UpdParam,
     Wait,
@@ -71,6 +74,72 @@ def _play_pulse(
     )
 
 
+def _offset_rectangular(pulse: Pulse, waveforms: WaveformIndices) -> bool:
+    """Check if a rectangular pulse uses AWG offsets instead of uploaded waveforms.
+
+    Whether a pulse is treated as a waveform or an offset is decided upstream in
+    `waveforms.waveforms`. Because offset pulses bypass waveform memory, they lack
+    index map entries for their I `(pulse.id, 0)` and Q `(pulse.id, 1)` components.
+    """
+    return (
+        isinstance(pulse.envelope, Rectangular)
+        and (pulse.id, 0) not in waveforms
+        and (pulse.id, 1) not in waveforms
+    )
+
+
+def _process_rectangular(pulse: Pulse, params: set[Param]) -> list[Lineable]:
+    """Emit Q1ASM for a rectangular pulse using `set_awg_offs`.
+
+    The constant level is set as an AWG offset (the NCO is still oscillating and
+    phase rotations on top of it work as for played waveforms), so no sample has
+    to be stored in the waveform memory::
+
+        set_awg_offs <amp>, 0
+        upd_param    4
+        wait         <duration - 4>
+        set_awg_offs 0, 0
+        upd_param    4
+
+    The trailing `upd_param` is needed because `wait` does not latch parameters,
+    so the offset reset has to be explicitly applied at the pulse end.
+    """
+
+    duration_sweep = {p.role: p.reg for p in params if p.role is ParamRole.DURATION}
+    amplitude_sweep = {p.role: p.reg for p in params if p.role is ParamRole.AMPLITUDE}
+
+    # The rectangular pulse is played only on path 0 (the I-channel). The Q-channel is
+    # always 0. The zero needs to match the register or fixed value of the amplitude.
+    if amplitude_sweep:
+        # If the amplitude is swept, then pulse.amplitude is just a placeholder.
+        amplitude = amplitude_sweep[ParamRole.AMPLITUDE]
+        zero = Registers.zero.value
+    else:
+        # If the amplitude is fixed, convert the normalized amplitude assigned to the
+        # pulse to units of set_awg_offs.
+        amplitude = int(convert(pulse.amplitude, Parameter.amplitude))
+        zero = 0
+
+    # The first `upd_param` below takes 4 ns so these don't have to be in the wait
+    if duration_sweep:
+        # the register values are already shifted by the 4 ns of the leading
+        # `upd_param` (see `sweepers._duration_shift`).
+        wait_instruction = [Wait(duration=duration_sweep[ParamRole.DURATION])]
+    else:
+        wait_instruction = [Wait(duration=int(pulse.duration) - 4)]
+
+    return [
+        SetAwgOffs(value_0=amplitude, value_1=zero),
+        Line(
+            instruction=UpdParam(duration=4),
+            comment=f"id: 0x{pulse.id.hex[:5]}",
+        ),
+        *wait_instruction,
+        SetAwgOffs(value_0=0, value_1=0),
+        UpdParam(duration=4),
+    ]
+
+
 def _process_pulse(
     pulse: Pulse, params: set[Param], waveforms: WaveformIndices, merged_vzs: bool
 ):
@@ -85,9 +154,16 @@ def _process_pulse(
     duration_sweep = {
         p.role: p.reg for p in params if p.role.value[1] is Parameter.duration
     }
+    # Rectangular pulses with duration >= 8 ns are implemented using `set_awg_offs`. For
+    # all other pulses, waveforms are played.
+    pulse_instructions = (
+        _process_rectangular(pulse, params)
+        if _offset_rectangular(pulse, waveforms)
+        else _play_pulse(pulse, waveforms, duration_sweep)
+    )
     if merged_vzs:
         assert pulse.relative_phase == 0.0
-        return _play_pulse(pulse, waveforms, duration_sweep)
+        return pulse_instructions
     else:
         phase = int(convert(pulse.relative_phase, Parameter.relative_phase))
         minus_phase = int(convert(-pulse.relative_phase, Parameter.relative_phase))
@@ -104,7 +180,7 @@ def _process_pulse(
                 else []
             )
             + ([SetPhDelta(value=Registers.phase_delta.value)])
-            + _play_pulse(pulse, waveforms, duration_sweep)
+            + pulse_instructions
             + ([Move(source=minus_phase, destination=Registers.phase_delta.value)])
         )
 
@@ -204,13 +280,23 @@ def event(
     acquisitions: dict[MeasureId, AcquisitionSpec],
     merged_vzs: bool,
 ) -> Block:
-    params = parpulse[1]
+    pulse, params = parpulse
+    # For offset rectangular pulses the amplitude sweeper works differently: if a pulse
+    # is implemented through a waveform, the implementation varies the waveform gain
+    # with `set_awg_gain` (output = waveform * gain + offset), which cannot change the
+    # amplitude set through `set_awg_offs`. Instead, the swept amplitude is written
+    # straight into the pulse's own `set_awg_offs` in `_process_rectangular` and the
+    # AMPLITUDE parameter is excluded from the usual gain update/reset around the event.
+    is_offset = isinstance(pulse, Pulse) and _offset_rectangular(pulse, waveforms)
+    sweep_params = [
+        p for p in params if not (is_offset and p.role is ParamRole.AMPLITUDE)
+    ]
     return [
         inst
         for block in (
-            *(update_instructions(p.role, p.reg) for p in params),
+            *(update_instructions(p.role, p.reg) for p in sweep_params),
             *(play(parpulse, waveforms, acquisitions, merged_vzs),),
-            *(reset_instructions(p.role, p.reg) for p in reversed(list(params))),
+            *(reset_instructions(p.role, p.reg) for p in reversed(sweep_params)),
         )
         for inst in block
     ]

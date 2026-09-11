@@ -2,6 +2,8 @@ from collections.abc import Callable, Iterable
 from enum import Enum, auto
 from itertools import groupby
 
+import numpy as np
+
 from qibolab._core.identifier import ChannelId
 from qibolab._core.instruments.qblox.q1asm.ast_ import (
     Add,
@@ -13,17 +15,30 @@ from qibolab._core.instruments.qblox.q1asm.ast_ import (
     Value,
 )
 from qibolab._core.instruments.qblox.sequence.asm import Registers
-from qibolab._core.pulses.pulse import (
-    Pulse,
-    PulseId,
-    PulseLike,
-)
+from qibolab._core.pulses import Pulse, PulseId, PulseLike, Rectangular
 from qibolab._core.serialize import Model
 from qibolab._core.sweeper import ParallelSweepers, Parameter, Range, Sweeper
 
 from .asm import MAX_PARAM, convert
 
-__all__ = []
+__all__ = ["is_offset_rectangular"]
+
+
+def is_offset_rectangular(pulse: PulseLike, sweep: Sweeper | None = None) -> bool:
+    """Decides whether the pulse is compiled through AWG offsets instead of waveforms.
+
+    To conserve waveform memory, rectangular pulses of at least 8 ns use
+    ``set_awg_offs`` instead of a waveform expressed as an array of floats. Shorter
+    pulses cannot use this optimization because the ``upd_param`` instruction takes 4 ns
+    and the ``wait`` at least 4 ns in the Q1 core (see experiment._process_rectangular)
+    .
+    """
+    if not (isinstance(pulse, Pulse) and isinstance(pulse.envelope, Rectangular)):
+        return False
+    if sweep is not None:
+        assert sweep.parameter is Parameter.duration and sweep.values is not None
+        return bool(np.all(sweep.values >= 8))
+    return pulse.duration >= 8
 
 
 class ParamRole(Enum):
@@ -59,9 +74,26 @@ class ParamRole(Enum):
 
     @classmethod
     def unique(cls, sweep: Sweeper) -> bool:
+        """Whether the sweeper can be served by a single value register.
+
+        Most sweepers require only one register. The primary exception is a duration
+        sweep over pulses played from waveform memory. These compile into ``play <I>,
+        <Q>, 4`` followed by ``wait <duration - 4>``, requiring three registers (the wait
+        duration and the `<I>` and `<Q>` waveform indices).
+
+        Duration sweeps remain single-register if they do not play waveforms, such as
+        standalone wait instructions or square pulses executed via offsets
+        (``set_awg_offs``).
+        """
+        # non-duration parameters always map to a single register
         return sweep.parameter is not Parameter.duration or (
             sweep.pulses is not None
-            and not any(isinstance(p, Pulse) for p in sweep.pulses)
+            # non-unique as soon as at least one target is a *played* pulse, i.e. a
+            # Pulse that is not realized through offsets
+            and not any(
+                isinstance(p, Pulse) and not is_offset_rectangular(p, sweep)
+                for p in sweep.pulses
+            )
         )
 
     @property
@@ -142,7 +174,7 @@ def _pulse_duration(sweep: Sweeper) -> list[tuple[Range, "ParamRole"]]:
     return [
         ((0, 2 * len(sweep), 2), ParamRole.PULSE_I),
         ((1, 2 * len(sweep) + 1, 2), ParamRole.PULSE_Q),
-        ((sweep - 4.0).irange, ParamRole.DURATION),
+        (sweep.irange, ParamRole.DURATION),
     ]
 
 
@@ -155,6 +187,26 @@ def _registers(sweep: Sweeper) -> list[tuple[Range, ParamRole]]:
     )
 
 
+def _duration_shift(role: ParamRole, pulse: PulseLike | None) -> int:
+    """Shift of the register values for a swept pulse duration.
+
+    Pulses are generated either as a waveform or as an offset (for most rectangular
+    pulses). If their duration is swept, both cases consist of a 4 ns latch instruction
+    (either ``upd_param`` or ``play``) followed by a wait instruction:
+
+    - Rectangular pulses with duration >= 8 ns (via ``_process_rectangular``):
+        upd_param 4
+        wait <duration>
+
+    - Any other pulse (via ``_play_duration_swept``):
+        play <I>, <Q>, 4
+        wait <duration>
+
+    Any other duration sweeper requires no duration shift.
+    """
+    return 4 if role is ParamRole.DURATION and isinstance(pulse, Pulse) else 0
+
+
 def _unravel_sweeps(sweepers: list[ParallelSweepers]) -> Iterable[tuple[int, Param]]:
     """Turn sweepers into suitable ranges with unique targets."""
     return (
@@ -162,7 +214,9 @@ def _unravel_sweeps(sweepers: list[ParallelSweepers]) -> Iterable[tuple[int, Par
             j,
             Param(
                 reg=Register(number=0),
-                start=int(convert(irange[0], sweep.parameter)),
+                start=int(
+                    convert(irange[0] - _duration_shift(role, pulse), sweep.parameter)
+                ),
                 step=int(convert(irange[2], sweep.parameter)),
                 pulse=pulse.id if pulse is not None else None,
                 channel=channel,
