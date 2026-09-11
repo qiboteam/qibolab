@@ -361,7 +361,7 @@ def _singleshot_results(
 
         # now measured has dimensions (Q_i, Nshots, *S)
         measured = np.stack(np.unravel_index(sampled, measured_dims))
-        res.extend(measured)
+        res.append(measured)
 
     # stacking the results vertically
     # now it had dimensions (M, Nshot, *S)
@@ -369,7 +369,7 @@ def _singleshot_results(
     # are automatically time-sorted. This is guaranteed because both are generated
     # using 'np.unique'—first on the measurement times, and then via its inverse
     # mapping applied 'unique_q_idx', which gives a ordered subset of acquisitions(sequence).keys().
-    res = np.stack(res)
+    res = np.vstack(res)
 
     if options.acquisition_type is AcquisitionType.DISCRIMINATION:
         # now we group all the states >= 1, so we classify as 1

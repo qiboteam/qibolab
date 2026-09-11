@@ -12,7 +12,8 @@ def expectation_value_state(prob_vector: NDArray, confusion_matrix: NDArray) -> 
     Calculate the expectation value of a quantum state after applying a confusion matrix.
     """
     p_fin = confusion_matrix @ prob_vector
-    return p_fin @ np.arange(p_fin.size)
+    # this is true for 2-level systems
+    return p_fin[1:].sum()
 
 
 def test_ground_state(platform: Platform):

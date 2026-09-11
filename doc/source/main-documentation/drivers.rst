@@ -130,8 +130,7 @@ that the frequency of the transmon can be changed by applying flux :math:`\Phi_i
     \sqrt[4]{d_i^2 + (1 - d_i^2)\cos^2\left( \pi k(\Phi_i - \Phi^{\text{sweetspot}}_i) \right)} + \alpha_i
 
 where :math:`\omega_i^{\text{max}}` is the maximum frequency of the transmon, :math:`d_i` is the junctions asymmetry
-and :math:`\Phi^{\text{sweetspot}}_i` is the flux value at which the transmon frequency is maximum
-Currently neither drive or crosstalk effects are considered.
+and :math:`\Phi^{\text{sweetspot}}_i` is the flux value at which the transmon frequency is maximum.
 The coupling strength between the two transmons :math:`g` .
 
 .. note::
