@@ -1,4 +1,4 @@
-from qibolab._core.dummy.platform import create_dummy
+from qibolab._core.dummy.platform import create_dummy_platform
 from qibolab._core.platform.components import Hardware
 from qibolab._core.platform.load import (
     PLATFORM,
@@ -15,7 +15,7 @@ __all__ = [
     "PLATFORMS_PATH",
     "Hardware",
     "Platform",
-    "create_dummy",
+    "create_dummy_platform",
     "create_platform",
     "initialize_parameters",
     "load_hardware",
