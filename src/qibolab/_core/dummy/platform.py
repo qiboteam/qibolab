@@ -20,7 +20,7 @@ def create_dummy_hardware(
     if qubits_set is None:
         qubits_set = list(range(5))
     if couplers_set is None:
-        couplers_set = list(range(5))
+        couplers_set = [0, 1, 3, 4]
 
     for q in qubits_set:
         drive12 = f"{q}/drive12"

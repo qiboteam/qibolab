@@ -61,7 +61,7 @@ class Sweeper(Model):
 
             import numpy as np
             from qibolab import Parameter, PulseSequence, Sweeper
-            from qibolab.instruments.dummy import create_dummy_platform
+            from qibolab.platform import create_dummy_platform
 
             platform = create_dummy_platform()
             qubit = platform.qubits[0]
