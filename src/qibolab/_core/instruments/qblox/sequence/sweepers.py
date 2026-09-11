@@ -174,28 +174,37 @@ def _pulse_duration(sweep: Sweeper) -> list[tuple[Range, "ParamRole"]]:
     return [
         ((0, 2 * len(sweep), 2), ParamRole.PULSE_I),
         ((1, 2 * len(sweep) + 1, 2), ParamRole.PULSE_Q),
-        ((sweep - 4.0).irange, ParamRole.DURATION),
+        (sweep.irange, ParamRole.DURATION),
     ]
 
 
 def _registers(sweep: Sweeper) -> list[tuple[Range, ParamRole]]:
     """Reserve registers for sweeping."""
-    if (
-        sweep.parameter is Parameter.duration
-        and sweep.pulses is not None
-        and all(is_offset_rectangular(p, sweep) for p in sweep.pulses)
-    ):
-        # offset-based rectangular pulses are realized as `upd_param(4)` followed by a
-        # `wait(>=4)`. The duration sweep applies to wait part, so 4 ns has to be
-        # subtracted.
-        assert sweep.values is not None and np.all(sweep.values >= 8)
-        return [((sweep - 4.0).irange, ParamRole.DURATION)]
-
     return (
         [(sweep.irange, ParamRole.from_sweeper(sweep))]
         if ParamRole.unique(sweep)
         else _pulse_duration(sweep)
     )
+
+
+def _duration_shift(role: ParamRole, pulse: PulseLike | None) -> int:
+    """Shift of the register values for a swept pulse duration.
+
+    Pulses are generated either as a waveform or as an offset (for most rectangular
+    pulses). If their duration is swept, both cases consist of a 4 ns latch instruction
+    (either ``upd_param`` or ``play``) followed by a wait instruction:
+
+    - Rectangular pulses with duration >= 8 ns (via ``_process_rectangular``):
+        upd_param 4
+        wait <duration>
+
+    - Any other pulse (via ``_play_duration_swept``):
+        play <I>, <Q>, 4
+        wait <duration>
+
+    Any other duration sweeper requires no duration shift.
+    """
+    return 4 if role is ParamRole.DURATION and isinstance(pulse, Pulse) else 0
 
 
 def _unravel_sweeps(sweepers: list[ParallelSweepers]) -> Iterable[tuple[int, Param]]:
@@ -205,7 +214,9 @@ def _unravel_sweeps(sweepers: list[ParallelSweepers]) -> Iterable[tuple[int, Par
             j,
             Param(
                 reg=Register(number=0),
-                start=int(convert(irange[0], sweep.parameter)),
+                start=int(
+                    convert(irange[0] - _duration_shift(role, pulse), sweep.parameter)
+                ),
                 step=int(convert(irange[2], sweep.parameter)),
                 pulse=pulse.id if pulse is not None else None,
                 channel=channel,
