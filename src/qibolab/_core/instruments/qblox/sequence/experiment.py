@@ -128,6 +128,8 @@ def _process_rectangular(pulse: Pulse, params: set[Param]) -> list[Lineable]:
     else:
         wait_instruction = [Wait(duration=int(pulse.duration) - 4)]
 
+    # NOTE: The UpdParam below causes the realtime duration of the pulse to be 4 ns
+    # longer than the requested duration.
     return [
         SetAwgOffs(value_0=amplitude, value_1=zero),
         Line(
