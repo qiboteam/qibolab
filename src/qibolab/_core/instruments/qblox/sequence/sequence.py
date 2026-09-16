@@ -72,6 +72,7 @@ class Q1Sequence(Model):
         options: ExecutionParameters,
         sampling_rate: float,
         channel: set[ChannelId],
+        pulse_channel: ChannelId,
         duration: float,
         merged_vzs: bool,
     ) -> "Q1Sequence":
@@ -109,6 +110,7 @@ class Q1Sequence(Model):
                 options,
                 sweepers,
                 channel,
+                pulse_channel,
                 int(padding),
                 merged_vzs,
             ),
@@ -167,6 +169,7 @@ def compile(
             options,
             sampling_rate,
             _effective_channels(ch, seq),
+            ch,
             duration,
             merged_vzs,
         )
