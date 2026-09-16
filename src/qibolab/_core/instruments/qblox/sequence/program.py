@@ -13,7 +13,9 @@ from ..q1asm.ast_ import (
     Nop,
     Program,
     Stop,
+    UpdParam,
     Wait,
+    WaitSync,
 )
 from .acquisition import AcquisitionSpec, MeasureId
 from .experiment import experiment
@@ -22,7 +24,7 @@ from .sweepers import Param, params, params_reshape, sweep_sequence, update_inst
 from .transpile import transpile
 from .waveforms import WaveformIndices
 
-__all__ = ["Program"]
+__all__ = ["Program", "twpa_program"]
 
 
 def setup(
@@ -137,6 +139,49 @@ def program(
                     singleshot,
                     channel,
                     pulses,
+                ),
+                finalization(),
+            ]
+            for el in block
+        ]
+    )
+
+
+def twpa_program(
+    options: ExecutionParameters,
+    sweepers: list[ParallelSweepers],
+    channel: set[ChannelId],
+    duration: int,
+) -> Program:
+    """Generate sequencer program for swept TWPA channel."""
+    assert options.nshots is not None
+    loops_ = loops(
+        sweepers,
+        options.nshots,
+        inner_shots=options.averaging_mode is AveragingMode.SEQUENTIAL,
+    )
+    params_ = params(sweepers, allocated=max(lp.reg.number for lp in loops_))
+    indexed_params = params_reshape(params_)
+    experiment_ = [
+        UpdParam(duration=4),
+        WaitSync(duration=4),
+        Wait(duration=duration),
+    ]
+    singleshot = options.averaging_mode is AveragingMode.SINGLESHOT
+
+    return transpile(
+        [
+            el
+            for block in [
+                setup(loops_, params_, channel, pulses=set()),
+                loop(
+                    experiment_,
+                    loops_,
+                    indexed_params,
+                    0,
+                    singleshot,
+                    channel,
+                    pulses=set(),
                 ),
                 finalization(),
             ]
