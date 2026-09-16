@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 
 from qibolab._core.components import AcquisitionConfig, IqConfig, OscillatorConfig
-from qibolab._core.dummy import create_dummy
+from qibolab._core.dummy import create_dummy_platform
 from qibolab._core.dummy.platform import FOLDER as DUMMY_FOLDER
 from qibolab._core.native import SingleQubitNatives, TwoQubitNatives
 from qibolab._core.parameters import NativeGates, Parameters, update_configs
@@ -133,7 +133,7 @@ def test_dump_parameters_with_updates(platform: Platform, tmp_path: Path):
 def test_kernels(tmp_path: Path):
     """Test dumping and loading of `Kernels`."""
 
-    platform = create_dummy()
+    platform = create_dummy_platform()
     for name, config in platform.parameters.configs.items():
         if isinstance(config, AcquisitionConfig):
             platform.parameters.configs[name] = replace(
@@ -157,7 +157,7 @@ def test_kernels(tmp_path: Path):
 def test_dump_platform(tmp_path):
     """Test platform dump and loading parameters and kernels."""
 
-    platform = create_dummy()
+    platform = create_dummy_platform()
 
     platform.dump(tmp_path)
 

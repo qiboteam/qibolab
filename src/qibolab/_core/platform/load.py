@@ -117,9 +117,9 @@ def create_platform(name: str) -> Platform:
         The plaform class.
     """
     if name == "dummy":
-        from qibolab._core.dummy import create_dummy
+        from qibolab._core.dummy import create_dummy_platform
 
-        return create_dummy()
+        return create_dummy_platform()
     path = _search(name, _platforms_paths())
 
     hardware = _load_platform(path)
