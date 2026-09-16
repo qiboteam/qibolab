@@ -7,9 +7,22 @@ from qibolab._core.components.channels import (
     DcChannel,
     IqChannel,
 )
-from qibolab._core.identifier import QubitId
+from qibolab._core.identifier import ChannelId, QubitId
+from qibolab._core.serialize import Model
 
-__all__ = ["infer_los", "map_ports"]
+__all__ = ["Channels", "Twpa", "Twpas", "infer_los", "infer_mixers", "map_ports"]
+
+Channels = dict[ChannelId, Channel]
+Twpas = dict[str, tuple[str, str | None]]
+SlotMap = dict[str | int, list[QubitId]]
+ClusterMap = dict[str, tuple[int, SlotMap]]
+
+
+class Twpa(Model):
+    """TWPA pump configuration placeholder for port mapping."""
+
+    name: str
+    mixer: str | None = None
 
 
 def _chtype(mod: str, input: bool) -> tuple[str, type[Channel]]:
@@ -24,45 +37,59 @@ def _chtype(mod: str, input: bool) -> tuple[str, type[Channel]]:
     raise ValueError
 
 
-def _port_channels(mod: str, port: int | str, slot: int) -> dict:
+def _port_path(port: int | str, slot: int) -> str:
+    port = f"o{port}" if isinstance(port, int) else port
+    return f"{slot}/{port}"
+
+
+def _port_channels(mod: str, port: int | str, slot: int) -> dict[str, Channel]:
     if isinstance(port, str) and port.startswith("io"):
         return {
             "probe": IqChannel(path=f"{slot}/o{port[2:]}"),
             "acquisition": AcquisitionChannel(path=f"{slot}/i{port[2:]}"),
         }
-    port = f"o{port}" if isinstance(port, int) else port
-    name, cls = _chtype(mod, port[0] == "i")
-    return {name: cls(path=f"{slot}/{port}")}
+    path = _port_path(port, slot)
+    name, cls = _chtype(mod, isinstance(port, str) and port[0] == "i")
+    return {name: cls(path=path)}
 
 
-def _premap(cluster: dict):
-    d = defaultdict(lambda: defaultdict(dict))
+def _premap(
+    cluster: ClusterMap,
+) -> tuple[dict[QubitId, dict[str, Channel]], Twpas]:
+    channels = defaultdict(lambda: defaultdict(dict))
+    twpas: Twpas = {}
 
     for mod, props in cluster.items():
         slot = props[0]
-        for port, els in props[1].items():
-            for el in els:
-                d[el] |= _port_channels(mod, port, slot)
+        for port, elements in props[1].items():
+            for el in elements:
+                if isinstance(el, Twpa):
+                    twpas[el.name] = (_port_path(port, slot), el.mixer)
+                else:
+                    channels[el] |= _port_channels(mod, port, slot)
 
-    return d
+    return channels, twpas
 
 
-def map_ports(cluster: dict, qubits: dict, couplers: dict | None = None) -> dict:
-    """Extract channels from compact representation.
+def map_ports(
+    cluster: ClusterMap, qubits: dict, couplers: dict | None = None
+) -> tuple[Channels, Twpas]:
+    """Extract channels and TWPAs from compact representation.
 
     Conventions:
     - each item is a module
     - the first element of each value is the module's slot ID
-    - the second element is a map from ports to qubits
+    - the second element is a map from ports to qubits or :class:`Twpa` instances
         - ports
             - they are `i{n}` or `o{n}` for the inputs and outputs respectively
             - `io{n}` is also allowed, to signal that both are connected (cater for the specific
               case of the QRM_RF where there are only one port of each type)
             - if it's just an integer, it is intended to be an output (equivalent to `o{n}`)
         - values
-            - list of element names
-            - they are `q{name}` or `c{name}` for qubits and couplers respectively
+            - list of element names or :class:`Twpa` instances
+            - element names are `q{name}` or `c{name}` for qubits and couplers respectively
             - multiple elements are allowed, for multiplexed ports
+            - :class:`Twpa` elements are collected into the returned :data:`Twpas` dictionary
 
     .. note::
 
@@ -76,9 +103,9 @@ def map_ports(cluster: dict, qubits: dict, couplers: dict | None = None) -> dict
     if couplers is None:
         couplers = {}
 
-    premap = _premap(cluster)
+    premap, twpas = _premap(cluster)
 
-    channels = {}
+    channels: Channels = {}
     for name, el in (qubits | couplers).items():
         for chname, ch in premap[name].items():
             channels[getattr(el, chname)] = ch
@@ -88,7 +115,7 @@ def map_ports(cluster: dict, qubits: dict, couplers: dict | None = None) -> dict
             )
         except KeyError:
             pass
-    return channels
+    return channels, twpas
 
 
 _PORT = re.compile(r"i?o?(.*)")
@@ -122,7 +149,8 @@ def _infer_outputs(cluster: dict, suffix: str) -> dict[tuple[QubitId, bool], str
         for mod, specs in cluster.items()
         if "_rf" in mod
         for port, qs in specs[1].items()
-        for q in qs
+        for q in (qs if isinstance(qs, (list, tuple, set)) else [qs])
+        if not isinstance(q, Twpa)
     }
 
 
