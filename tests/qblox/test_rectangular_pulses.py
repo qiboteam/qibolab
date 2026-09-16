@@ -1,6 +1,7 @@
 """Rectangular pulses are synthesized with `set_awg_offs` instead of waveforms."""
 
 import numpy as np
+import pytest
 
 from qibolab._core.execution_parameters import ExecutionParameters
 from qibolab._core.instruments.qblox.q1asm.ast_ import (
@@ -49,6 +50,18 @@ def test_static_rectangular_pulse_uses_offsets():
     assert Wait(duration=36) in instrs
     # and the offset reset is latched by a final upd_param
     assert sum(isinstance(i, UpdParam) for i in instrs) == 3
+
+
+def test_offset_sweeper_conflicts_with_offset_rectangular_pulse():
+    pulse = Pulse(duration=40, amplitude=0.5, envelope=Rectangular())
+    sweeper = Sweeper(
+        parameter=Parameter.offset,
+        values=np.array([0.1, 0.2]),
+        channels=["ch1"],
+    )
+
+    with pytest.raises(ValueError, match="Cannot sweep the offset of channel 'ch1'"):
+        _compile([("ch1", pulse)], [[sweeper]])
 
 
 def test_short_rectangular_pulse_falls_back_to_waveforms():
