@@ -2,6 +2,7 @@ from collections.abc import Iterable, Sequence
 
 from qibolab._core.execution_parameters import AveragingMode, ExecutionParameters
 from qibolab._core.identifier import ChannelId
+from qibolab._core.pulses import Pulse
 from qibolab._core.pulses.pulse import PulseId, PulseLike
 from qibolab._core.sweeper import ParallelSweepers
 
@@ -16,9 +17,16 @@ from ..q1asm.ast_ import (
     Wait,
 )
 from .acquisition import AcquisitionSpec, MeasureId
-from .experiment import experiment
+from .experiment import _offset_rectangular, experiment
 from .loops import LoopSpec, Registers, loop, loops
-from .sweepers import Param, params, params_reshape, sweep_sequence, update_instructions
+from .sweepers import (
+    Param,
+    ParamRole,
+    params,
+    params_reshape,
+    sweep_sequence,
+    update_instructions,
+)
 from .transpile import transpile
 from .waveforms import WaveformIndices
 
@@ -100,6 +108,7 @@ def program(
     options: ExecutionParameters,
     sweepers: list[ParallelSweepers],
     channel: set[ChannelId],
+    pulse_channel: ChannelId,
     padding: int,
     merged_vzs: bool,
 ) -> Program:
@@ -116,6 +125,16 @@ def program(
     sweepseq = sweep_sequence(
         sequence, [p for v in indexed_params.values() for p in v.pulse]
     )
+    if any(
+        p.role is ParamRole.OFFSET and p.channel == pulse_channel for p in params_
+    ) and any(
+        isinstance(pulse, Pulse) and _offset_rectangular(pulse, waveforms)
+        for pulse, _ in sweepseq
+    ):
+        raise ValueError(
+            f"Cannot sweep the offset of channel {pulse_channel!r} while playing a "
+            "rectangular pulse on it."
+        )
     experiment_ = [
         *experiment(sweepseq, waveforms, acquisitions, merged_vzs),
         # Enforce a minimum wait of 4 ns corresponding to one clock cycle
