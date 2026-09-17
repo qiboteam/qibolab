@@ -91,8 +91,8 @@ def test_waveforms_duration_sweeper():
         ),
     )
 
-    # swept pulses (non-rectangular, since rectangular pulses are synthesized
-    # through `set_awg_offs` and occupy no waveform memory)
+    # swept pulses (non-rectangular, since rectangular pulses are synthesized through
+    # `set_awg_offs` instead of waveforms)
     pulse_b = Pulse(
         duration=4,
         amplitude=1.0,
@@ -151,15 +151,17 @@ def test_waveforms_duration_sweeper():
     assert len(swept_indices) == len(set(swept_indices))
 
 
-def test_waveforms_rectangular_pulses_not_stored():
-    """Rectangular pulses are synthesized with offsets and use no waveform memory."""
-    static = Pulse(duration=20000, amplitude=0.5, envelope=Rectangular())
+def test_rectangular_pulses_no_waveforms():
+    """Rectangular pulses are synthesized with offsets and use no waveforms."""
+
+    # Test for a bare pulse, amplitude swept, and duration swept pulses.
+    static = Pulse(duration=40, amplitude=0.5, envelope=Rectangular())
     amp_swept = Pulse(duration=40, amplitude=0.5, envelope=Rectangular())
     dur_swept = Pulse(duration=40, amplitude=0.5, envelope=Rectangular())
 
     duration_sweeper = Sweeper(
         parameter=Parameter.duration,
-        values=np.array([20000.0, 40000.0, 60000.0]),
+        range=(100, 600, 100),
         pulses=[dur_swept],
     )
 
