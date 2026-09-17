@@ -30,8 +30,7 @@ def is_offset_rectangular(pulse: PulseLike, sweep: Sweeper | None = None) -> boo
     To conserve waveform memory, rectangular pulses of at least 8 ns use
     ``set_awg_offs`` instead of a waveform expressed as an array of floats. Shorter
     pulses cannot use this optimization because the ``upd_param`` instruction takes 4 ns
-    and the ``wait`` at least 4 ns in the Q1 core (see experiment._process_rectangular)
-    .
+    and the ``wait`` at least 4 ns in the Q1 core.
     """
     if not (isinstance(pulse, Pulse) and isinstance(pulse.envelope, Rectangular)):
         return False
