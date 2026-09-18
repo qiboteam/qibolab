@@ -60,8 +60,9 @@ def test_offset_sweeper_conflicts_with_offset_rectangular_pulse():
         values=np.array([0.1, 0.2]),
         channels=["ch1"],
     )
-
-    with pytest.raises(ValueError, match="Cannot sweep the offset of channel 'ch1'"):
+    with pytest.raises(
+        ValueError, match="Cannot sweep the offset of channel\\(s\\) 'ch1'"
+    ):
         _compile([("ch1", pulse)], [[sweeper]])
 
 
