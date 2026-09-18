@@ -108,7 +108,6 @@ def program(
     options: ExecutionParameters,
     sweepers: list[ParallelSweepers],
     channel: set[ChannelId],
-    pulse_channel: ChannelId,
     padding: int,
     merged_vzs: bool,
 ) -> Program:
@@ -125,15 +124,19 @@ def program(
     sweepseq = sweep_sequence(
         sequence, [p for v in indexed_params.values() for p in v.pulse]
     )
-    if any(
-        p.role is ParamRole.OFFSET and p.channel == pulse_channel for p in params_
-    ) and any(
+    swept_offset_channels = [
+        p.channel
+        for p in params_
+        if p.role is ParamRole.OFFSET and p.channel in channel
+    ]
+    if swept_offset_channels and any(
         isinstance(pulse, Pulse) and _offset_rectangular(pulse, waveforms)
         for pulse, _ in sweepseq
     ):
         raise ValueError(
-            f"Cannot sweep the offset of channel {pulse_channel!r} while playing a "
-            "rectangular pulse on it."
+            "Cannot sweep the offset of channel(s) "
+            f"{', '.join(swept_offset_channels)!r} while playing a rectangular pulse on "
+            "it."
         )
     experiment_ = [
         *experiment(sweepseq, waveforms, acquisitions, merged_vzs),
