@@ -106,7 +106,7 @@ class OpxOutputConfig(DcConfig):
             else []
         )
         return {
-            "feedforward": normalize_feedforward(feedforward, self.feedforward_max)
+            "feedforward": normalize_feedforward(feedforward, self.feedforward_max),
             "exponential": [
                 (filt.amplitude, filt.tau)
                 for filt in self.filters
