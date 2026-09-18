@@ -102,7 +102,7 @@ class OpxOutputConfig(DcConfig):
         ]
         feedforward = (
             reduce(np.convolve, [f.feedforward for f in fir_filters])
-            if len(fir_filters) > 0
+            if fir_filters
             else []
         )
         return {
