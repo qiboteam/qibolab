@@ -21,7 +21,10 @@ def test_convert_frequency_valid(freq, expected):
 def test_convert_frequency_invalid(freq):
     with pytest.raises(
         ValueError,
-        match=f"Frequency must be a float between -500e6 and 500e6. Received: {freq}",
+        match=(
+            f"Frequency must be a float between "
+            f"-{MAX_PARAM[Parameter.frequency] / 4} and {MAX_PARAM[Parameter.frequency] / 4}. Received: {freq}"
+        ),
     ):
         _convert_frequency(freq)
 
