@@ -19,11 +19,11 @@ def test_convert_frequency_valid(freq, expected):
 
 @pytest.mark.parametrize("freq", [500e6, -500.1e6, 6e9, -6e9])
 def test_convert_frequency_invalid(freq):
+    max_ = MAX_PARAM[Parameter.frequency]
     with pytest.raises(
         ValueError,
         match=(
-            f"Frequency must be a float between "
-            f"-{MAX_PARAM[Parameter.frequency] / 4} and {MAX_PARAM[Parameter.frequency] / 4}. Received: {freq}"
+            f"Frequency must be a float between -{max_} and {max_}. Received: {freq}"
         ),
     ):
         _convert_frequency(freq)
