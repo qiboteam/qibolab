@@ -50,9 +50,10 @@ def _convert_frequency(frequency: float) -> float:
     """Converts frequency values to the encoding used in qblox FPGAs."""
 
     # TODO: move validation closer to user input
-    if abs(frequency) >= 500e6:
+    if abs(frequency) >= MAX_PARAM[Parameter.frequency] / 4:
         raise ValueError(
-            f"Frequency must be a float between -500e6 and 500e6. Received: {frequency}"
+            f"Frequency must be a float between "
+            f"-{MAX_PARAM[Parameter.frequency] / 4} and {MAX_PARAM[Parameter.frequency] / 4}. Received: {frequency}"
         )
 
     return 4 * frequency
