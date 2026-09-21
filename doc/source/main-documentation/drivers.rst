@@ -1,175 +1,270 @@
-.. admonition:: Work in progress
+.. _main_doc_driver_api:
 
-    This page is only partially updated from a previous version of Qibolab.
+Driver API
+==========
 
-    In case of doubts, contact the `Qibo developers
-    <https://github.com/qiboteam/qibo#contacts>`_.
+The Driver API defines how to integrate new instruments with Qibolab.
+Drivers handle the compilation of experiments and management of instrument communication.
 
-.. _main_doc_instruments:
+Overview
+--------
 
-Instruments
-===========
+A driver is a Python class that:
 
-One the key features of Qibolab is its support for multiple different electronics.
-A list of all the supported electronics follows:
+1. Inherits from :class:`._core.instruments.abstract.Instrument` (or :class:`.Controller`)
+2. Implements connection/disconnection to the physical instrument
+3. For controllers, implements experiment execution (compilation and upload)
 
-Controllers (subclasses of :class:`qibolab._core.instruments.abstract.Controller`):
-    - Dummy Instrument: :class:`qibolab.instruments.DummyInstrument`
-    - Quantum Machines: :class:`qibolab.instruments.qm.QmController`
-    - Qibosoq-controlled RFSoC: :class:`qibolab.instruments.qibosoq.RFSoC`
+Qibolab ships with drivers for several platforms:
 
-Other Instruments (subclasses of :class:`qibolab._core.instruments.abstract.Instrument`):
-    - Erasynth++: :class:`qibolab.instruments.era.ERASynth`
-    - RohseSchwarz SGS100A: :class:`qibolab.instruments.rohde_schwarz.SGS100A`
+- **Controllers**: Quantum Machines (QM), Qblox, Qibosoq RFSoC, Dummy
+- **Supporting**: ERASynth (LO), Rohde & Schwarz (LO), QRNG
 
-All instruments inherit the :class:`qibolab._core.instruments.abstract.Instrument` and implement methods for connecting and disconnecting.
-:class:`qibolab._core.instruments.abstract.Controller` is a special case of instruments that provides the :class:`qibolab._core.instruments.abstract.execute`
-method that deploys sequences on hardware.
+Instrument Base Class
+---------------------
 
-Some more detail on the interal functionalities of instruments is given in :doc:`/tutorials/instrument`
+All instruments inherit from :class:`._core.instruments.abstract.Instrument`:
 
-The following is a table of the currently supported or not supported features (dev stands for `under development`):
+.. code-block:: python
 
-.. csv-table:: Supported features
-    :header: "Feature", "RFSoC", "Qblox", "QM"
-    :widths: 25, 5, 5, 5, 5
-
-    "Arbitrary pulse sequence",     "yes","yes","yes","yes"
-    "Arbitrary waveforms",          "yes","yes","yes","yes"
-    "Multiplexed readout",          "yes","yes","yes","yes"
-    "Hardware classification",      "no","yes","yes","yes"
-    "Fast reset",                   "dev","dev","dev","dev"
-    "Device simulation",            "no","no","yes","dev"
-    "RTS frequency",                "yes","yes","yes","yes"
-    "RTS amplitude",                "yes","yes","yes","yes"
-    "RTS duration",                 "yes","yes","yes","yes"
-    "RTS relative phase",           "yes","yes","yes","yes"
-    "RTS 2D any combination",       "yes","yes","yes","yes"
-    "Sequence unrolling",           "dev","dev","dev","dev"
-    "Hardware averaging",           "yes","yes","yes","yes"
-    "Singleshot (no averaging)",    "yes","yes","yes","yes"
-    "Integrated acquisition",       "yes","yes","yes","yes"
-    "Classified acquisition",       "yes","yes","yes","yes"
-    "Raw waveform acquisition",     "yes","yes","yes","yes"
+    from qibolab._core.instruments.abstract import Instrument, InstrumentSettings
 
 
+    class MyInstrument(Instrument):
+        """Custom instrument driver."""
 
-Quantum Machines
-^^^^^^^^^^^^^^^^
+        address: str  # Network address (e.g., "192.168.1.100")
+        settings: InstrumentSettings | None = None
 
-Tested with a cluster of nine `OPX+ <https://www.quantum-machines.co/products/opx/>`_ controllers, using QOP213 and QOP220.
+        def connect(self):
+            """Establish connection to physical instrument."""
+            # Implement connection logic
+            pass
 
-Qibolab is communicating with the instruments using the `QUA <https://docs.quantum-machines.co/0.1/>`_ language, via the ``qm-qua`` and ``qualang-tools`` Python libraries.
+        def disconnect(self):
+            """Close connection."""
+            # Implement disconnection logic
+            pass
 
-.. _qrng:
+        def setup(self, *args, **kwargs):
+            """Configure instrument (optional, for non-controllers)."""
+            pass
 
-Quantum Random Number Generator
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+**Key Attributes**
 
-In addition to the above instruments used for QPU control, Qibolab provides a driver
-for sampling numbers from a quantum random number generator device (QRNG) in
-:class:`qibolab.instruments.qrng.QRNG`.
-This assumes that the device is connected to the host computer via a serial port.
+- ``address``: Network address for communication
+- ``settings``: Optional settings saved in platform runcard
+- ``channels`` (controllers only): Mapping of channel IDs to :class:`.Channel` objects
 
-The following script can be used to sample 1000 floats uniformly distributed in [0, 1]:
+**Key Methods**
 
-.. code::  python
+- ``connect()``: Establish connection
+- ``disconnect()``: Close connection
+- ``setup()``: Configure non-controller instruments
 
-    from qibolab.instruments.qrng import QRNG
+Controller Class
+----------------
 
-    qrng = QRNG(address="/dev/ttyACM0")
+Controllers execute experiments. They inherit from :class:`.Instrument` and add:
 
-    qrng.connect()
+.. code-block:: python
 
-    samples = qrng.random(1000)
-
-    qrng.disconnect()
-
-
-The QRNG produces raw entropy which is converted to uniform distribution using an
-exctraction algorithm. Two such algorithms are implemented
-
-- :class:`qibolab.instruments.qrng.ShaExtrator`: default, based on SHA-256 hash algorithm,
-- :class:`qibolab.instruments.qrng.ToeplitzExtractor`.
-
-It is possible to switch extractor when instantiating the :class:`qibolab.instruments.qrng.QRNG` object:
-
-.. code::  python
-
-    from qibolab.instruments.qrng import QRNG, ToeplitzExtractor
-
-    qrng = QRNG(address="/dev/ttyACM0", extractor=ToeplitzExtractor())
+    from qibolab._core.instruments.abstract import Controller
+    from qibolab._core.components import Config, Channel
 
 
-.. _main_doc_emulator:
+    class MyController(Controller):
+        """Custom pulse controller."""
 
-Emulation of QPU platforms
+        channels: dict[ChannelId, Channel] = Field(default_factory=dict)
+
+        @property
+        def sampling_rate(self) -> float:
+            """Sampling rate in GSps (giga samples per second)."""
+            return 5.0  # Example: 5 GSps
+
+        def play(
+            self,
+            configs: dict[str, Config],
+            sequences: list[PulseSequence],
+            options: ExecutionParameters,
+            sweepers: list[ParallelSweepers],
+        ) -> dict[PulseId, Result]:
+            """Execute experiment and return results."""
+            # Compile sequences to hardware instructions
+            # Apply configurations
+            # Upload to hardware
+            # Run experiment
+            # Download results
+            # Return mapping of acquisition pulse IDs to results
+            pass
+
+**Key Methods**
+
+- ``sampling_rate`` (property): Sampling rate in GSps
+- ``play()``: Execute experiment with given sequences and options
+
+Channel Definition
+------------------
+
+Channels define how instruments control the QPU. Qibolab provides base types:
+
+- :class:`.DcChannel`: Direct current (no modulation)
+- :class:`.IqChannel`: Modulated IQ (requires mixer, LO)
+- :class:`.AcquisitionChannel`: Measurement readout
+
+Define custom channels by subclassing:
+
+.. code-block:: python
+
+    from qibolab._core.components import IqChannel
+
+
+    class CustomChannel(IqChannel):
+        """Platform-specific channel."""
+
+        custom_param: str = "default"
+
+Configuration Classes
+---------------------
+
+Configurations hold runtime parameters. They must inherit from :class:`.Config`:
+
+.. code-block:: python
+
+    from qibolab._core.components.configs import Config
+
+
+    class MyConfig(Config):
+        """Platform-specific configuration."""
+
+        frequency: float  # Frequency in Hz
+        power: float = -20  # Power in dBm
+        # Add any custom parameters
+
+Instrument-specific configs extend base types:
+
+.. code-block:: python
+
+    from qibolab._core.components.configs import IqConfig
+
+
+    class MyIqConfig(IqConfig):
+        """Extended IQ config with custom parameters."""
+
+        mixer_correction: float = 0.0
+
+Compilation Workflow
+--------------------
+
+The ``play()`` method should:
+
+1. **Receive inputs**:
+   - ``configs``: Configuration dict (str -> Config)
+   - ``sequences``: List of :class:`.PulseSequence` to execute
+   - ``options``: :class:`.ExecutionParameters`
+   - ``sweepers``: List of :class:`.ParallelSweepers` for real-time sweeps
+
+2. **Compile sequences**:
+   - Convert Qibolab pulses to hardware instructions
+   - Apply configurations (frequency, amplitude, etc.)
+   - Handle sweepers (native or unroll as sequences)
+   - Optimize for hardware constraints
+
+3. **Upload and execute**:
+   - Upload compiled program to hardware
+   - Run experiment
+   - Collect results
+
+4. **Return results**:
+   - Dictionary mapping acquisition pulse IDs to numpy arrays
+   - Shape should match :meth:`.ExecutionParameters.results_shape`
+
+Example
+-------
+
+Here's a simplified example of a custom controller:
+
+.. code-block:: python
+
+    from qibolab._core.instruments.abstract import Controller
+    from qibolab._core.components import IqChannel, IqConfig
+    from pydantic import Field
+
+
+    class SimplePulseController(Controller):
+        """Minimal controller example."""
+
+        channels: dict = Field(default_factory=dict)
+
+        @property
+        def sampling_rate(self) -> float:
+            return 1.0  # 1 GSps
+
+        def play(self, configs, sequences, options, sweepers):
+            import numpy as np
+
+            # Compile: convert sequences to hardware format
+            # (implementation depends on your hardware)
+
+            # Execute: run on hardware
+            # (connect to hardware, upload, trigger, wait for results)
+
+            # Return dummy results for demonstration
+            results = {}
+            for seq in sequences:
+                for ch, pulse in seq.acquisitions:
+                    pulse_id = pulse.id
+                    shape = options.results_shape(sweepers)
+                    results[pulse_id] = np.zeros(shape)
+
+            return results
+
+Best Practices
+--------------
+
+1. **Leverage Pydantic**: Use Pydantic models for validation
+2. **Document parameters**: Clear docstrings for configuration classes
+3. **Handle errors gracefully**: Meaningful error messages for configuration issues
+4. **Optimize compilation**: Cache compiled programs when possible
+5. **Test offline**: Provide a dummy/emulated mode for testing without hardware
+6. **Support real-time sweepers**: Implement hardware sweepers when possible
+7. **Validate channels**: Ensure all referenced channels exist
+
+Extending Existing Drivers
 ---------------------------
 
-Although Qibolab is mostly dedicated to providing hardware drivers for self-hosted quantum computing setups,
-it is also possible to simulate the outcome of a pulse sequence with an emulator.
-The default emulator engine is based on `QuTiP <https://qutip.org/>`_, and :class:`.DynamiqsEngine`
-is also available as an alternative JAX-based engine. In both cases, the simulation is performed
-by solving the master equation for a given Hamiltonian including dissipation.
+To extend an existing driver (e.g., add custom channels or configs):
 
-With Qibolab it is currently possible to emulate a system of split-transmon qubits capacitively coupled. The Hamiltonian solved numerically in the case
-of two transmon qubits is given by
+1. Subclass the channel or config class
+2. Add instrument-specific parameters
+3. Update the platform to use your custom classes
+4. Document changes in the driver implementation
 
-.. math::
+See :ref:`tutorial_driver` for a detailed walkthrough of creating a custom driver.
 
-    \frac{H}{\hbar} =  \sum_{i=1}^2 \Big[ a^\dagger_i a_i \omega_i (\Phi_i) + \frac{\alpha_i}{2} a_i^\dagger a_i^\dagger a_i a_i - i \Omega_i(t) (a_i - a_i^\dagger) \Big] + g (a_1^\dagger a_2 + a_1 a_2^\dagger)
+Supported Features Table
+------------------------
 
-where :math:`a_i (a_i^\dagger)` are the destruction (creation) operators for the transmon  :math:`i`,
-:math:`\omega_i` and :math:`\alpha_i / 2 \pi` are the frequency and the anharmoncity of the transmon  :math:`i`.
-Each transmon is controlled with a drive term with a Rabi frequency :math:`\Omega_i(t)` and it is flux-tunable, meaning
-that the frequency of the transmon can be changed by applying flux :math:`\Phi_i`
+The following table summarizes support across Qibolab drivers:
 
-.. math::
+.. csv-table:: Supported features
+    :header: "Feature", "RFSoC", "Qblox", "QM", "Emulator"
+    :widths: 25, 10, 10, 10, 10
 
-    \omega_i(\Phi_i) = (\omega_i^{\text{max}} - \alpha_i)
-    \sqrt[4]{d_i^2 + (1 - d_i^2)\cos^2\left( \pi k(\Phi_i - \Phi^{\text{sweetspot}}_i) \right)} + \alpha_i
+    "Arbitrary pulse sequence",     "✓","✓","✓","✓"
+    "Arbitrary waveforms",          "✓","✓","✓","✓"
+    "Multiplexed readout",          "✓","✓","✓","✓"
+    "Hardware classification",      "✗","✓","✓","✗"
+    "Fast reset",                   "dev","dev","dev","dev"
+    "RTS frequency",                "✓","✓","✓","✓"
+    "RTS amplitude",                "✓","✓","✓","✓"
+    "RTS duration",                 "✓","✓","✓","✓"
+    "RTS relative phase",           "✓","✓","✓","✓"
+    "Hardware averaging",           "✓","✓","✓","✓"
+    "Singleshot (no averaging)",    "✓","✓","✓","✓"
+    "Integrated acquisition",       "✓","✓","✓","✓"
+    "Classified acquisition",       "✓","✓","✓","✓"
+    "Raw waveform acquisition",     "✓","✓","✓","✓"
 
-where :math:`\omega_i^{\text{max}}` is the maximum frequency of the transmon, :math:`d_i` is the junctions asymmetry
-and :math:`\Phi^{\text{sweetspot}}_i` is the flux value at which the transmon frequency is maximum
-Currently neither drive or crosstalk effects are considered.
-The coupling strength between the two transmons :math:`g` .
-
-.. note::
-
-    In most of the setups the sweetspot is identified by the offset value selected on the flux line connected to the qubit. Within the emulator
-    it is possible to configure how to convert the offset value :math:`V` to the flux value using the entry ``voltage_to_flux``, which we denote with :math:`k` in the flux line configuration.
-    The flux is computed from the offset value as
-
-    .. math::
-
-        \Phi = k \cdot V
-
-
-The emulator supports also tunable based architecture, where the Hamiltonian is given by
-
-.. math::
-
-    \frac{H}{\hbar} =  \sum_{i=1,2,c} \Big[ a^\dagger_i a_i \omega_i + \frac{\alpha_i}{2} a_i^\dagger a_i^\dagger a_i a_i \Big] - \sum_{i=1,2} i \Omega_i(t) (a_i - a_i^\dagger)  + g_{12} (a_1^\dagger a_2 + a_1 a_2^\dagger) + g_{1c} (a_1^\dagger a_c + a_1 a_c^\dagger) + g_{2c} (a_2^\dagger a_c + a_2 a_c^\dagger) ,
-
-where the index :math:`c` refers to the coupler.
-
-The readout pulses parameters are ignored, given that the Hamiltonian doesn't include a resonator. The only information
-used when the readout pulse is placed in the sequence which is necessary to determine for how long the system should be evolved.
-The results retrieved by the emulator correspond to the time when the readout pulse is played.
-
-Measurements are performed by measuring the probability of each transmon state available. In the case of two levels we return the probability
-of finding the transmon in either :math:`\ket{0}` or :math:`\ket{1}`. When ``AveragingMode.SINGLESHOT`` is used samples are generated from the probabilities
-computed previously. If ``AveragingMode.CYCLIC`` the following weighted average is returned
-
-.. math::
-
-    \mu = \sum_{i=0}^{N} i  p_i
-
-where :math:`p_i` is the probability corresponding to state :math:`\ket{i}`, and :math:`N` are the transmon levels available.
-
-The emulator supports ``AcquisitionType.DISCRIMINATION``. We also provide a way of retrieving information with ``AcquisitionType.INTEGRATION``
-by encoding into the :math:`I` component the probabilities and while the :math:`Q` component is set at 0.
-We add a Gaussian noise both on :math:`I` and :math:`Q`.
-This should be enough to get some meaningful results by computing the magnitude of the signal :math:`\sqrt{I^2 + Q^2}`.
-
-Example of platforms using the emulator are available `here <https://https://github.com/qiboteam/qibolab/tree/emulator-tests/tests/instruments/emulator/platforms/>`_.
+Legend: ✓ = Supported, ✗ = Not supported, dev = Under development
