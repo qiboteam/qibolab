@@ -35,7 +35,7 @@ MAX_PARAM = {
     Parameter.amplitude: 2**15 - 1,
     Parameter.offset: 2**15 - 1,
     Parameter.phase: 1e9,
-    Parameter.frequency: 2e9,
+    Parameter.frequency: 500e6,
 }
 """Maximum range for parameters.
 
@@ -46,12 +46,26 @@ Ranges may be one-sided (just positive) or two-sided. This is accounted for in
 """
 
 
+def _convert_frequency(frequency: float) -> float:
+    """Converts frequency values to the encoding used in qblox FPGAs."""
+
+    max_ = MAX_PARAM[Parameter.frequency]
+    # TODO: move validation closer to user input
+    if abs(frequency) >= max_:
+        raise ValueError(
+            "Frequency must be a float between "
+            f"-{max_} and {max_}. Received: {frequency}"
+        )
+
+    return 4 * frequency
+
+
 def _convert_offset(offset: float) -> float:
     """Converts offset values to the encoding used in qblox FPGAs."""
 
     # TODO: move validation closer to user input
     if abs(offset) >= 1:
-        raise ValueError("Offset must be a float between -1 and 1.")
+        raise ValueError(f"Offset must be a float between -1 and 1. Received: {offset}")
 
     return np.floor(offset * MAX_PARAM[Parameter.offset])
 
@@ -63,7 +77,7 @@ def convert(value: float, kind: Parameter) -> float:
     if kind in (Parameter.relative_phase, Parameter.phase):
         return (value / (2 * np.pi)) % 1.0 * MAX_PARAM[Parameter.phase]
     if kind is Parameter.frequency:
-        return 4 * value % (2**32)
+        return _convert_frequency(value) % (2**32)
     if kind is Parameter.offset:
         return _convert_offset(value) % (2**32)
     if kind is Parameter.duration:
