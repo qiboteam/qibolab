@@ -94,7 +94,7 @@ class SequencerConfig(Model):
             ),
             # configure the sequencers to synchronize
             sync_en=True,
-            # modulation, only disable for QCM - always used for flux pulses
+            # modulation, only enabled for RF modules
             mod_en_awg=rf,
         )
 

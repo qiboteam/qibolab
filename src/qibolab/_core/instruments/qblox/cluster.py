@@ -349,7 +349,7 @@ class Cluster(Controller):
             los = config.module.los(self._los, configs, ids)
             mixers = config.module.mixers(self._mixers, configs, ids)
             modcfg = modcfgs[slot] = config.ModuleConfig.build(
-                channels, configs, los, mixers
+                channels, configs, los, mixers, module.is_rf_type
             )
             modcfg.apply(module)
         return modcfgs

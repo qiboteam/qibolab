@@ -1,7 +1,6 @@
 from itertools import groupby
 from typing import Any, Literal
 
-import numpy as np
 from pydantic import BaseModel, ConfigDict, Field
 
 from qibolab._core.components.channels import AcquisitionChannel, Channel, IqChannel
@@ -21,38 +20,28 @@ from ..identifiers import SlotId
 
 __all__ = []
 
+QCM_NORMALIZED_DC_OFFSET_TO_VOLTS = 2.5
+"""Convert normalized qibolab DC-offset units to QCM output-offset volts.
 
-QCM_SWEEP_TO_OFFSET = 2.5 / np.sqrt(2)
-"""Conversion factor between swept value and configuration.
+Qibolab stores :class:`.DcConfig` offsets in normalized units between -1 and 1, whereas
+Qblox QCM module offsets are configured directly in volts.
 
-There are two different ways to add an offset to the waveform played by the QCM module:
-
-- digitally summing an offset, which could be controlled both in real-time and by
-  configurations
-- adding an offset directly to the outgoing signal
-
-
-Since the QCM supplies outputs at 5 Vpp (`documented as +/-2.5 V
+QCM outputs span 5 Vpp (`documented as +/-2.5 V
 <https://docs.qblox.com/en/main/products/architecture/modules/qcm.html#specifications>`_),
-a conversion is needed, because the first option will be defined in the interval (-1,
-1) in the parameters (internally mapping the floats on a suitable integers range), while
-the second is directly expressed in Volt.
-Hence, the conversion factor of ``2.5``.
+so the conversion from normalized DC-offset units to output volts is ``2.5``.
 
-However, these two ways are not equivalent, especially because of the NCO and LO mixing
-process.
-Indeed, the first one is happening upstream to the mixing process, and the second
-downstream.
-Since we are sweeping only one of the two components of the signal (the in-phase,
-I), it will result multiplied by a sine-wave, which reduces its root mean square (RMS)
-power by a factor of `sqrt(2)`. Which is then accounted for in the conversion range.
+Note:
+    These offsets are supported only for :class:`.DcConfig` on baseband flux and
+    coupler-flux lines. No root mean square correction of sqrt(2) is applied: such a
+    correction would only account for a normalized envelope being multiplied by a
+    sinusoidal carrier on an RF-modulated path, while these channels are not routed
+    through RF modules (enforced by :func:`PortConfig.build`).
 
-https://docs.qblox.com/en/main/products/architecture/sequencers/control.html#arbitrary-waveform-generator-awg
-https://docs.qblox.com/en/main/products/architecture/modules/qcm.html#block-diagram
-
-Notice that sweeping both of the components is also viable. But even without any flux
-pulse, the sum of sine and cosine with maximal amplitude will saturate the power supply,
-eventually clipping the signal and reducing the power range.
+See Also:
+    * `Qblox AWG Documentation
+      <https://docs.qblox.com/en/main/products/architecture/sequencers/control.html#arbitrary-waveform-generator-awg>`_
+    * `Qblox QCM Block Diagram
+      <https://docs.qblox.com/en/main/products/architecture/modules/qcm.html#block-diagram>`_
 """
 
 
@@ -164,6 +153,7 @@ class PortConfig(BaseModel):
         out: bool,
         lo: OscillatorConfig | None,
         mixer: IqMixerConfig | None,
+        is_rf: bool,
     ) -> "PortConfig":
         """Create port configuration for the desired channel.
 
@@ -190,6 +180,12 @@ class PortConfig(BaseModel):
 
         # DC channels are configured for static offsets and pre-distortions
         if isinstance(config, DcConfig):
+            if is_rf:
+                raise ValueError(
+                    f"DC channel '{channel.path}' is routed through an RF-type module. "
+                    "Static offset conversion assumes an unmodulated (baseband) AWG "
+                    "output, which does not hold for RF modules."
+                )
             if only_out:
                 port.offset_(config)
                 port.filters(config)
@@ -220,7 +216,7 @@ class PortConfig(BaseModel):
         return port
 
     def offset_(self, dc: DcConfig) -> None:
-        self.offset = dc.offset * QCM_SWEEP_TO_OFFSET
+        self.offset = dc.offset * QCM_NORMALIZED_DC_OFFSET_TO_VOLTS
 
     def lo(self, lo: OscillatorConfig) -> None:
         self.lo_en = True
