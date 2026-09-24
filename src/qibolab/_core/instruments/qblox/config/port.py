@@ -181,17 +181,7 @@ class PortConfig(BaseModel):
 
         # DC channels are configured for static offsets and pre-distortions
         if isinstance(config, DcConfig):
-            if is_rf:
-                raise ValueError(
-                    f"DC channel '{channel.path}' is routed through an RF-type module. "
-                    "Static offset conversion assumes an unmodulated (baseband) AWG "
-                    "output, which does not hold for RF modules."
-                )
-            if is_qrm:
-                raise ValueError(
-                    f"DC channel '{channel.path}' is routed through a QRM module. "
-                    "Static DC offsets are supported only on QCM modules."
-                )
+            assert not is_rf and not is_qrm
             if only_out:
                 port.offset_(config)
                 port.filters(config)

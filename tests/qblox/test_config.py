@@ -16,7 +16,7 @@ def test_module_config_dc_offset_end_to_end():
     qcm = ModuleConfig.build(channels, configs, {}, {}, is_rf=False, is_qrm=False)
     assert qcm.ports["out0_offset"] == pytest.approx(offset_val * 2.5)
 
-    with pytest.raises(ValueError, match="QCM"):
+    with pytest.raises(AssertionError):
         ModuleConfig.build(channels, configs, {}, {}, is_rf=False, is_qrm=True)
-    with pytest.raises(ValueError, match="RF-type module"):
+    with pytest.raises(AssertionError):
         ModuleConfig.build(channels, configs, {}, {}, is_rf=True, is_qrm=False)
