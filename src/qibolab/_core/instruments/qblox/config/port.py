@@ -154,6 +154,7 @@ class PortConfig(BaseModel):
         lo: OscillatorConfig | None,
         mixer: IqMixerConfig | None,
         is_rf: bool,
+        is_qrm: bool,
     ) -> "PortConfig":
         """Create port configuration for the desired channel.
 
@@ -185,6 +186,11 @@ class PortConfig(BaseModel):
                     f"DC channel '{channel.path}' is routed through an RF-type module. "
                     "Static offset conversion assumes an unmodulated (baseband) AWG "
                     "output, which does not hold for RF modules."
+                )
+            if is_qrm:
+                raise ValueError(
+                    f"DC channel '{channel.path}' is routed through a QRM module. "
+                    "Static DC offsets are supported only on QCM modules."
                 )
             if only_out:
                 port.offset_(config)
