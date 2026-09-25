@@ -353,8 +353,7 @@ class Cluster(Controller):
                 configs,
                 los,
                 mixers,
-                is_rf=module.is_rf_type,
-                is_qrm=module.is_qrm_type,
+                is_qcm_non_rf_type=module.is_qcm_type and not module.is_rf_type,
             )
             modcfg.apply(module)
         return modcfgs

@@ -153,8 +153,7 @@ class PortConfig(BaseModel):
         out: bool,
         lo: OscillatorConfig | None,
         mixer: IqMixerConfig | None,
-        is_rf: bool,
-        is_qrm: bool,
+        is_qcm_non_rf_type: bool,
     ) -> "PortConfig":
         """Create port configuration for the desired channel.
 
@@ -181,7 +180,7 @@ class PortConfig(BaseModel):
 
         # DC channels are configured for static offsets and pre-distortions
         if isinstance(config, DcConfig):
-            assert not is_rf and not is_qrm
+            assert is_qcm_non_rf_type
             if only_out:
                 port.offset_(config)
                 port.filters(config)
