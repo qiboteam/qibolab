@@ -59,6 +59,7 @@ Contents
     main-documentation/drivers
     main-documentation/compiler
     main-documentation/circuits
+    main-documentation/emulator
 
 .. toctree::
     :maxdepth: 2
