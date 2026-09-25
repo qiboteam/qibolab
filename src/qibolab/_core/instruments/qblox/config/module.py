@@ -85,10 +85,13 @@ class ModuleConfig(Model):
         configs: Configs,
         los: dict[ChannelId, OscillatorConfig],
         mixers: dict[ChannelId, IqMixerConfig],
+        is_qcm_non_rf_type: bool,
     ) -> "ModuleConfig":
         # generate port configurations as a dictionary
         def portconfig(*args, **kwargs) -> tuple[str, port.StrDict]:
-            p = port.PortConfig.build(*args, **kwargs)
+            p = port.PortConfig.build(
+                *args, is_qcm_non_rf_type=is_qcm_non_rf_type, **kwargs
+            )
             return (p.path, p.model_dump(exclude_unset=True))
 
         # extend channel list to include probe channels

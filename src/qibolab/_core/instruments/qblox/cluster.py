@@ -349,7 +349,11 @@ class Cluster(Controller):
             los = config.module.los(self._los, configs, ids)
             mixers = config.module.mixers(self._mixers, configs, ids)
             modcfg = modcfgs[slot] = config.ModuleConfig.build(
-                channels, configs, los, mixers
+                channels,
+                configs,
+                los,
+                mixers,
+                is_qcm_non_rf_type=module.is_qcm_type and not module.is_rf_type,
             )
             modcfg.apply(module)
         return modcfgs
