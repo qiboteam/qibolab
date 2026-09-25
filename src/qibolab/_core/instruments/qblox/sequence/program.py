@@ -2,6 +2,7 @@ from collections.abc import Iterable, Sequence
 
 from qibolab._core.execution_parameters import AveragingMode, ExecutionParameters
 from qibolab._core.identifier import ChannelId
+from qibolab._core.pulses import Pulse
 from qibolab._core.pulses.pulse import PulseId, PulseLike
 from qibolab._core.sweeper import ParallelSweepers
 
@@ -16,9 +17,16 @@ from ..q1asm.ast_ import (
     Wait,
 )
 from .acquisition import AcquisitionSpec, MeasureId
-from .experiment import experiment
+from .experiment import _offset_rectangular, experiment
 from .loops import LoopSpec, Registers, loop, loops
-from .sweepers import Param, params, params_reshape, sweep_sequence, update_instructions
+from .sweepers import (
+    Param,
+    ParamRole,
+    params,
+    params_reshape,
+    sweep_sequence,
+    update_instructions,
+)
 from .transpile import transpile
 from .waveforms import WaveformIndices
 
@@ -50,8 +58,8 @@ def setup(
                 comment="init bin counter",
             ),
             Line(
-                instruction=Move(source=0, destination=Registers.bin_reset.value),
-                comment="init bin reset",
+                instruction=Move(source=0, destination=Registers.zero.value),
+                comment="init fixed zero register",
             ),
             Line(
                 instruction=Move(source=0, destination=Registers.phase_delta.value),
@@ -116,6 +124,20 @@ def program(
     sweepseq = sweep_sequence(
         sequence, [p for v in indexed_params.values() for p in v.pulse]
     )
+    swept_offset_channels = [
+        p.channel
+        for p in params_
+        if p.role is ParamRole.OFFSET and p.channel in channel
+    ]
+    if swept_offset_channels and any(
+        isinstance(pulse, Pulse) and _offset_rectangular(pulse, waveforms)
+        for pulse, _ in sweepseq
+    ):
+        raise ValueError(
+            "Cannot sweep the offset of channel(s) "
+            f"{', '.join(swept_offset_channels)!r} while playing a rectangular pulse on "
+            "it."
+        )
     experiment_ = [
         *experiment(sweepseq, waveforms, acquisitions, merged_vzs),
         # Enforce a minimum wait of 4 ns corresponding to one clock cycle
