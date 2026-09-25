@@ -13,10 +13,8 @@ def test_module_config_dc_offset_end_to_end():
     channels: dict[ChannelId, Channel] = {ChannelId("flux"): DcChannel(path="4/o1")}
     configs: Configs = {ChannelId("flux"): DcConfig(offset=offset_val)}
 
-    qcm = ModuleConfig.build(channels, configs, {}, {}, is_rf=False, is_qrm=False)
+    qcm = ModuleConfig.build(channels, configs, {}, {}, is_qcm_non_rf_type=True)
     assert qcm.ports["out0_offset"] == pytest.approx(offset_val * 2.5)
 
     with pytest.raises(AssertionError):
-        ModuleConfig.build(channels, configs, {}, {}, is_rf=False, is_qrm=True)
-    with pytest.raises(AssertionError):
-        ModuleConfig.build(channels, configs, {}, {}, is_rf=True, is_qrm=False)
+        ModuleConfig.build(channels, configs, {}, {}, is_qcm_non_rf_type=False)
