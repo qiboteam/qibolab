@@ -72,11 +72,10 @@ class OscillatorConfig(Config):
 
 
 class IqMixerConfig(Config):
-    """Configuration for IQ mixer.
+    """Frequency-independent IQ mixer corrections, shared across the RF output.
 
-    Mixers usually have various imperfections, and one needs to
-    compensate for them. This class holds the compensation
-    configuration.
+    The frequency-dependent sideband corrections (``scale_q``, ``phase_q``) live
+    per channel in :class:`IqConfig`.
     """
 
     kind: Literal["iq-mixer"] = "iq-mixer"
@@ -85,21 +84,23 @@ class IqMixerConfig(Config):
     """DC offset for the I component."""
     offset_q: float = 0.0
     """DC offset for the Q component."""
-    scale_q: float = 1.0
-    """The relative amplitude scale/factor of the q channel, to account for I-Q
-    amplitude imbalance."""
-    phase_q: float = 0.0
-    """The phase offset of the q channel, to account for I-Q phase
-    imbalance."""
 
 
 class IqConfig(Config):
-    """Configuration for an IQ channel."""
+    """Configuration for an IQ channel.
+
+    Also holds the frequency-dependent mixer sideband corrections (``scale_q``,
+    ``phase_q``), kept per channel rather than in the shared :class:`IqMixerConfig`.
+    """
 
     kind: Literal["iq"] = "iq"
 
     frequency: float
     """The carrier frequency of the channel."""
+    scale_q: float = 1.0
+    """Relative amplitude scale of the Q channel, correcting I-Q amplitude imbalance."""
+    phase_q: float = 0.0
+    """Phase offset of the Q channel, correcting I-Q phase imbalance."""
 
 
 class AcquisitionConfig(Config):
