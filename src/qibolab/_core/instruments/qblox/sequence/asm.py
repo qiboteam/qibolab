@@ -13,10 +13,11 @@ class Registers(Enum):
     """Pre-assigned register numbers."""
 
     bin = Register(number=0)
-    zero = Register(number=1)
+    bin_reset = Register(number=1)
     shots = Register(number=2)
     wait = Register(number=3)
     phase_delta = Register(number=4)
+    zero = Register(number=5)
 
     @classmethod
     def first_available(cls) -> int:
