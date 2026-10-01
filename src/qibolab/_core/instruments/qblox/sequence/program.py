@@ -58,8 +58,8 @@ def setup(
                 comment="init bin counter",
             ),
             Line(
-                instruction=Move(source=0, destination=Registers.zero.value),
-                comment="init fixed zero register",
+                instruction=Move(source=0, destination=Registers.bin_reset.value),
+                comment="init bin reset",
             ),
             Line(
                 instruction=Move(source=0, destination=Registers.phase_delta.value),
