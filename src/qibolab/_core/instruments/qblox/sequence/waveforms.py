@@ -1,4 +1,5 @@
 from collections.abc import Iterable, Sequence
+from dataclasses import dataclass
 from itertools import count
 from typing import Annotated
 
@@ -26,6 +27,18 @@ WaveformIndex = int
 """Index of the memory block containing the given waveform samples."""
 WaveformIndices = dict[ComponentId, tuple[WaveformIndex, int]]
 """Map pulses' components to waveforms memory indices, and related duration."""
+
+
+@dataclass(frozen=True)
+class PulseRealization:
+    """How each pulse is realized on hardware.
+
+    Pulses are either played from waveform memory (indexed by ``indices``) or
+    implemented through AWG offsets (identified by ``offset_pulses``).
+    """
+
+    waveform_indices: WaveformIndices
+    offset_pulses: set[PulseId]
 
 
 class Waveform(Model):
@@ -143,7 +156,7 @@ def waveforms(
     sampling_rate: float,
     amplitude_swept: set[PulseId],
     duration_swept: dict[PulseId, Sweeper],
-) -> tuple[dict[WaveformIndex, WaveformSpec], WaveformIndices]:
+) -> tuple[dict[WaveformIndex, WaveformSpec], PulseRealization]:
     """Build the waveform memory map and pulse-component index map for a sequence.
 
     1. Split pulses into non-swept and duration-swept groups. Amplitude-swept pulses
@@ -182,10 +195,12 @@ def waveforms(
 
     pulses_not_swept: list[Pulse] = []
     pulses_swept: list[tuple[Pulse, Sweeper]] = []
+    offset_pulses: set[PulseId] = set()
     for p in sequence:
         if isinstance(p, (Pulse, Readout)):
             # offset-based rectangular pulses do not have a corresponding waveform.
             if is_offset_rectangular(p, duration_swept.get(p.id)):
+                offset_pulses.add(p.id)
                 continue
             if p.id in duration_swept:
                 pulses_swept.append(
@@ -270,4 +285,6 @@ def waveforms(
         }
         offset += next(counter)
 
-    return dict(enumerate(deduplicated_waveforms)), indices_map
+    return dict(enumerate(deduplicated_waveforms)), PulseRealization(
+        waveform_indices=indices_map, offset_pulses=offset_pulses
+    )

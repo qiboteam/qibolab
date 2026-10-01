@@ -1,4 +1,3 @@
-from qibolab._core.pulses import Rectangular
 from qibolab._core.pulses.pulse import (
     Acquisition,
     Align,
@@ -35,7 +34,7 @@ from .sweepers import (
     reset_instructions,
     update_instructions,
 )
-from .waveforms import WaveformIndices
+from .waveforms import PulseRealization, WaveformIndices
 
 __all__ = []
 
@@ -71,20 +70,6 @@ def _play_pulse(
         [_play_waveforms(pulse, waveforms)]
         if len(duration_sweep) == 0
         else _play_duration_swept(duration_sweep)
-    )
-
-
-def _offset_rectangular(pulse: Pulse, waveforms: WaveformIndices) -> bool:
-    """Check if a rectangular pulse uses AWG offsets instead of uploaded waveforms.
-
-    Whether a pulse is treated as a waveform or an offset is decided upstream in
-    `waveforms.waveforms`. Because offset pulses bypass waveform memory, they lack
-    index map entries for their I `(pulse.id, 0)` and Q `(pulse.id, 1)` components.
-    """
-    return (
-        isinstance(pulse.envelope, Rectangular)
-        and (pulse.id, 0) not in waveforms
-        and (pulse.id, 1) not in waveforms
     )
 
 
@@ -150,7 +135,10 @@ def _process_rectangular(pulse: Pulse, params: set[Param]) -> list[Lineable]:
 
 
 def _process_pulse(
-    pulse: Pulse, params: set[Param], waveforms: WaveformIndices, merged_vzs: bool
+    pulse: Pulse,
+    params: set[Param],
+    pulse_realization: PulseRealization,
+    merged_vzs: bool,
 ):
     """
     If merged_vzs is True, all virtual-Z gates are merged and phase handling is done in
@@ -167,8 +155,8 @@ def _process_pulse(
     # all other pulses, waveforms are played.
     pulse_instructions = (
         _process_rectangular(pulse, params)
-        if _offset_rectangular(pulse, waveforms)
-        else _play_pulse(pulse, waveforms, duration_sweep)
+        if pulse.id in pulse_realization.offset_pulses
+        else _play_pulse(pulse, pulse_realization.waveform_indices, duration_sweep)
     )
     if merged_vzs:
         assert pulse.relative_phase == 0.0
@@ -261,7 +249,7 @@ def _process_readout(
 
 def play(
     parpulse: ParameterizedPulse,
-    waveforms: WaveformIndices,
+    pulse_realization: PulseRealization,
     acquisitions: dict[MeasureId, AcquisitionSpec],
     merged_vzs: bool,
 ) -> Block:
@@ -269,7 +257,7 @@ def play(
     pulse = parpulse[0]
     params = parpulse[1]
     if isinstance(pulse, Pulse):
-        return _process_pulse(pulse, params, waveforms, merged_vzs)
+        return _process_pulse(pulse, params, pulse_realization, merged_vzs)
     if isinstance(pulse, Delay):
         return _process_delay(pulse, params)
     if isinstance(pulse, VirtualZ):
@@ -279,13 +267,13 @@ def play(
     if isinstance(pulse, Align):
         raise NotImplementedError("Align operation not yet supported by Qblox.")
     if isinstance(pulse, Readout):
-        return _process_readout(pulse, waveforms, acquisitions)
+        return _process_readout(pulse, pulse_realization.waveform_indices, acquisitions)
     raise NotImplementedError(f"Instruction {type(pulse)} unsupported by Qblox driver.")
 
 
 def event(
     parpulse: ParameterizedPulse,
-    waveforms: WaveformIndices,
+    pulse_realization: PulseRealization,
     acquisitions: dict[MeasureId, AcquisitionSpec],
     merged_vzs: bool,
 ) -> Block:
@@ -296,7 +284,7 @@ def event(
     # amplitude set through `set_awg_offs`. Instead, the swept amplitude is written
     # straight into the pulse's own `set_awg_offs` in `_process_rectangular` and the
     # AMPLITUDE parameter is excluded from the usual gain update/reset around the event.
-    is_offset = isinstance(pulse, Pulse) and _offset_rectangular(pulse, waveforms)
+    is_offset = pulse.id in pulse_realization.offset_pulses
     sweep_params = [
         p for p in params if not (is_offset and p.role is ParamRole.AMPLITUDE)
     ]
@@ -304,7 +292,7 @@ def event(
         inst
         for block in (
             *(update_instructions(p.role, p.reg) for p in sweep_params),
-            *(play(parpulse, waveforms, acquisitions, merged_vzs),),
+            *(play(parpulse, pulse_realization, acquisitions, merged_vzs),),
             *(reset_instructions(p.role, p.reg) for p in reversed(sweep_params)),
         )
         for inst in block
@@ -313,7 +301,7 @@ def event(
 
 def experiment(
     sequence: SweepSequence,
-    waveforms: WaveformIndices,
+    pulse_realization: PulseRealization,
     acquisitions: dict[MeasureId, AcquisitionSpec],
     merged_vzs: bool,
 ) -> Block:
@@ -330,7 +318,8 @@ def experiment(
     return [UpdParam(duration=4), WaitSync(duration=4)] + [
         inst
         for block in (
-            event(pulse, waveforms, acquisitions, merged_vzs) for pulse in sequence
+            event(pulse, pulse_realization, acquisitions, merged_vzs)
+            for pulse in sequence
         )
         for inst in block
     ]
