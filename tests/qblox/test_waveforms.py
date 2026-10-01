@@ -119,7 +119,7 @@ def test_waveforms_duration_sweeper():
         pulses=[pulse_c],
     )
 
-    waveform_specs, indices_map = waveforms(
+    waveform_specs, pulse_realization = waveforms(
         sequence=[pulse_a, pulse_b, pulse_c],
         sampling_rate=1.0,
         amplitude_swept=set(),
@@ -128,6 +128,7 @@ def test_waveforms_duration_sweeper():
             pulse_c.id: sweeper_c,
         },
     )
+    indices_map = pulse_realization.waveform_indices
 
     # Two unique Q components plus one shared I component.
     assert len(waveform_specs) == (
@@ -167,7 +168,7 @@ def test_rectangular_pulses_no_waveforms():
         pulses=[dur_swept],
     )
 
-    waveform_specs, indices_map = waveforms(
+    waveform_specs, pulse_realization = waveforms(
         sequence=[static, amp_swept, dur_swept],
         sampling_rate=1.0,
         amplitude_swept={amp_swept.id},
@@ -175,4 +176,4 @@ def test_rectangular_pulses_no_waveforms():
     )
 
     assert len(waveform_specs) == 0
-    assert indices_map == {}
+    assert pulse_realization.waveform_indices == {}
