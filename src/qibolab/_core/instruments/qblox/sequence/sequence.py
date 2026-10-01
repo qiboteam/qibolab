@@ -19,6 +19,7 @@ from qibolab._core.sweeper import (
 from ..q1asm import Program, parse
 from .acquisition import Acquisitions, MeasureId, Weight, Weights, acquisitions
 from .program import program
+from .sweepers import is_offset_rectangular
 from .waveforms import Waveform, WaveformIndex, waveforms
 
 __all__ = ["Q1Sequence"]
@@ -151,6 +152,34 @@ def _effective_channels(ch: ChannelId, seq: Iterable[PulseLike]) -> set[ChannelI
     )
 
 
+def _check_no_offset_sweep_on_awg_offset_pulse_channel(
+    sequence: PulseSequence, sweepers: list[ParallelSweepers]
+) -> None:
+    """Reject offset sweeps on channels carrying rectangular pulses realized as offsets.
+
+    The implementation of offset-based rectangular pulses assumes a zero baseline, and
+    sweeping the offset would violate this assumption.
+    """
+    duration_swept = swept_pulses(sweepers, {Parameter.duration})
+    swept_offset_channels = [
+        ch
+        for parsweep in sweepers
+        for sweeper in parsweep
+        if sweeper.parameter is Parameter.offset and sweeper.channels
+        for ch in sweeper.channels
+    ]
+    if swept_offset_channels and any(
+        is_offset_rectangular(pulse, duration_swept.get(pulse.id))
+        for ch in swept_offset_channels
+        for pulse in sequence.channel(ch)
+    ):
+        raise ValueError(
+            "Cannot sweep the offset of channel(s) "
+            f"{', '.join(swept_offset_channels)!r} while playing a rectangular pulse on "
+            "it."
+        )
+
+
 def compile(
     sequence: PulseSequence,
     sweepers: list[ParallelSweepers],
@@ -158,6 +187,7 @@ def compile(
     sampling_rate: float,
     merged_vzs: bool,
 ) -> dict[ChannelId, Q1Sequence]:
+    _check_no_offset_sweep_on_awg_offset_pulse_channel(sequence, sweepers)
     duration = sequence.duration
     sweeper_channels = {ch: [] for ch in swept_channels(sweepers)}
     return {
