@@ -23,12 +23,13 @@ def test_waveforms_deduplicate_equal_components_across_distinct_iq_pairs():
         ),
     )
 
-    waveform_specs, indices_map = waveforms(
+    waveform_specs, realization = waveforms(
         sequence=[pulse_a, pulse_b],
         sampling_rate=1.0,
         amplitude_swept=set(),
         duration_swept={},
     )
+    indices_map = realization.waveform_indices
 
     # Two unique Q components plus one shared I component.
     assert len(waveform_specs) == 3
@@ -61,12 +62,13 @@ def test_waveforms_deduplicate_across_distinct_lengths():
         ),
     )
 
-    waveform_specs, indices_map = waveforms(
+    waveform_specs, realization = waveforms(
         sequence=[pulse_a, pulse_b],
         sampling_rate=1.0,
         amplitude_swept=set(),
         duration_swept={},
     )
+    indices_map = realization.waveform_indices
 
     # Two unique Q components plus two unique I components.
     assert len(waveform_specs) == 4

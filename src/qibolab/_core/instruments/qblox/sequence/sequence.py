@@ -82,7 +82,7 @@ class Q1Sequence(Model):
         pulse_and_readout_ids = {
             pulse.id for pulse in sequence if isinstance(pulse, (Pulse, Readout))
         }
-        waveform_specs, indices_map = waveforms(
+        waveform_specs, pulse_realization = waveforms(
             sequence,
             sampling_rate,
             amplitude_swept=set(swept_pulses(sweepers, {Parameter.amplitude})),
@@ -104,7 +104,7 @@ class Q1Sequence(Model):
             acquisitions={k: a.acquisition for k, a in acquisitions_.items()},
             program=program(
                 sequence,
-                indices_map,
+                pulse_realization,
                 acquisitions_,
                 options,
                 sweepers,
