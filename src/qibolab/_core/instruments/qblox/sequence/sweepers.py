@@ -72,7 +72,7 @@ class ParamRole(Enum):
         raise ValueError("Sweeper parameter kind does not correspond to any role.")
 
     @classmethod
-    def unique(cls, sweep: Sweeper) -> bool:
+    def single_register(cls, sweep: Sweeper) -> bool:
         """Whether the sweeper can be served by a single value register.
 
         Most sweepers require only one register. The primary exception is a duration
@@ -181,7 +181,7 @@ def _registers(sweep: Sweeper) -> list[tuple[Range, ParamRole]]:
     """Reserve registers for sweeping."""
     return (
         [(sweep.irange, ParamRole.from_sweeper(sweep))]
-        if ParamRole.unique(sweep)
+        if ParamRole.single_register(sweep)
         else _pulse_duration(sweep)
     )
 
