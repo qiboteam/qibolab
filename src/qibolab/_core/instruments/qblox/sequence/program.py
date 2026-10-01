@@ -20,7 +20,6 @@ from .experiment import experiment
 from .loops import LoopSpec, Registers, loop, loops
 from .sweepers import (
     Param,
-    ParamRole,
     params,
     params_reshape,
     sweep_sequence,
@@ -123,19 +122,6 @@ def program(
     sweepseq = sweep_sequence(
         sequence, [p for v in indexed_params.values() for p in v.pulse]
     )
-    swept_offset_channels = [
-        p.channel
-        for p in params_
-        if p.role is ParamRole.OFFSET and p.channel in channel
-    ]
-    if swept_offset_channels and any(
-        pulse.id in pulse_realization.offset_pulses for pulse, _ in sweepseq
-    ):
-        raise ValueError(
-            "Cannot sweep the offset of channel(s) "
-            f"{', '.join(swept_offset_channels)!r} while playing a rectangular pulse on "
-            "it."
-        )
     experiment_ = [
         *experiment(sweepseq, pulse_realization, acquisitions, merged_vzs),
         # Enforce a minimum wait of 4 ns corresponding to one clock cycle
