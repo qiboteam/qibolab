@@ -108,10 +108,16 @@ def _process_rectangular(pulse: Pulse, params: set[Param]) -> list[Lineable]:
     duration_sweep = {p.role: p.reg for p in params if p.role is ParamRole.DURATION}
     amplitude_sweep = {p.role: p.reg for p in params if p.role is ParamRole.AMPLITUDE}
 
-    # The rectangular pulse is played only on path 0 (the I-channel). The Q-channel is
-    # always 0. The zero needs to match the register or fixed value of the amplitude.
+    # The rectangular pulse is played only on path-0 (the I-channel). The value of the
+    # Q-channel signal is always 0.0.
+    #
+    # `set_awg_offs` in Qblox expects both arguments of the same type (register or
+    # immediate), therefore `zero` is assigned to match `amplitude`. See:
+    # https://docs.qblox.com/en/main/products/qblox_instruments/q1/index.html#set_awg_offs-instt
     if amplitude_sweep:
-        # If the amplitude is swept, then pulse.amplitude is just a placeholder.
+        # If the amplitude is swept, then pulse.amplitude is just a placeholder. The
+        # intended value is defined by the sweepers' range, and a register is then used
+        # in place of an immediate.
         amplitude = amplitude_sweep[ParamRole.AMPLITUDE]
         zero = Registers.zero.value
     else:
