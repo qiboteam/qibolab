@@ -126,13 +126,14 @@ def _process_rectangular(pulse: Pulse, params: set[Param]) -> list[Lineable]:
         amplitude = int(convert(pulse.amplitude, Parameter.amplitude))
         zero = 0
 
-    # The first `upd_param` below takes 4 ns so these don't have to be in the wait
-    if duration_sweep:
-        # the register values are already shifted by the 4 ns of the leading
-        # `upd_param` (see `sweepers._duration_shift`).
-        wait_instruction = [Wait(duration=duration_sweep[ParamRole.DURATION])]
-    else:
-        wait_instruction = [Wait(duration=int(pulse.duration) - 4)]
+    # The first `upd_param` below takes 4 ns so these don't have to be in the wait.
+    # For swept durations the register values are already shifted by those 4 ns
+    # (see `sweepers._duration_shift`).
+    wait_duration = (
+        duration_sweep[ParamRole.DURATION]
+        if duration_sweep
+        else int(pulse.duration) - 4
+    )
 
     # NOTE: The UpdParam below causes the realtime duration of the pulse to be 4 ns
     # longer than the requested duration.
@@ -142,7 +143,7 @@ def _process_rectangular(pulse: Pulse, params: set[Param]) -> list[Lineable]:
             instruction=UpdParam(duration=4),
             comment=f"id: 0x{pulse.id.hex[:5]}",
         ),
-        *wait_instruction,
+        Wait(duration=wait_duration),
         SetAwgOffs(value_0=0, value_1=0),
         UpdParam(duration=4),
     ]
