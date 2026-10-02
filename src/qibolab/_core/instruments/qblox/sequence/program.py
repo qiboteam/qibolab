@@ -18,9 +18,15 @@ from ..q1asm.ast_ import (
 from .acquisition import AcquisitionSpec, MeasureId
 from .experiment import experiment
 from .loops import LoopSpec, Registers, loop, loops
-from .sweepers import Param, params, params_reshape, sweep_sequence, update_instructions
+from .sweepers import (
+    Param,
+    params,
+    params_reshape,
+    sweep_sequence,
+    update_instructions,
+)
 from .transpile import transpile
-from .waveforms import WaveformIndices
+from .waveforms import PulseRealization
 
 __all__ = ["Program"]
 
@@ -56,6 +62,10 @@ def setup(
             Line(
                 instruction=Move(source=0, destination=Registers.phase_delta.value),
                 comment="init delta phase register",
+            ),
+            Line(
+                instruction=Move(source=0, destination=Registers.zero.value),
+                comment="init zero register",
             ),
         ]
         + [
@@ -95,7 +105,7 @@ def finalization() -> list[Instruction]:
 
 def program(
     sequence: Iterable[PulseLike],
-    waveforms: WaveformIndices,
+    pulse_realization: PulseRealization,
     acquisitions: dict[MeasureId, AcquisitionSpec],
     options: ExecutionParameters,
     sweepers: list[ParallelSweepers],
@@ -117,7 +127,7 @@ def program(
         sequence, [p for v in indexed_params.values() for p in v.pulse]
     )
     experiment_ = [
-        *experiment(sweepseq, waveforms, acquisitions, merged_vzs),
+        *experiment(sweepseq, pulse_realization, acquisitions, merged_vzs),
         # Enforce a minimum wait of 4 ns corresponding to one clock cycle
         Wait(duration=max(padding, 4)),
     ]

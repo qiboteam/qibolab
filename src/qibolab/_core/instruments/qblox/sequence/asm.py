@@ -17,6 +17,7 @@ class Registers(Enum):
     shots = Register(number=2)
     wait = Register(number=3)
     phase_delta = Register(number=4)
+    zero = Register(number=5)
 
     @classmethod
     def first_available(cls) -> int:

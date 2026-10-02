@@ -14,9 +14,11 @@ from ..q1asm.ast_ import (
     Block,
     Instruction,
     Line,
+    Lineable,
     Move,
     Play,
     Register,
+    SetAwgOffs,
     SetPhDelta,
     UpdParam,
     Wait,
@@ -32,7 +34,7 @@ from .sweepers import (
     reset_instructions,
     update_instructions,
 )
-from .waveforms import WaveformIndices
+from .waveforms import PulseRealization, WaveformIndices
 
 __all__ = []
 
@@ -71,8 +73,72 @@ def _play_pulse(
     )
 
 
+def _process_rectangular(pulse: Pulse, params: set[Param]) -> list[Lineable]:
+    """Emit Q1ASM for a rectangular pulse using `set_awg_offs`.
+
+    The constant level is set as an AWG offset (the NCO is still oscillating and
+    phase rotations on top of it work as for played waveforms), so no sample has
+    to be stored in the waveform memory::
+
+        set_awg_offs <amp>, 0
+        upd_param    4
+        wait         <duration - 4>
+        set_awg_offs 0, 0
+        upd_param    4
+
+    The trailing `upd_param` is needed because `wait` does not latch parameters,
+    so the offset reset has to be explicitly applied at the pulse end.
+    """
+
+    duration_sweep = {p.role: p.reg for p in params if p.role is ParamRole.DURATION}
+    amplitude_sweep = {p.role: p.reg for p in params if p.role is ParamRole.AMPLITUDE}
+
+    # The rectangular pulse is played only on path-0 (the I-channel). The value of the
+    # Q-channel signal is always 0.0.
+    #
+    # `set_awg_offs` in Qblox expects both arguments of the same type (register or
+    # immediate), therefore `zero` is assigned to match `amplitude`. See:
+    # https://docs.qblox.com/en/main/products/qblox_instruments/q1/index.html#set_awg_offs-instt
+    if amplitude_sweep:
+        # If the amplitude is swept, then pulse.amplitude is just a placeholder. The
+        # intended value is defined by the sweepers' range, and a register is then used
+        # in place of an immediate.
+        amplitude = amplitude_sweep[ParamRole.AMPLITUDE]
+        zero = Registers.zero.value
+    else:
+        # If the amplitude is fixed, convert the normalized amplitude assigned to the
+        # pulse to units of set_awg_offs.
+        amplitude = int(convert(pulse.amplitude, Parameter.amplitude))
+        zero = 0
+
+    # The first `upd_param` below takes 4 ns so these don't have to be in the wait.
+    # For swept durations the register values are already shifted by those 4 ns
+    # (see `sweepers._duration_shift`).
+    wait_duration = (
+        duration_sweep[ParamRole.DURATION]
+        if duration_sweep
+        else int(pulse.duration) - 4
+    )
+
+    # NOTE: The UpdParam below causes the realtime duration of the pulse to be 4 ns
+    # longer than the requested duration.
+    return [
+        SetAwgOffs(value_0=amplitude, value_1=zero),
+        Line(
+            instruction=UpdParam(duration=4),
+            comment=f"id: 0x{pulse.id.hex[:5]}",
+        ),
+        Wait(duration=wait_duration),
+        SetAwgOffs(value_0=0, value_1=0),
+        UpdParam(duration=4),
+    ]
+
+
 def _process_pulse(
-    pulse: Pulse, params: set[Param], waveforms: WaveformIndices, merged_vzs: bool
+    pulse: Pulse,
+    params: set[Param],
+    pulse_realization: PulseRealization,
+    merged_vzs: bool,
 ):
     """
     If merged_vzs is True, all virtual-Z gates are merged and phase handling is done in
@@ -85,9 +151,16 @@ def _process_pulse(
     duration_sweep = {
         p.role: p.reg for p in params if p.role.value[1] is Parameter.duration
     }
+    # Rectangular pulses with duration >= 8 ns are implemented using `set_awg_offs`. For
+    # all other pulses, waveforms are played.
+    pulse_instructions = (
+        _process_rectangular(pulse, params)
+        if pulse.id in pulse_realization.offset_pulses
+        else _play_pulse(pulse, pulse_realization.waveform_indices, duration_sweep)
+    )
     if merged_vzs:
         assert pulse.relative_phase == 0.0
-        return _play_pulse(pulse, waveforms, duration_sweep)
+        return pulse_instructions
     else:
         phase = int(convert(pulse.relative_phase, Parameter.relative_phase))
         minus_phase = int(convert(-pulse.relative_phase, Parameter.relative_phase))
@@ -104,7 +177,7 @@ def _process_pulse(
                 else []
             )
             + ([SetPhDelta(value=Registers.phase_delta.value)])
-            + _play_pulse(pulse, waveforms, duration_sweep)
+            + pulse_instructions
             + ([Move(source=minus_phase, destination=Registers.phase_delta.value)])
         )
 
@@ -176,7 +249,7 @@ def _process_readout(
 
 def play(
     parpulse: ParameterizedPulse,
-    waveforms: WaveformIndices,
+    pulse_realization: PulseRealization,
     acquisitions: dict[MeasureId, AcquisitionSpec],
     merged_vzs: bool,
 ) -> Block:
@@ -184,7 +257,7 @@ def play(
     pulse = parpulse[0]
     params = parpulse[1]
     if isinstance(pulse, Pulse):
-        return _process_pulse(pulse, params, waveforms, merged_vzs)
+        return _process_pulse(pulse, params, pulse_realization, merged_vzs)
     if isinstance(pulse, Delay):
         return _process_delay(pulse, params)
     if isinstance(pulse, VirtualZ):
@@ -194,23 +267,33 @@ def play(
     if isinstance(pulse, Align):
         raise NotImplementedError("Align operation not yet supported by Qblox.")
     if isinstance(pulse, Readout):
-        return _process_readout(pulse, waveforms, acquisitions)
+        return _process_readout(pulse, pulse_realization.waveform_indices, acquisitions)
     raise NotImplementedError(f"Instruction {type(pulse)} unsupported by Qblox driver.")
 
 
 def event(
     parpulse: ParameterizedPulse,
-    waveforms: WaveformIndices,
+    pulse_realization: PulseRealization,
     acquisitions: dict[MeasureId, AcquisitionSpec],
     merged_vzs: bool,
 ) -> Block:
-    params = parpulse[1]
+    pulse, params = parpulse
+    # For offset rectangular pulses the amplitude sweeper works differently: if a pulse
+    # is implemented through a waveform, the implementation varies the waveform gain
+    # with `set_awg_gain` (output = waveform * gain + offset), which cannot change the
+    # amplitude set through `set_awg_offs`. Instead, the swept amplitude is written
+    # straight into the pulse's own `set_awg_offs` in `_process_rectangular` and the
+    # AMPLITUDE parameter is excluded from the usual gain update/reset around the event.
+    is_offset = pulse.id in pulse_realization.offset_pulses
+    sweep_params = [
+        p for p in params if not (is_offset and p.role is ParamRole.AMPLITUDE)
+    ]
     return [
         inst
         for block in (
-            *(update_instructions(p.role, p.reg) for p in params),
-            *(play(parpulse, waveforms, acquisitions, merged_vzs),),
-            *(reset_instructions(p.role, p.reg) for p in reversed(list(params))),
+            *(update_instructions(p.role, p.reg) for p in sweep_params),
+            *(play(parpulse, pulse_realization, acquisitions, merged_vzs),),
+            *(reset_instructions(p.role, p.reg) for p in reversed(sweep_params)),
         )
         for inst in block
     ]
@@ -218,7 +301,7 @@ def event(
 
 def experiment(
     sequence: SweepSequence,
-    waveforms: WaveformIndices,
+    pulse_realization: PulseRealization,
     acquisitions: dict[MeasureId, AcquisitionSpec],
     merged_vzs: bool,
 ) -> Block:
@@ -235,7 +318,8 @@ def experiment(
     return [UpdParam(duration=4), WaitSync(duration=4)] + [
         inst
         for block in (
-            event(pulse, waveforms, acquisitions, merged_vzs) for pulse in sequence
+            event(pulse, pulse_realization, acquisitions, merged_vzs)
+            for pulse in sequence
         )
         for inst in block
     ]
