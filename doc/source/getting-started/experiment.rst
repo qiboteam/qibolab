@@ -1,200 +1,153 @@
-First experiment
+First Experiment
 ================
 
-The aim of this introductory example is to present the main aspects of the Qibolab
-interface, bringing up all the required ingredients for an actual execution.
+In this example, we'll run a simple single-qubit quantum experiment: single-shot classification.
 
-For configuration simplicity, a dummy instrument will be used. Since its only purpose is
-to generate purely random numbers, respecting the layout.
-At the end, the results will be compared with those resulting from a more comprehensive
-:doc:`tutorial <../tutorials/emulator>`, based on the numerically computed evolution of
-a :ref:`simulated system <main_doc_emulator>`.
+Setup the Platform
+------------------
 
-Define the platform
--------------------
-
-To launch experiments on quantum hardware, users have first to define their platform.
-
-For a first experiment, let's define a single qubit platform.
-In this example, the qubit is only coupled to a drive channel and a transmission line.
-Where the latter is represented by a pair of related entities: an output probe channel,
-and an input acquisition channel.
+First, define a single-qubit platform with minimal hardware:
 
 .. testcode:: python
 
-    from qibolab import AcquisitionChannel, Hardware, IqChannel, Qubit
+    from qibolab import AcquisitionChannel, Hardware, IqChannel, Qubit, Platform, Parameters
     from qibolab.instruments.dummy import DummyInstrument
 
+    # Define qubit with drive, probe, and acquisition channels
+    qubit = Qubit.default(0)
 
-    def create() -> Hardware:
-        # Define qubit
-        qubits = {0: Qubit.default(0)}
+    # Create channels
+    channels = {
+        qubit.probe: IqChannel(mixer=None, lo=None),
+        qubit.acquisition: AcquisitionChannel(probe=qubit.probe, twpa_pump=None),
+        qubit.drive: IqChannel(mixer=None, lo=None),
+    }
 
-        # Create channels and connect to instrument ports
-        channels = {}
-        qubit = qubits[0]
-        # Readout
-        channels[qubit.probe] = IqChannel(mixer=None, lo=None)
-        # Acquire
-        channels[qubit.acquisition] = AcquisitionChannel(probe=qubit.probe, twpa_pump=None)
-        # Drive
-        channels[qubit.drive] = IqChannel(mixer=None, lo=None)
+    # Create dummy instrument
+    controller = DummyInstrument(address="192.168.0.101:80", channels=channels)
 
-        # Define instruments
-        controller = DummyInstrument(address="192.168.0.101:80", channels=channels)
+    # Create hardware
+    hardware = Hardware(
+        instruments={"dummy": controller},
+        qubits={0: qubit},
+    )
 
-        # Define and return platform
-        return Hardware(instruments={"dummy": controller}, qubits=qubits)
-
-
-Then we can define the following parameters (the exact content is not yet relevant, and
-it will be explained in the :ref:`related section <main_doc_parameters>`).
-
-.. admonition:: Parameters dictionary
-    :collapsible: closed
-
-    .. testcode:: python
-
-        parameters = {
-            "settings": {"nshots": 1000, "relaxation_time": 70000},
-            "configs": {
-                "0/drive": {"kind": "iq", "frequency": 4833726197},
-                "0/probe": {"kind": "iq", "frequency": 7320000000},
-                "0/acquisition": {
-                    "kind": "acquisition",
-                    "delay": 224,
-                    "smearing": 0,
-                    "threshold": 0.002100861788865835,
-                    "iq_angle": -0.7669877581038627,
-                },
-            },
-            "native_gates": {
-                "single_qubit": {
-                    "0": {
-                        "RX": [
-                            [
-                                "0/drive",
-                                {
-                                    "kind": "pulse",
-                                    "duration": 40,
-                                    "amplitude": 0.5,
-                                    "envelope": {"kind": "gaussian", "rel_sigma": 3.0},
-                                },
-                            ],
-                        ],
-                        "MZ": [
-                            [
-                                "0/acquisition",
-                                {
-                                    "kind": "readout",
-                                    "acquisition": {
-                                        "kind": "acquisition",
-                                        "duration": 2000.0,
-                                    },
-                                    "probe": {
-                                        "kind": "pulse",
-                                        "duration": 2000.0,
-                                        "amplitude": 0.003,
-                                        "envelope": {"kind": "rectangular"},
-                                    },
-                                },
-                            ]
-                        ],
-                    }
-                },
-                "two_qubit": {},
-            },
-        }
-
-Finally, we can instantiate the defined platform as follows:
+Platform parameters are stored in a dictionary (see below for details):
 
 .. testcode:: python
 
-    from qibolab import Platform, Parameters
+    parameters_dict = {
+        "settings": {"nshots": 1000, "relaxation_time": 70000},
+        "configs": {
+            "0/drive": {"kind": "iq", "frequency": 4833726197},
+            "0/probe": {"kind": "iq", "frequency": 7320000000},
+            "0/acquisition": {
+                "kind": "acquisition",
+                "delay": 224,
+                "smearing": 0,
+                "threshold": 0.002,
+                "iq_angle": -0.767,
+            },
+        },
+        "native_gates": {
+            "single_qubit": {
+                "0": {
+                    "RX": [
+                        [
+                            "0/drive",
+                            {
+                                "kind": "pulse",
+                                "duration": 40,
+                                "amplitude": 0.5,
+                                "envelope": {"kind": "gaussian", "rel_sigma": 3.0},
+                            },
+                        ],
+                    ],
+                    "MZ": [
+                        [
+                            "0/acquisition",
+                            {
+                                "kind": "readout",
+                                "acquisition": {
+                                    "kind": "acquisition",
+                                    "duration": 2000.0,
+                                },
+                                "probe": {
+                                    "kind": "pulse",
+                                    "duration": 2000.0,
+                                    "amplitude": 0.003,
+                                    "envelope": {"kind": "rectangular"},
+                                },
+                            },
+                        ]
+                    ],
+                }
+            },
+            "two_qubit": {},
+        },
+    }
 
-    params = Parameters.model_validate(parameters)
-    platform = Platform(name="my_platform", parameters=params, **vars(create()))
+    # Create platform
+    params = Parameters.model_validate(parameters_dict)
+    platform = Platform(
+        name="my_platform",
+        parameters=params,
+        **vars(hardware),
+    )
 
-.. note::
+Run the Experiment
+------------------
 
-    In this case, even defining ``create()`` and ``parameters`` separately appears
-    redundant.
-    However, this pattern is particularly convenient to separate the established devices
-    arrangement, which is considered to be the fixed part of the platform, from the set
-    of parameters, that are instead subject to calibration.
-
-    The division is especially useful to store platforms as files. Qibolab also supplies
-    built-in machinery to load these stored platforms, as described in the
-    :doc:`../tutorials/storage` tutorial.
-
-
-Further information about defining platforms is provided in the
-:doc:`../main-documentation/platform` page, and several examples can be found at the
-`TII QRC lab-dedicated repository <https://github.com/qiboteam/qibolab_platforms_qrc>`_.
-
-Perform an experiment
----------------------
-
-Once the platform is available, we can finally use it to execute an experiment.
-
-One of the simplest options is a *single-shot classification*. It will make limited
-usage of the available Experiment API, which will be explored in its :doc:`dedicated
-guide <../main-documentation/experiment>`, or in further tutorials.
-
-Here it is the required code:
+Execute a simple single-shot classification:
 
 .. testcode:: python
 
     import matplotlib.pyplot as plt
-
     from qibolab import AcquisitionType
 
-    # access the native gates
+    # Get native gates
     gates = platform.natives.single_qubit[0]
 
+    # Run two experiments: measure |0> and |1>
     results = []
-    # iterate over pulse sequences
     for sequence in [gates.MZ(), gates.RX() | gates.MZ()]:
-        # perform the experiment using specific options
         signal = platform.execute(
             [sequence],
             nshots=1000,
             acquisition_type=AcquisitionType.INTEGRATION,
         )
+        # Extract acquisition pulse ID
         _, acq = next(iter(sequence.acquisitions))
-
-        # collect the results
         sig = signal[acq.id]
         results.append([sig[..., 0], sig[..., 1]])
 
-    plt.title("Single shot classification")
+    # Plot results
+    plt.title("Single-Shot Classification")
     plt.xlabel("In-phase [a.u.]")
     plt.ylabel("Quadrature [a.u.]")
-
-    plt.scatter(*results[0], label="0")
-    plt.scatter(*results[1], label="1")
+    plt.scatter(*results[0], label="↓ (no RX)")
+    plt.scatter(*results[1], label="↑ (after RX)")
     plt.legend()
 
+What's Happening?
+-----------------
 
-The main features of this snippet are:
+The code above:
 
-- the calibrated *native gates* are accessed from the ``platform`` parameters
-- they are used to construct a sequence (e.g. `gates.RX() | gates.MZ()`)
-- the sequence is executed by the ``platform``
-- the results consist of a dictionary, mapping the identifier of the acquisition
-  operations to the arrays of results, which are organized over multiple dimensions
-  (more in the :ref:`main_doc_results` section)
+1. Defines a single-qubit platform with a dummy instrument
+2. Runs two experiments:
+   - **MZ()**: Just measure (detect state |0>)
+   - **RX() | MZ()**: Apply π/2 rotation, then measure (detect state |1>)
+3. Collects I and Q quadrature data from both experiments
+4. Plots the results on the IQ plane
 
-As announced from the beginning, the results are pure white noise:
+With the dummy instrument, results are random noise. Use the :ref:`emulator <main_doc_emulator>`
+for realistic quantum simulation, or connect to real hardware.
 
-.. image:: dummy-single-shot.svg
-    :align: center
+Next Steps
+----------
 
-This is because the platform we defined adopted a dummy instrument, which is mainly
-provided for debugging purpose.
-
-Using a more meaningful platform, e.g. one based on :doc:`QPU numerical simulation
-<../tutorials/emulator>`, the result would have been the following
-
-.. image:: ../tutorials/emulator-single-shot.svg
-    :align: center
+- See :ref:`main_doc_experiment` for complete Experiment API reference
+- Try the :ref:`emulator tutorial <tutorial_emulator>` for realistic simulation
+- Read :ref:`tutorial_platform` to build custom platforms
+- Explore :ref:`tutorial_calibration` for gate calibration

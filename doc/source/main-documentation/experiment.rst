@@ -1,341 +1,261 @@
-.. admonition:: Work in progress
-
-    This page is only partially updated from a previous version of Qibolab.
-
-    In case of doubts, contact the `Qibo developers
-    <https://github.com/qiboteam/qibo#contacts>`_.
-
 .. _main_doc_experiment:
 
-Experiment
-==========
+Experiment API
+==============
 
-Pulses
-------
+The Experiment API enables definition and execution of quantum experiments.
+It consists of pulse sequences, sweepers, and execution parameters—everything that
+enters :meth:`.Platform.execute`.
 
-In Qibolab, an extensive API is available for working with pulses and pulse sequences, a fundamental aspect of quantum experiments.
-At the heart of this API is the :class:`qibolab.Pulse` object, which empowers users to define and customize pulses with specific parameters.
+Overview
+--------
 
-Additionally, pulses are defined by an envelope shape, represented by a subclass of :class:`qibolab._core.pulses.envelope.BaseEnvelope`.
-Qibolab offers a range of pre-defined pulse shapes which can be found in :py:mod:`qibolab._core.pulses.envelope`.
+An experiment in Qibolab is defined by:
 
-- Rectangular (:class:`qibolab.Rectangular`)
-- Exponential (:class:`qibolab.Exponential`)
-- Gaussian (:class:`qibolab.Gaussian`)
-- Drag (:class:`qibolab.Drag`)
-- SNZ (:class:`qibolab.Snz`)
-- Custom (:class:`qibolab.Custom`)
+1. **Pulse Sequences** (:class:`.PulseSequence`): Synchronized pulses across channels
+2. **Sweepers** (:class:`.Sweeper`): Parameter sweeps (optional)
+3. **Execution Parameters** (:class:`.ExecutionParameters`): Options like nshots, averaging
 
-To illustrate, here is an examples of how to instantiate a pulse using the Qibolab API:
+Together, these form a complete experiment specification.
 
-.. testsetup:: python
+Pulse Sequences
+---------------
 
-    from qibolab import create_platform
-    from qibolab import (
-        AcquisitionType,
-        AveragingMode,
-    )
+A :class:`.PulseSequence` is a list of (channel, pulse) pairs representing operations
+to execute in order. Pulses on different channels execute in parallel.
 
-    options = dict(
-        nshots=1000,
-        relaxation_time=10,
-        fast_reset=False,
-        acquisition_type=AcquisitionType.INTEGRATION,
-        averaging_mode=AveragingMode.CYCLIC,
-    )
+**Creating Sequences**
 
-    platform = create_platform("dummy")
-
-.. testcode:: python
-
-    from qibolab import Pulse, Rectangular
-
-    pulse = Pulse(
-        duration=40.0,  # Pulse duration in ns
-        amplitude=0.5,  # Amplitude normalized to [-1, 1]
-        relative_phase=0.0,  # Phase in radians
-        envelope=Rectangular(),
-    )
-
-Here, we defined a rectangular drive pulse using the generic Pulse object.
-
-Both the Pulses objects and the PulseShape object have useful plot functions and several different various helper methods.
-
-To organize pulses into sequences, Qibolab provides the :class:`qibolab.PulseSequence` object. Here's an example of how you can create and manipulate a pulse sequence:
-
-.. testcode:: python
+.. code-block:: python
 
     from qibolab import Pulse, PulseSequence, Rectangular
 
+    # Create individual pulses
     pulse1 = Pulse(
-        duration=40,  # timing, in all qibolab, is expressed in ns
-        amplitude=0.5,  # this amplitude is relative to the range of the instrument
-        relative_phase=0,  # phases are in radians
+        duration=40,  # nanoseconds
+        amplitude=0.5,  # normalized [-1, 1]
+        relative_phase=0,  # radians
         envelope=Rectangular(),
     )
-    pulse2 = Pulse(
-        duration=40,  # timing, in all qibolab, is expressed in ns
-        amplitude=0.5,  # this amplitude is relative to the range of the instrument
-        relative_phase=0,  # phases are in radians
-        envelope=Rectangular(),
-    )
-    pulse3 = Pulse(
-        duration=40,  # timing, in all qibolab, is expressed in ns
-        amplitude=0.5,  # this amplitude is relative to the range of the instrument
-        relative_phase=0,  # phases are in radians
-        envelope=Rectangular(),
-    )
-    pulse4 = Pulse(
-        duration=40,  # timing, in all qibolab, is expressed in ns
-        amplitude=0.5,  # this amplitude is relative to the range of the instrument
-        relative_phase=0,  # phases are in radians
-        envelope=Rectangular(),
-    )
-    drive_channel_qubit0 = platform.qubits[0].drive
+
+    # Create sequence
     sequence = PulseSequence(
         [
-            (drive_channel_qubit0, pulse1),
-            (drive_channel_qubit0, pulse2),
-            (drive_channel_qubit0, pulse3),
-            (drive_channel_qubit0, pulse4),
-        ],
+            (qubit.drive, pulse1),
+            (qubit.probe, measurement_pulse),
+        ]
     )
 
-    print(f"Total duration: {sequence.duration}")
+**Using Native Gates**
 
+Platforms provide pre-defined gates (RX, RY, MZ) accessible via :attr:`.Platform.natives`:
 
-.. testoutput:: python
-    :hide:
-
-    Total duration: 160.0
-
-
-When conducting experiments on quantum hardware, pulse sequences are vital. Assuming you have already initialized a platform, executing an experiment is as simple as:
-
-.. testcode:: python
-
-    result = platform.execute([sequence])
-
-Lastly, when conducting an experiment, it is not always required to define a pulse from scratch.
-Usual pulses, such as pi-pulses or measurements, are already defined in the platform runcard and can be easily initialized with platform methods.
-These are relying on parameters held in the :ref:`main_doc_native` data structures.
-Typical experiments may include both pre-defined pulses and new ones:
-
-.. testcode:: python
-
-    from qibolab import Rectangular
+.. code-block:: python
 
     natives = platform.natives.single_qubit[0]
-    sequence = natives.RX() | natives.MZ()
+    rx_pulse = natives.RX()
+    sequence = rx_pulse | natives.MZ()  # Concatenate with |
 
-    results = platform.execute([sequence])
+**Pulse Shapes**
 
+Qibolab supports several pulse envelope shapes:
+
+- :class:`.Rectangular`: Constant amplitude
+- :class:`.Gaussian`: Gaussian envelope
+- :class:`.Drag`: DRAG (derivative removal by adiabatic gate)
+- :class:`.Exponential`: Exponential decay
+- :class:`.Snz`: Second-order nested SWAP gate
+- :class:`.Custom`: User-defined waveform
+
+See :py:mod:`qibolab._core.pulses.envelope` for details.
+
+**Sequence Operations**
+
+Sequences support several operations:
+
+.. code-block:: python
+
+    seq1 = ...
+    seq2 = ...
+
+    # Concatenate: execute seq1 then seq2
+    combined = seq1 | seq2
+
+    # Duration of sequence
+    duration = seq1.duration
+
+    # Channel duration
+    drive_duration = seq1.channel_duration(qubit.drive)
 
 Sweepers
 --------
 
-Sweeper objects, represented by the :class:`qibolab.Sweeper` class, stand as a crucial component in experiments and calibration tasks within the Qibolab framework.
+:class:`.Sweeper` objects enable efficient parameter sweeps on hardware without
+requiring multiple round-trips to the host.
 
-Consider a scenario where a resonator spectroscopy experiment is performed. This process involves a sequence of steps:
+**Sweepable Parameters**
 
-1. Define a pulse sequence.
-2. Define a readout pulse with frequency :math:`A`.
-3. Execute the sequence.
-4. Define a new readout pulse with frequency :math:`A + \epsilon`.
-5. Execute the sequence again.
-6. Repeat for increasing frequencies :math:`A + 2 \epsilon`, :math:`A + 3 \epsilon`, and so on.
+Sweepers can modify:
 
-This approach is suboptimal and time-consuming, mainly due to the frequent communication between the control device and the Qibolab user after each execution. Such communication overhead significantly extends experiment duration.
+- **Pulse parameters**: amplitude, duration, relative_phase
+- **Channel parameters**: frequency, offset
 
-In supported control devices, an efficient technique involves defining a "sweeper" or a parameter scan directly on the device. This scan, applied to specific parameters, allows multiple variations to be executed in a single communication round, drastically reducing experiment time.
+**Creating Sweepers**
 
-To address the inefficiency, Qibolab introduces the concept of Sweeper objects.
+Specify sweeper using either ``values`` (explicit array) or ``range`` (start, stop, step):
 
-Sweeper objects in Qibolab are characterized by a :class:`qibolab.Parameter`. This parameter, crucial to the sweeping process, can be one of several types:
-
-- Amplitude
-- Duration
-- Relative phase
-- Start
-
---
-
-- Frequency
-- Offset
-
-The first group includes parameters of the pulses, while the second group includes parameters of channels.
-
-To designate the pulse(s) or channel(s) to which a sweeper is applied, you can utilize the ``pulses`` or ``channels`` parameter within the Sweeper object.
-
-.. note::
-
-   It is possible to simultaneously execute the same sweeper on different pulses or channels. The ``pulses`` or ``channels`` attribute is designed as a list, allowing for this flexibility.
-
-To effectively specify the sweeping behavior, Qibolab provides the ``values`` attribute along with the ``type`` attribute.
-
-The ``values`` attribute comprises an array of numerical values that define the sweeper's progression.
-
-Let's see some examples.
-Consider now a system with three qubits (qubit 0, qubit 1, qubit 2) with resonator frequency at 4 GHz, 5 GHz and 6 GHz.
-A typical resonator spectroscopy experiment could be defined with:
-
-.. testcode:: python
-
-    import numpy as np
+.. code-block:: python
 
     from qibolab import Parameter, Sweeper
+    import numpy as np
 
-    natives = platform.natives.single_qubit
-
-    sequence = (
-        natives[0].MZ()  # readout pulse for qubit 0 at 4 GHz
-        | natives[1].MZ()  # readout pulse for qubit 1 at 5 GHz
-        | natives[2].MZ()  # readout pulse for qubit 2 at 6 GHz
-    )
-
-    sweepers = [
-        Sweeper(
-            parameter=Parameter.frequency,
-            values=platform.config(qubit.probe).frequency
-            + np.arange(-200_000, +200_000, 1),  # define an interval of swept values
-            channels=[qubit.probe],
-        )
-        for qubit in platform.qubits.values()
-    ]
-
-    results = platform.execute([sequence], [sweepers], **options)
-
-In this way, we first define three parallel sweepers with an interval of 400 MHz (-200 MHz --- 200 MHz). The resulting probed frequency will then be:
-    - for qubit 0: [3.8 GHz, 4.2 GHz]
-    - for qubit 1: [4.8 GHz, 5.2 GHz]
-    - for qubit 2: [5.8 GHz, 6.2 GHz]
-
-It is possible to define and executes multiple sweepers at the same time, in a nested loop style.
-For example:
-
-.. testcode:: python
-
-    qubit = platform.qubits[0]
-    natives = platform.natives.single_qubit[0]
-    rx_sequence = natives.RX()
-    sequence = rx_sequence | natives.MZ()
-
-    f0 = platform.config(qubit.drive).frequency
-    sweeper_freq = Sweeper(
+    # Sweep frequency on a channel
+    sweeper = Sweeper(
         parameter=Parameter.frequency,
-        range=(f0 - 100_000, f0 + 100_000, 10_000),
+        values=np.array([4e9, 4.01e9, 4.02e9]),  # or
+        # range=(4e9, 4.1e9, 0.01e9),
         channels=[qubit.drive],
     )
-    rx_pulse = rx_sequence[0][1]
-    sweeper_amp = Sweeper(
+
+    # Sweep amplitude on a pulse
+    pulse = sequence[0][1]
+    sweeper = Sweeper(
         parameter=Parameter.amplitude,
-        range=(0, 0.43, 0.3),
-        pulses=[rx_pulse],
+        range=(0, 1, 0.1),
+        pulses=[pulse],
     )
 
-    results = platform.execute([sequence], [[sweeper_freq], [sweeper_amp]], **options)
+**Multiple Sweepers**
 
-Let's say that the RX pulse has, from the runcard, a frequency of 4.5 GHz and an amplitude of 0.3, the parameter space probed will be:
+Multiple sweepers can be combined:
 
-- amplitudes: [0, 0.03, 0.06, 0.09, 0.12, ..., 0.39, 0.42]
-- frequencies: [4.4999, 4.49991, 4.49992, ...., 4.50008, 4.50009] (GHz)
+- Sweepers in the **same list** execute in parallel (zip style)
+- Sweepers in **separate lists** form nested loops (outer to inner)
 
-Sweepers given in the same list will be applied in parallel, in a Python ``zip`` style,
-while different lists define nested loops, with the first list corresponding to the outer loop.
+.. code-block:: python
+
+    # Parallel sweeps
+    results = platform.execute(
+        [sequence], [[sweeper1, sweeper2]], **options  # sweeper1 and sweeper2 in parallel
+    )
+
+    # Nested sweeps
+    results = platform.execute(
+        [sequence],
+        [[sweeper1], [sweeper2]],  # sweeper1 (outer), sweeper2 (inner)
+        **options
+    )
 
 .. warning::
 
-   Different control devices may have different limitations on the sweepers.
-   It is possible that the sweeper will raise an error, if not supported, or that it will be automatically converted as a list of pulse sequences to perform sequentially.
+    Hardware support for sweepers varies. Unsupported sweepers either raise an error
+    or are automatically unrolled as separate sequences.
 
 Execution Parameters
 --------------------
 
-In the course of several examples, you've encountered the ``**options`` argument in function calls like:
+:class:`.ExecutionParameters` specifies how to run experiments via keyword arguments
+to :meth:`.Platform.execute`:
 
-.. testcode:: python
+.. code-block:: python
 
-   res = platform.execute([sequence], **options)
-
-Let's now delve into the details of the ``options`` and understand its parts.
-
-The ``options`` extra arguments, is a vital element for every hardware execution.
-It encompasses essential information that tailors the execution to specific requirements:
-
-- ``nshots``: Specifies the number of experiment repetitions.
-- ``relaxation_time``: Introduces a wait time between repetitions, measured in nanoseconds (ns).
-- ``fast_reset``: Enables or disables fast reset functionality, if supported; raises an error if not supported.
-- ``acquisition_type``: Determines the acquisition mode for results.
-- ``averaging_mode``: Defines the mode for result averaging.
-
-The first three parameters are straightforward in their purpose. However, let's take a closer look at the last two parameters.
-
-Supported acquisition types, accessible via the :class:`qibolab.AcquisitionType` enumeration, include:
-
-- Discrimination: Distinguishes states based on acquired voltages.
-- Integration: Returns demodulated and integrated waveforms.
-- Raw: Offers demodulated, yet unintegrated waveforms.
-
-Supported averaging modes, available through the :class:`qibolab.AveragingMode` enumeration, consist of:
-
-- Cyclic: Provides averaged results, yielding a single IQ point per measurement.
-- Singleshot: Supplies non-averaged results.
-
-.. note::
-
-    Two averaging modes actually exists: cyclic and sequential.
-    In sequential mode, a sweeper is executed with the repetition loop nested inside, while cyclic mode places the sweeper as the outermost loop. Cyclic execution generally offers better noise resistance.
-    Ideally, use the cyclic mode. However, some devices lack support for it and will automatically convert it to sequential execution.
-
-.. _main_doc_results:
-
-Results
--------
-
-``platform.execute`` returns a dictionary, mapping the acquisition pulse id to the results of the corresponding measurements.
-The results of each measurement are a numpy array with dimension that depends on the number of shots, acquisition type,
-averaging mode and the number of swept points, if sweepers were used.
-
-For example in
-
-.. testcode:: python
-
-    qubit = platform.qubits[0]
-    natives = platform.natives.single_qubit[0]
-
-    ro_sequence = natives.MZ()
-    sequence = natives.RX() | ro_sequence
-
-
-    ro_pulse = ro_sequence[0][1]
-    result = platform.execute(
-        [sequence],
+    results = platform.execute(
+        sequences,
+        sweepers,
         nshots=1000,
-        relaxation_time=10,
+        relaxation_time=100,  # nanoseconds between shots
         fast_reset=False,
         acquisition_type=AcquisitionType.INTEGRATION,
         averaging_mode=AveragingMode.CYCLIC,
     )
 
+**Key Parameters**
 
-``result`` will be a dictionary with a single key ``ro_pulse.id`` and an array of
-two elements, the averaged I and Q components of the integrated signal.
-If instead, ``(AcquisitionType.INTEGRATION, AveragingMode.SINGLESHOT)`` was used, the array would have shape ``(options["nshots"], 2)``,
-while for ``(AcquisitionType.DISCRIMINATION, AveragingMode.SINGLESHOT)`` the shape would be ``(options["nshots"],)`` with values 0 or 1.
+- ``nshots`` (int): Number of repetitions
+- ``relaxation_time`` (int): Wait between shots (ns)
+- ``fast_reset`` (bool): Enable fast reset if supported
+- ``acquisition_type`` (:class:`.AcquisitionType`): How to acquire data
+- ``averaging_mode`` (:class:`.AveragingMode`): How to average results
 
-The shape of the values of an integrated acquisition with two sweepers will be:
+**Acquisition Types**
 
-.. testcode:: python
+- :attr:`.AcquisitionType.DISCRIMINATION`: Demodulate, integrate, and discriminate states
+- :attr:`.AcquisitionType.INTEGRATION`: Demodulate and integrate
+- :attr:`.AcquisitionType.RAW`: Acquire raw waveform (unintegrated)
 
+**Averaging Modes**
+
+- :attr:`.AveragingMode.CYCLIC`: Best noise resistance; sweeper is outer loop
+- :attr:`.AveragingMode.SINGLESHOT`: No averaging
+- :attr:`.AveragingMode.SEQUENTIAL`: Worse noise; sweeper is inner loop (avoid)
+
+Results
+-------
+
+:meth:`.Platform.execute` returns a dictionary mapping acquisition pulse IDs to results.
+Result shape depends on nshots, acquisition type, averaging mode, and sweepers.
+
+**Result Shapes**
+
+Without sweepers:
+
+- Discrimination, Cyclic: Shape ``()`` (single value)
+- Discrimination, Singleshot: Shape ``(nshots,)`` with values 0 or 1
+- Integration, Cyclic: Shape ``(2,)`` (I and Q averaged)
+- Integration, Singleshot: Shape ``(nshots, 2)`` (I and Q per shot)
+- Raw, Singleshot: Shape ``(nshots, samples, 2)``
+
+With sweepers:
+
+- Result shape includes sweep dimensions
+- Sweeper order follows nesting/parallelization
+
+Example with two sweepers:
+
+.. code-block:: python
+
+    # sweeper1: 100 values, sweeper2: 50 values
+    # INTEGRATION + SINGLESHOT
+    result_shape = (nshots, len(sweeper1), len(sweeper2), 2)  # I and Q
+
+Full Example
+------------
+
+Complete experiment combining all components:
+
+.. code-block:: python
+
+    from qibolab import create_platform, Parameter, Sweeper, AcquisitionType, AveragingMode
+
+    platform = create_platform("my_platform")
+    platform.connect()
+
+    qubit = platform.qubits[0]
+    natives = platform.natives.single_qubit[0]
+
+    # Define experiment
+    rx_sequence = natives.RX()
+    sequence = rx_sequence | natives.MZ()
+
+    # Define sweepers
     f0 = platform.config(qubit.drive).frequency
-    sweeper1 = Sweeper(
+    freq_sweeper = Sweeper(
         parameter=Parameter.frequency,
-        range=(f0 - 100_000, f0 + 100_000, 1),
+        range=(f0 - 100e6, f0 + 100e6, 1e6),
         channels=[qubit.drive],
     )
-    sweeper2 = Sweeper(
-        parameter=Parameter.frequency,
-        range=(f0 - 200_000, f0 + 200_000, 1),
-        channels=[qubit.probe],
+
+    # Execute
+    results = platform.execute(
+        [sequence],
+        [[freq_sweeper]],
+        nshots=1000,
+        relaxation_time=100,
+        acquisition_type=AcquisitionType.DISCRIMINATION,
+        averaging_mode=AveragingMode.CYCLIC,
     )
-    shape = (options["nshots"], len(sweeper1.values), len(sweeper2.values), 2)
+
+    platform.disconnect()
+
+    # Process results
+    print(results[ro_pulse_id].shape)  # (frequency_points,)
