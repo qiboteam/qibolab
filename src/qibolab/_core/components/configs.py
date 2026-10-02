@@ -72,25 +72,25 @@ class OscillatorConfig(Config):
 
 
 class IqMixerConfig(Config):
-    """Frequency-independent IQ mixer corrections, shared across the RF output.
+    """Per-port IQ mixer DC offsets for LO-leakage suppression.
 
-    The frequency-dependent sideband corrections (``scale_q``, ``phase_q``) live
-    per channel in :class:`IqConfig`.
+    A single mixer is shared by all channels on the same RF port, so these
+    frequency-independent offsets are defined once per port.
     """
 
     kind: Literal["iq-mixer"] = "iq-mixer"
 
     offset_i: float = 0.0
-    """DC offset for the I component."""
+    """DC offset applied to the I component to suppress LO leakage."""
     offset_q: float = 0.0
-    """DC offset for the Q component."""
+    """DC offset applied to the Q component to suppress LO leakage."""
 
 
 class IqConfig(Config):
-    """Configuration for an IQ channel.
+    """Per-channel IQ modulation configuration.
 
-    Also holds the frequency-dependent mixer sideband corrections (``scale_q``,
-    ``phase_q``), kept per channel rather than in the shared :class:`IqMixerConfig`.
+    Holds the carrier frequency of the channel together with the frequency-dependent
+    sideband corrections.
     """
 
     kind: Literal["iq"] = "iq"
