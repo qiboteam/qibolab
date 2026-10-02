@@ -52,7 +52,7 @@ def integration_lengths(
 
 IndividualScope = TypedDict(
     "IndividualScope",
-    {"data": list[float], "out-of-range": list[bool], "avg_cnt": list[bool]},
+    {"data": list[float], "out-of-range": bool, "avg_cnt": int},
 )
 
 
@@ -95,7 +95,7 @@ def _integration(data: Integration, length: int) -> Result:
 
 
 def _scope(data: ScopeData) -> Result:
-    res = np.array([data["path0"], data["path1"]])
+    res = np.array([data["path0"]["data"], data["path1"]["data"]])
     return np.moveaxis(res, 0, -1)
 
 
