@@ -1,7 +1,7 @@
-{ lib, pkgs, ... }:
+{ pkgs, ... }:
 {
   packages = with pkgs; [
-    pre-commit
+    prek
     poethepoet
     jupyter
   ];
@@ -15,27 +15,12 @@
     enable = true;
     libraries = with pkgs; [ zlib ];
     version = "3.12";
-    poetry = {
+    uv = {
       enable = true;
-      install = {
+      sync = {
         enable = true;
-        groups = [
-          "dev"
-          "analysis"
-          "tests"
-        ];
-        extras =
-          let
-            inherit (lib.strings) concatStrings intersperse;
-          in
-          [
-            (concatStrings (
-              intersperse " -E " [
-                "qrng"
-                "emulator"
-              ]
-            ))
-          ];
+        allGroups = true;
+        allExtras = true;
       };
     };
   };
