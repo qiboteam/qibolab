@@ -161,13 +161,15 @@ def _check_no_offset_sweep_on_awg_offset_pulse_channel(
     sweeping the offset would violate this assumption.
     """
     duration_swept = swept_pulses(sweepers, {Parameter.duration})
-    swept_offset_channels = [
-        ch
-        for parsweep in sweepers
-        for sweeper in parsweep
-        if sweeper.parameter is Parameter.offset and sweeper.channels
-        for ch in sweeper.channels
-    ]
+    swept_offset_channels = sorted(
+        {
+            ch
+            for parsweep in sweepers
+            for sweeper in parsweep
+            if sweeper.parameter is Parameter.offset and sweeper.channels
+            for ch in sweeper.channels
+        }
+    )
     if swept_offset_channels and any(
         is_offset_rectangular(pulse, duration_swept.get(pulse.id))
         for ch in swept_offset_channels
