@@ -72,34 +72,35 @@ class OscillatorConfig(Config):
 
 
 class IqMixerConfig(Config):
-    """Configuration for IQ mixer.
+    """Per-port IQ mixer DC offsets for LO-leakage suppression.
 
-    Mixers usually have various imperfections, and one needs to
-    compensate for them. This class holds the compensation
-    configuration.
+    A single mixer is shared by all channels on the same RF port, so these
+    frequency-independent offsets are defined once per port.
     """
 
     kind: Literal["iq-mixer"] = "iq-mixer"
 
     offset_i: float = 0.0
-    """DC offset for the I component."""
+    """DC offset applied to the I component to suppress LO leakage."""
     offset_q: float = 0.0
-    """DC offset for the Q component."""
-    scale_q: float = 1.0
-    """The relative amplitude scale/factor of the q channel, to account for I-Q
-    amplitude imbalance."""
-    phase_q: float = 0.0
-    """The phase offset of the q channel, to account for I-Q phase
-    imbalance."""
+    """DC offset applied to the Q component to suppress LO leakage."""
 
 
 class IqConfig(Config):
-    """Configuration for an IQ channel."""
+    """Per-channel IQ modulation configuration.
+
+    Holds the carrier frequency of the channel together with the frequency-dependent
+    sideband corrections.
+    """
 
     kind: Literal["iq"] = "iq"
 
     frequency: float
     """The carrier frequency of the channel."""
+    scale_q: float = 1.0
+    """Relative amplitude scale of the Q channel, correcting I-Q amplitude imbalance."""
+    phase_q: float = 0.0
+    """Phase offset of the Q channel, correcting I-Q phase imbalance."""
 
 
 class AcquisitionConfig(Config):
