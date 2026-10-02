@@ -52,7 +52,7 @@ def integration_lengths(
 
 IndividualScope = TypedDict(
     "IndividualScope",
-    {"data": list[float], "out-of-range": bool, "avg_cnt": bool},
+    {"data": list[float], "out-of-range": bool, "avg_cnt": int},
 )
 
 
