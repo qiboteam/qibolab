@@ -24,19 +24,27 @@ from .asm import MAX_PARAM, convert
 __all__ = ["is_offset_rectangular"]
 
 
-def is_offset_rectangular(pulse: PulseLike, sweep: Sweeper | None = None) -> bool:
+def is_offset_rectangular(
+    pulse: PulseLike, duration_sweep: Sweeper | None = None
+) -> bool:
     """Decides whether the pulse is compiled through AWG offsets instead of waveforms.
 
     To conserve waveform memory, rectangular pulses of at least 8 ns use
     ``set_awg_offs`` instead of a waveform expressed as an array of floats. Shorter
     pulses cannot use this optimization because the ``upd_param`` instruction takes 4 ns
     and the ``wait`` at least 4 ns in the Q1 core.
+
+    A duration sweep is the only parameter that can change the offset-vs-waveform
+    decision, since it affects the 8 ns threshold.
     """
     if not (isinstance(pulse, Pulse) and isinstance(pulse.envelope, Rectangular)):
         return False
-    if sweep is not None:
-        assert sweep.parameter is Parameter.duration and sweep.values is not None
-        return bool(np.all(sweep.values >= 8))
+    if duration_sweep is not None:
+        assert (
+            duration_sweep.parameter is Parameter.duration
+            and duration_sweep.values is not None
+        )
+        return bool(np.all(duration_sweep.values >= 8))
     return pulse.duration >= 8
 
 
