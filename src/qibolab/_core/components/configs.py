@@ -24,8 +24,8 @@ __all__ = [
     "Configs",
     "DcConfig",
     "IqConfig",
-    "IqMixerConfig",
     "LogConfig",
+    "MixerOffsetConfig",
     "OscillatorConfig",
 ]
 
@@ -71,14 +71,14 @@ class OscillatorConfig(Config):
     power: float
 
 
-class IqMixerConfig(Config):
+class MixerOffsetConfig(Config):
     """Per-port IQ mixer DC offsets for LO-leakage suppression.
 
     A single mixer is shared by all channels on the same RF port, so these
     frequency-independent offsets are defined once per port.
     """
 
-    kind: Literal["iq-mixer"] = "iq-mixer"
+    kind: Literal["mixer-offset"] = "mixer-offset"
 
     offset_i: float = 0.0
     """DC offset applied to the I component [mV], to suppress LO leakage."""
@@ -143,7 +143,7 @@ class LogConfig(Config):
 
 ChannelConfig = (
     DcConfig
-    | IqMixerConfig
+    | MixerOffsetConfig
     | OscillatorConfig
     | IqConfig
     | AcquisitionConfig

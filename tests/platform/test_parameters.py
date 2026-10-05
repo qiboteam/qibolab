@@ -1,7 +1,11 @@
 import pytest
 
 from qibolab._core.components.channels import IqChannel
-from qibolab._core.components.configs import IqConfig, IqMixerConfig, OscillatorConfig
+from qibolab._core.components.configs import (
+    IqConfig,
+    MixerOffsetConfig,
+    OscillatorConfig,
+)
 from qibolab._core.platform.load import create_platform, locate_platform
 from qibolab._core.platform.parameters import reset_parameters
 from qibolab._core.platform.platform import PARAMETERS
@@ -46,7 +50,7 @@ def test_parameters_initialization():
     assert isinstance(sequence[0][1], Readout)
 
     assert isinstance(parameters.configs["0/drive"], IqConfig)
-    assert isinstance(parameters.configs["mixer/ciao"], IqMixerConfig)
+    assert isinstance(parameters.configs["mixer/ciao"], MixerOffsetConfig)
     assert isinstance(parameters.configs["lo/come"], OscillatorConfig)
 
 

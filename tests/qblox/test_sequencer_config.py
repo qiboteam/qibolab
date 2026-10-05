@@ -7,7 +7,7 @@ from qibolab._core.components.channels import AcquisitionChannel, IqChannel
 from qibolab._core.components.configs import (
     AcquisitionConfig,
     IqConfig,
-    IqMixerConfig,
+    MixerOffsetConfig,
     OscillatorConfig,
 )
 from qibolab._core.execution_parameters import AcquisitionType
@@ -35,7 +35,7 @@ def _channels_configs():
         ),
         "0/acquisition": AcquisitionConfig(delay=0, smearing=0),
         "lo/0": OscillatorConfig(frequency=4.5e9 - IF_FREQ, power=-10),
-        "mixer/0": IqMixerConfig(offset_i=0.03, offset_q=-0.05),
+        "mixer/0": MixerOffsetConfig(offset_i=0.03, offset_q=-0.05),
     }
     return channels, configs
 
