@@ -125,7 +125,9 @@ class SequencerConfig(Model):
             lo_freq = cast(OscillatorConfig, configs[probe_.lo]).frequency
             cfg.nco_freq = int(probe_config.frequency - lo_freq)
             cfg.mixer_corr_gain_ratio = probe_config.scale_q
-            cfg.mixer_corr_phase_offset_degree = probe_config.phase_q
+            # imbalance corrections are stored in radians, while the Qblox parameter
+            # is in degrees (accepting values in the [-45, 45] range)
+            cfg.mixer_corr_phase_offset_degree = np.degrees(probe_config.phase_q)
 
         return cfg
 

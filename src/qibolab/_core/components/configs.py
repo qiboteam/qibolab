@@ -81,9 +81,9 @@ class IqMixerConfig(Config):
     kind: Literal["iq-mixer"] = "iq-mixer"
 
     offset_i: float = 0.0
-    """DC offset applied to the I component to suppress LO leakage."""
+    """DC offset applied to the I component [mV], to suppress LO leakage."""
     offset_q: float = 0.0
-    """DC offset applied to the Q component to suppress LO leakage."""
+    """DC offset applied to the Q component [mV], to suppress LO leakage."""
 
 
 class IqConfig(Config):
@@ -98,9 +98,10 @@ class IqConfig(Config):
     frequency: float
     """The carrier frequency of the channel."""
     scale_q: float = 1.0
-    """Relative amplitude scale of the Q channel, correcting I-Q amplitude imbalance."""
+    """a dimensionless ratio equal to the Q-channel amplitude divided by the I-channel
+    amplitude, correcting I-Q amplitude imbalance."""
     phase_q: float = 0.0
-    """Phase offset of the Q channel, correcting I-Q phase imbalance."""
+    """Phase offset of the Q channel [rad], correcting I-Q phase imbalance."""
 
 
 class AcquisitionConfig(Config):

@@ -1,5 +1,8 @@
 """Tests for SequencerConfig.build with mixer corrections and channel configurations."""
 
+import numpy as np
+import pytest
+
 from qibolab._core.components.channels import AcquisitionChannel, IqChannel
 from qibolab._core.components.configs import (
     AcquisitionConfig,
@@ -12,7 +15,10 @@ from qibolab._core.instruments.qblox.config.port import PortAddress
 from qibolab._core.instruments.qblox.config.sequencer import SequencerConfig
 
 IF_FREQ = 500e6
-GAIN, PHASE = 0.953, 2.75
+GAIN = 0.953
+PHASE_DEG = 2.75
+PHASE = np.radians(PHASE_DEG)
+GAIN2, PHASE2_DEG = 0.9, -4.0
 
 
 def _channels_configs():
@@ -24,7 +30,9 @@ def _channels_configs():
     }
     configs = {
         "0/drive": IqConfig(frequency=4.5e9, scale_q=GAIN, phase_q=PHASE),
-        "0/drive12": IqConfig(frequency=4.7e9, scale_q=0.9, phase_q=-4.0),
+        "0/drive12": IqConfig(
+            frequency=4.7e9, scale_q=GAIN2, phase_q=np.radians(PHASE2_DEG)
+        ),
         "0/acquisition": AcquisitionConfig(delay=0, smearing=0),
         "lo/0": OscillatorConfig(frequency=4.5e9 - IF_FREQ, power=-10),
         "mixer/0": IqMixerConfig(offset_i=0.03, offset_q=-0.05),
@@ -51,7 +59,8 @@ def test_iq_channel_applies_corrections():
 
     assert cfg.nco_freq == int(IF_FREQ)
     assert cfg.mixer_corr_gain_ratio == GAIN
-    assert cfg.mixer_corr_phase_offset_degree == PHASE
+    # radians in the config, degrees on the instrument
+    assert cfg.mixer_corr_phase_offset_degree == pytest.approx(PHASE_DEG)
 
 
 def test_multiple_channels_on_shared_port_have_independent_corrections():
@@ -60,9 +69,9 @@ def test_multiple_channels_on_shared_port_have_independent_corrections():
     drive12 = _build("0/drive12", channels, configs, "4/o1")
 
     assert drive.mixer_corr_gain_ratio == GAIN
-    assert drive12.mixer_corr_gain_ratio == 0.9
-    assert drive.mixer_corr_phase_offset_degree == PHASE
-    assert drive12.mixer_corr_phase_offset_degree == -4.0
+    assert drive12.mixer_corr_gain_ratio == GAIN2
+    assert drive.mixer_corr_phase_offset_degree == pytest.approx(PHASE_DEG)
+    assert drive12.mixer_corr_phase_offset_degree == pytest.approx(PHASE2_DEG)
 
     assert drive.nco_freq == int(IF_FREQ)
     # NCO freq is the difference between channel frequency and LO frequency
@@ -84,4 +93,4 @@ def test_acquisition_channel_inherits_probe_corrections():
 
     assert cfg.nco_freq == int(IF_FREQ)
     assert cfg.mixer_corr_gain_ratio == GAIN
-    assert cfg.mixer_corr_phase_offset_degree == PHASE
+    assert cfg.mixer_corr_phase_offset_degree == pytest.approx(PHASE_DEG)
