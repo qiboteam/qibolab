@@ -76,7 +76,8 @@ class ModuleConfig(Model):
 
     Cf. :attr:`scope_acq_trigger_mode_path0`.
     """
-    # TODO: support scope acquisition average
+    scope_acq_avg_mode_en_path0: Annotated[bool, ModuleType.QRM] = True
+    scope_acq_avg_mode_en_path1: Annotated[bool, ModuleType.QRM] = True
 
     @classmethod
     def build(
