@@ -9,7 +9,7 @@ from ..components import (
     DcConfig,
     IqChannel,
     IqConfig,
-    IqMixerConfig,
+    MixerOffsetConfig,
     OscillatorConfig,
 )
 from ..identifier import ChannelId
@@ -84,7 +84,7 @@ def _channel_config(id: ChannelId, channel: Channel) -> dict[ChannelId, Config]:
         if channel.lo is not None:
             configs[channel.lo] = OscillatorConfig(frequency=0, power=0)
         if channel.mixer is not None:
-            configs[channel.mixer] = IqMixerConfig()
+            configs[channel.mixer] = MixerOffsetConfig()
         return configs
     return {id: Config()}
 

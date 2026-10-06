@@ -10,7 +10,6 @@ from qibolab._core.components.configs import (
     AcquisitionConfig,
     Configs,
     IqConfig,
-    IqMixerConfig,
     OscillatorConfig,
 )
 from qibolab._core.execution_parameters import AcquisitionType
@@ -120,15 +119,15 @@ class SequencerConfig(Model):
         # same IO sequencer)
         probe = channels[channel_id].iqout(channel_id)
         if probe is not None:
-            freq = cast(IqConfig, configs[probe]).frequency
+            probe_config = cast(IqConfig, configs[probe])
             probe_ = cast(IqChannel, channels[probe])
             assert probe_.lo is not None
             lo_freq = cast(OscillatorConfig, configs[probe_.lo]).frequency
-            cfg.nco_freq = int(freq - lo_freq)
-            assert probe_.mixer is not None
-            mixer = cast(IqMixerConfig, configs[probe_.mixer])
-            cfg.mixer_corr_gain_ratio = mixer.scale_q
-            cfg.mixer_corr_phase_offset_degree = mixer.phase_q
+            cfg.nco_freq = int(probe_config.frequency - lo_freq)
+            cfg.mixer_corr_gain_ratio = probe_config.scale_q
+            # imbalance corrections are stored in radians, while the Qblox parameter
+            # is in degrees (accepting values in the [-45, 45] range)
+            cfg.mixer_corr_phase_offset_degree = np.degrees(probe_config.phase_q)
 
         return cfg
 
