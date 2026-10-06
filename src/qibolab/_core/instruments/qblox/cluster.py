@@ -292,6 +292,21 @@ class Cluster(Controller):
                     acquisition=options_.acquisition_type,
                     sequences=sequences_,
                 )
+                if options_.acquisition_type is AcquisitionType.RAW:
+                    for slot, chs in sequencers.items():
+                        module = self._modules[slot]
+                        acq = [
+                            idx
+                            for ch, idx in chs.items()
+                            if ch in sequences_ and len(sequences_[ch].acquisitions) > 0
+                        ]
+                        # NOTE: len(acq) > 0 is possible. In that case multiple
+                        # acquisition sequencers share one module scope. This is not
+                        # necessarily a bug, but dus introduce the restriction that
+                        # the module can only use one of those sequencers as trigger.
+                        if len(acq) > 0:
+                            module.scope_acq_sequencer_select(acq[0])
+
                 log.status(self.cluster, sequencers)
 
                 # finally execute the experiment, and fetch results
