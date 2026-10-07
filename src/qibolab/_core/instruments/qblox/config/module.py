@@ -59,7 +59,6 @@ class ModuleConfig(Model):
     So, they are defined at the module-level, but dynamically prefixed for the physical
     port.
     """
-    # the following attributes are automatically processed and set
     scope_acq_trigger_mode_path0: Annotated[
         Literal["sequencer", "level"], ModuleType.QRM
     ] = "sequencer"
@@ -76,8 +75,8 @@ class ModuleConfig(Model):
 
     Cf. :attr:`scope_acq_trigger_mode_path0`.
     """
-    scope_acq_avg_mode_en_path0: Annotated[bool, ModuleType.QRM] = True
-    scope_acq_avg_mode_en_path1: Annotated[bool, ModuleType.QRM] = True
+    scope_acq_avg_mode_en_path0: Annotated[bool, ModuleType.QRM] = False
+    scope_acq_avg_mode_en_path1: Annotated[bool, ModuleType.QRM] = False
 
     @classmethod
     def build(
@@ -166,14 +165,14 @@ class ModuleConfig(Model):
 
         mod.parameters[name].set(value)
 
-    def apply(self, mod: Module) -> None:
-        """Configure module-wide settings."""
-        # first disable all default sequencer connections
+    def disconnect_module(self, mod: Module) -> None:
+        """Disconnect all inputs and outputs of the given module."""
         mod.disconnect_outputs()
-
         if mod.is_qrm_type:
-            # including input ones, if QRM
             mod.disconnect_inputs()
+
+    def update_module(self, mod: Module) -> None:
+        """Configure module-wide settings."""
 
         for config, value in self.ports.items():
             mod.parameters[config].set(value)
