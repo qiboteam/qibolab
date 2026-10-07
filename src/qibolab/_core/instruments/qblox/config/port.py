@@ -39,9 +39,9 @@ Note:
 
 See Also:
     * `Qblox AWG Documentation
-      <https://docs.qblox.com/en/main/products/architecture/sequencers/control.html#arbitrary-waveform-generator-awg>`_
+      <https://docs.qblox.com/en/v2026.08.0/products/architecture/sequencers/control.html#arbitrary-waveform-generator-awg>`_
     * `Qblox QCM Block Diagram
-      <https://docs.qblox.com/en/main/products/architecture/modules/qcm.html#block-diagram>`_
+      <https://docs.qblox.com/en/v2026.08.0/products/architecture/modules/qcm.html#block-diagram>`_
 """
 
 
@@ -115,7 +115,7 @@ FilterConfig = Literal["bypassed", "enabled", "delay_comp"]
 
 QCM_FIR_NTAPS = 32
 """Number of taps of the real-time FIR predistortion filter in Qblox QCM modules.
-https://docs.qblox.com/en/main/products/architecture/modules/real_time_predistortions.html
+https://docs.qblox.com/en/v2026.08.0/products/architecture/modules/real_time_predistortions.html
 """
 
 
