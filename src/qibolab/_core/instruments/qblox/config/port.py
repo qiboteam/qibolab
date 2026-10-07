@@ -113,6 +113,24 @@ class PortAddress(Model):
 
 FilterConfig = Literal["bypassed", "enabled", "delay_comp"]
 
+QCM_FIR_NTAPS = 32
+"""Number of taps of the real-time FIR predistortion filter in Qblox QCM modules.
+https://docs.qblox.com/en/main/products/architecture/modules/real_time_predistortions.html
+"""
+
+
+def fir_coefficients_padding(coefficients: list[float]) -> list[float]:
+    """Qblox predistortion filters expect a number of taps of exactly QCM_FIR_NTAPS.
+    If the platform holds a smaller number, they are appended with zeroes.
+    """
+    n = len(coefficients)
+    if n > QCM_FIR_NTAPS:
+        raise ValueError(
+            f"FIR filter with {n} taps is not supported by Qblox QCM modules, which "
+            f"expects exactly {QCM_FIR_NTAPS} taps."
+        )
+    return coefficients + [0.0] * (QCM_FIR_NTAPS - n)
+
 
 class PortConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -235,7 +253,7 @@ class PortConfig(BaseModel):
         if len(firs) == 1:
             fir = firs[0]
             self.fir_config = "enabled"
-            self.fir_coeffs = fir.coefficients
+            self.fir_coeffs = fir_coefficients_padding(fir.coefficients)
 
         exps = [f for f in dc.filters if isinstance(f, ExponentialFilter)]
         assert len(exps) <= 4, "At most 4 exponential filters available"
