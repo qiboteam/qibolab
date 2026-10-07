@@ -119,7 +119,7 @@ https://docs.qblox.com/en/v2026.08.0/products/architecture/modules/real_time_pre
 """
 
 
-def fir_coefficients_padding(coefficients: list[float]) -> list[float]:
+def _pad_fir_coefficients(coefficients: list[float]) -> list[float]:
     """Qblox predistortion filters expect a number of taps of exactly QCM_FIR_NTAPS.
     If the platform holds a smaller number, they are appended with zeroes.
     """
@@ -253,7 +253,7 @@ class PortConfig(BaseModel):
         if len(firs) == 1:
             fir = firs[0]
             self.fir_config = "enabled"
-            self.fir_coeffs = fir_coefficients_padding(fir.coefficients)
+            self.fir_coeffs = _pad_fir_coefficients(fir.coefficients)
 
         exps = [f for f in dc.filters if isinstance(f, ExponentialFilter)]
         assert len(exps) <= 4, "At most 4 exponential filters available"
