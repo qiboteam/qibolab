@@ -1,7 +1,7 @@
 import numpy as np
 
 from qibolab._core.instruments.qblox.sequence.waveforms import waveforms
-from qibolab._core.pulses import Custom, Pulse, Rectangular
+from qibolab._core.pulses import Custom, Gaussian, Pulse, Rectangular
 from qibolab._core.sweeper import Parameter, Sweeper
 
 
@@ -23,12 +23,13 @@ def test_waveforms_deduplicate_equal_components_across_distinct_iq_pairs():
         ),
     )
 
-    waveform_specs, indices_map = waveforms(
+    waveform_specs, realization = waveforms(
         sequence=[pulse_a, pulse_b],
         sampling_rate=1.0,
         amplitude_swept=set(),
         duration_swept={},
     )
+    indices_map = realization.waveform_indices
 
     # Two unique Q components plus one shared I component.
     assert len(waveform_specs) == 3
@@ -61,12 +62,13 @@ def test_waveforms_deduplicate_across_distinct_lengths():
         ),
     )
 
-    waveform_specs, indices_map = waveforms(
+    waveform_specs, realization = waveforms(
         sequence=[pulse_a, pulse_b],
         sampling_rate=1.0,
         amplitude_swept=set(),
         duration_swept={},
     )
+    indices_map = realization.waveform_indices
 
     # Two unique Q components plus two unique I components.
     assert len(waveform_specs) == 4
@@ -91,11 +93,12 @@ def test_waveforms_duration_sweeper():
         ),
     )
 
-    # swept pulses
+    # swept pulses (non-rectangular, since rectangular pulses are synthesized through
+    # `set_awg_offs` instead of waveforms)
     pulse_b = Pulse(
         duration=4,
         amplitude=1.0,
-        envelope=Rectangular(),
+        envelope=Gaussian(rel_sigma=0.2),
     )
 
     sweeper_b = Sweeper(
@@ -107,7 +110,7 @@ def test_waveforms_duration_sweeper():
     pulse_c = Pulse(
         duration=4,
         amplitude=1.0,
-        envelope=Rectangular(),
+        envelope=Gaussian(rel_sigma=0.2),
     )
 
     sweeper_c = Sweeper(
@@ -116,7 +119,7 @@ def test_waveforms_duration_sweeper():
         pulses=[pulse_c],
     )
 
-    waveform_specs, indices_map = waveforms(
+    waveform_specs, pulse_realization = waveforms(
         sequence=[pulse_a, pulse_b, pulse_c],
         sampling_rate=1.0,
         amplitude_swept=set(),
@@ -125,6 +128,7 @@ def test_waveforms_duration_sweeper():
             pulse_c.id: sweeper_c,
         },
     )
+    indices_map = pulse_realization.waveform_indices
 
     # Two unique Q components plus one shared I component.
     assert len(waveform_specs) == (
@@ -148,3 +152,28 @@ def test_waveforms_duration_sweeper():
         == len(np.arange(*sweeper_b.irange)) * 2 + len(np.arange(*sweeper_c.irange)) * 2
     )
     assert len(swept_indices) == len(set(swept_indices))
+
+
+def test_rectangular_pulses_no_waveforms():
+    """Rectangular pulses are synthesized with offsets and use no waveforms."""
+
+    # Test for a bare pulse, amplitude swept, and duration swept pulses.
+    static = Pulse(duration=40, amplitude=0.5, envelope=Rectangular())
+    amp_swept = Pulse(duration=40, amplitude=0.5, envelope=Rectangular())
+    dur_swept = Pulse(duration=40, amplitude=0.5, envelope=Rectangular())
+
+    duration_sweeper = Sweeper(
+        parameter=Parameter.duration,
+        range=(100, 600, 100),
+        pulses=[dur_swept],
+    )
+
+    waveform_specs, pulse_realization = waveforms(
+        sequence=[static, amp_swept, dur_swept],
+        sampling_rate=1.0,
+        amplitude_swept={amp_swept.id},
+        duration_swept={dur_swept.id: duration_sweeper},
+    )
+
+    assert len(waveform_specs) == 0
+    assert pulse_realization.waveform_indices == {}
