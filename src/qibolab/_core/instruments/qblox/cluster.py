@@ -7,6 +7,7 @@ from itertools import groupby
 from typing import cast
 
 import qblox_instruments as qblox
+import scipy.constants as consts
 from qblox_instruments.qcodes_drivers.module import Module
 from qcodes.instrument import find_or_create_instrument
 
@@ -16,6 +17,8 @@ from qibolab._core.components import (
     DcChannel,
     DcConfig,
     IqChannel,
+    IqConfig,
+    OscillatorConfig,
 )
 from qibolab._core.execution_parameters import (
     AcquisitionType,
@@ -51,7 +54,7 @@ logger = logging.getLogger(__name__)
 
 __all__ = ["Cluster"]
 
-SAMPLING_RATE = 1
+SAMPLING_RATE = 1  # GS/s
 
 
 def _compute_duration(
@@ -106,6 +109,7 @@ def _batch_sequences(
     qrm_channels: set[ChannelId],
     configs: Configs,
 ) -> list[PulseSequence]:
+
     batched_seqs = (
         batch_sequences_by_cluster_memory_limits(
             sequences,
@@ -115,9 +119,26 @@ def _batch_sequences(
             qrm_channels,
         )
         if options.averaging_mode.average
+        and options.acquisition_type is not AcquisitionType.RAW
         else sequences
     )
     return [_add_time_of_flight(b, configs).align_to_delays() for b in batched_seqs]
+
+
+def _validate_raw_acquisitions(sequences: dict[ChannelId, Q1Sequence]) -> None:
+    """Ensure each sequencer performs at most one RAW acquisition per run.
+
+    A run may perform multiple scope acquisitions when they are assigned to
+    different sequencers. A single sequencer cannot acquire more than once in
+    the same run, so RAW sequences are not batched: batching could combine
+    acquisitions onto one sequencer and violate this constraint.
+    """
+    for channel, sequence in sequences.items():
+        if len(sequence.acquisitions) > 1:
+            raise ValueError(
+                "RAW acquisition supports at most one acquisition pulse per "
+                f"sequencer; channel {channel!r} has {len(sequence.acquisitions)}."
+            )
 
 
 def _merge_phases_if_no_phase_sweeper(
@@ -259,7 +280,7 @@ class Cluster(Controller):
         )
 
         # configure the modules
-        _module_configs = self._configure_modules(configs)
+        _module_configs = self._configure_modules_static(configs)
 
         # Execute each batch sequentially, and concatenate results
         log = Logger(configs)
@@ -278,6 +299,10 @@ class Cluster(Controller):
                     self.sampling_rate,
                     merged_vzs=not phase_sweeper_present,
                 )
+                if options_.acquisition_type is AcquisitionType.RAW:
+                    # This check is required for RAW acquisition; see the
+                    # _validate_raw_acquisitions docstring for further details.
+                    _validate_raw_acquisitions(sequences_)
 
                 for channelid, seq in sequences_.items():
                     slot = PortAddress.from_path(self.channels[channelid].path).slot
@@ -287,25 +312,12 @@ class Cluster(Controller):
 
                 # then configure sequencers (including sequences upload)
                 self._disconnect_and_desync_sequencers()
-                sequencers, _sequencer_configs = self._configure_sequencers(
+                # configure the hardware for the current sequence batch
+                sequencers = self._configure_hardware_per_sequence(
                     configs=configs,
                     acquisition=options_.acquisition_type,
                     sequences=sequences_,
                 )
-                if options_.acquisition_type is AcquisitionType.RAW:
-                    for slot, chs in sequencers.items():
-                        module = self._modules[slot]
-                        acq = [
-                            idx
-                            for ch, idx in chs.items()
-                            if ch in sequences_ and len(sequences_[ch].acquisitions) > 0
-                        ]
-                        # NOTE: len(acq) > 0 is possible. In that case multiple
-                        # acquisition sequencers share one module scope. This is not
-                        # necessarily a bug, but dus introduce the restriction that
-                        # the module can only use one of those sequencers as trigger.
-                        if len(acq) > 0:
-                            module.scope_acq_sequencer_select(acq[0])
 
                 log.status(self.cluster, sequencers)
 
@@ -319,12 +331,17 @@ class Cluster(Controller):
 
                 # process raw results to adhere to standard format
                 lengths = integration_lengths(sequences_, sequencers, self._modules)
+
                 psres.append(
                     extract(
-                        data,
-                        lengths,
-                        options_.acquisition_type,
-                        options_.results_shape(sweepers_),
+                        acquired_data=data,
+                        lengths=lengths,
+                        acquisition=options_.acquisition_type,
+                        shape=options_.results_shape(sweepers_),
+                        sampling_rate=self.sampling_rate * consts.giga,
+                        frequencies=self._ifs(configs)
+                        if options_.acquisition_type is AcquisitionType.RAW
+                        else {},
                     )
                 )
 
@@ -351,7 +368,9 @@ class Cluster(Controller):
                 # an indefinite wait during `wait_sync`.
                 seq.sync_en(False)
 
-    def _configure_modules(self, configs: Configs) -> dict[SlotId, config.ModuleConfig]:
+    def _configure_modules_static(
+        self, configs: Configs
+    ) -> dict[SlotId, config.ModuleConfig]:
         """Configure module settings (e.g. LOs, Mixers).
 
         Returns a dictionary mapping slots to their respective ModuleConfig.
@@ -370,15 +389,81 @@ class Cluster(Controller):
                 mixers,
                 is_qcm_non_rf_type=module.is_qcm_type and not module.is_rf_type,
             )
-            modcfg.apply(module)
+            # we can disconnect module just when initializing them for he first time (for static configurations)
+            modcfg.disconnect_module(module)
+            modcfg.update_module(module)
         return modcfgs
+
+    def _enable_raw_acquisition(
+        self,
+        acq_sequencers: dict[SlotId, list[int]],
+    ) -> None:
+        """Configure scope acquisition settings on each module.
+
+        For every module (identified by its slot), this method builds a
+        ``ModuleConfig`` that enables the scope acquisition averaging mode
+        on both paths when the requested ``acquisition_mode`` is
+        ``AcquisitionType.RAW``.  In RAW mode, each acquisition sequencer
+        listed in ``acq_sequencers`` is individually selected on the module
+        so that the scope acquisition mode is applied per-sequencer.
+        """
+        for slot, seq_indices in acq_sequencers.items():
+            config_updates = config.ModuleConfig(
+                ports={},
+                scope_acq_avg_mode_en_path0=True,
+                scope_acq_avg_mode_en_path1=True,
+            )
+            readout_module = self._modules[slot]
+
+            for idx in seq_indices:
+                readout_module.scope_acq_sequencer_select(idx)
+
+            config_updates.update_module(readout_module)
+
+    def _configure_hardware_per_sequence(
+        self,
+        configs: Configs,
+        acquisition: AcquisitionType,
+        sequences: dict[ChannelId, Q1Sequence] | None = None,
+    ) -> SequencerMap:
+        """Configure the hardware for a specific sequence.
+
+        This method orchestrates the full hardware configuration pipeline for
+        a given acquisition sequence. It delegates sequencer configuration to
+        :meth:`_configure_sequencers` and, depending on the acquisition type,
+        applies additional module-level settings.
+
+        For ``AcquisitionType.RAW`` acquisitions, the method additionally calls
+        :meth:`_enable_raw_acquisition` to dynamically reconfigure the relevant
+        readout modules so that each acquisition sequencer is individually
+        selected for scope acquisition mode. For other acquisition types
+        (e.g. ``INTEGRATION``), only the standard sequencer configuration is
+        applied.
+        """
+
+        sequencers, _, acquisition_sequencers = self._configure_sequencers(
+            configs=configs,
+            acquisition=acquisition,
+            sequences=sequences,
+        )
+
+        # at the time being we only dynamically change the modules for RAW acquisition
+        # but in the future it can be expanded
+        if acquisition is AcquisitionType.RAW:
+            self._enable_raw_acquisition(acq_sequencers=acquisition_sequencers)
+
+        return sequencers
 
     def _configure_sequencers(
         self,
         configs: Configs,
         acquisition: AcquisitionType = AcquisitionType.INTEGRATION,
         sequences: dict[ChannelId, Q1Sequence] | None = None,
-    ) -> tuple[SequencerMap, dict[SlotId, dict[int, config.SequencerConfig]]]:
+    ) -> tuple[
+        SequencerMap,
+        dict[SlotId, dict[int, config.SequencerConfig]],
+        dict[SlotId, list[int]],
+    ]:
         """Configure sequencers.
 
         The return value consists of the association map from channels to sequencers,
@@ -394,6 +479,7 @@ class Cluster(Controller):
         operate in scope mode.
         """
         sequencers = defaultdict(dict)
+        acquisition_sequencers = defaultdict(list)
         exec_mode = sequences is not None
         sequences_ = defaultdict(lambda: None, sequences if exec_mode else {})
 
@@ -429,10 +515,15 @@ class Cluster(Controller):
                     sequence=sequences_[ch],
                 )
                 seqcfg.apply(sequencer)
+
+                # Only RAW input sequencers set this flag to False; output
+                # sequencers leave it as None and cannot trigger scope capture.
+                if seqcfg.demod_en_acq is False:
+                    acquisition_sequencers[slot].append(idx)
                 # populate channel-to-sequencer mapping
                 sequencers[slot][ch] = idx
 
-        return sequencers, seqcfgs
+        return sequencers, seqcfgs, acquisition_sequencers
 
     def configure(
         self,
@@ -442,12 +533,13 @@ class Cluster(Controller):
     ) -> tuple[SequencerMap, ClusterConfigs]:
         """
         .. deprecated:: 0.2.16
-            Use `configure_sequencers` and/or `_configure_modules` instead.
+            Use `configure_sequencers` and/or `_configure_modules_static` instead.
         """
-        modules_configs = self._configure_modules(configs)
-        sequencers, seqcfgs = self._configure_sequencers(
+        modules_configs = self._configure_modules_static(configs)
+        sequencers, seqcfgs, acquisition_sequencers = self._configure_sequencers(
             configs, acquisition, sequences
         )
+        _ = self._enable_raw_acquisition(acquisition_sequencers)
         return sequencers, ClusterConfigs(modules=modules_configs, sequencers=seqcfgs)
 
     def _execute(
@@ -570,3 +662,22 @@ class Cluster(Controller):
             )
             if mix is not None
         }
+
+    def _ifs(self, configs: Configs) -> dict[ChannelId, float]:
+        """Compute the intermediate frequencies for demodulation.
+
+        IFs are computed in Hz.
+        """
+        frequencies = {}
+
+        channels = self.channels
+        los = self._los
+        for ch, channel in channels.items():
+            if not isinstance(channel, AcquisitionChannel) or channel.probe is None:
+                continue
+
+            probe = channel.probe
+            lo = los.get(ch)
+            lo_freq = cast(OscillatorConfig, configs[lo]).frequency if lo else 0.0
+            frequencies[ch] = cast(IqConfig, configs[probe]).frequency - lo_freq
+        return frequencies
