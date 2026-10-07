@@ -139,7 +139,7 @@ class Param(Model):
     def from_range(
         cls,
         irange: Range,
-        sweep: Sweeper,
+        kind: Parameter,
         role: ParamRole,
         pulse: PulseId | None,
         channel: ChannelId | None,
@@ -149,14 +149,14 @@ class Param(Model):
         Validates the entire range (start, stop, step) before converting.
         """
         start_, stop, step = irange
-        start = int(convert(start_ - _duration_shift(role, pulse), sweep.parameter))
+        start = int(convert(start_ - _duration_shift(role, pulse), kind))
         # Validate all points in the range
         for value in (start, stop, step):
-            _validate_sweeper_value(value, sweep.parameter)
+            _validate_sweeper_value(value, kind)
         return cls(
             reg=Register(number=0),
-            start=int(convert(start, sweep.parameter)),
-            step=int(convert(step, sweep.parameter)),
+            start=int(convert(start, kind)),
+            step=int(convert(step, kind)),
             pulse=pulse,
             channel=channel,
             role=role,
@@ -248,7 +248,7 @@ def _unravel_sweeps(sweepers: list[ParallelSweepers]) -> Iterable[tuple[int, Par
             j,
             Param.from_range(
                 irange,
-                sweep,
+                sweep.parameter,
                 role,
                 pulse.id if pulse is not None else None,
                 channel,
