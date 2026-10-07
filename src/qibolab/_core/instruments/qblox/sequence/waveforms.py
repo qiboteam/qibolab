@@ -1,5 +1,4 @@
 from collections.abc import Iterable, Sequence
-from dataclasses import dataclass
 from itertools import count
 from typing import Annotated
 
@@ -29,8 +28,7 @@ WaveformIndices = dict[ComponentId, tuple[WaveformIndex, int]]
 """Map pulses' components to waveforms memory indices, and related duration."""
 
 
-@dataclass(frozen=True)
-class PulseRealization:
+class PulseRealization(Model):
     """How each pulse is realized on hardware.
 
     Pulses are either played from waveform memory (indexed by ``indices``) or
