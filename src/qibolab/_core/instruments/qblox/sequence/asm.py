@@ -4,7 +4,7 @@ import numpy as np
 
 from qibolab._core.sweeper import Parameter
 
-from ..q1asm.ast_ import Instruction, Line, Lineable, Register
+from ..q1asm.ast_ import Instruction, Line, Lineable, Move, Register
 
 __all__ = []
 
@@ -22,6 +22,23 @@ class Registers(Enum):
     @classmethod
     def first_available(cls) -> int:
         return max(r.value.number for r in cls) + 1
+
+    @classmethod
+    def init_zero_registers(cls) -> list[Line]:
+        """Generate `Move` instructions to initialize registers with zero value."""
+        init_specs = [
+            (cls.bin, "init bin counter"),
+            (cls.bin_reset, "init bin reset"),
+            (cls.phase_delta, "init delta phase register"),
+            (cls.zero, "init zero register"),
+        ]
+        return [
+            Line(
+                instruction=Move(source=0, destination=reg.value),
+                comment=comment,
+            )
+            for reg, comment in init_specs
+        ]
 
 
 def label(line: Lineable, label: str) -> Line:

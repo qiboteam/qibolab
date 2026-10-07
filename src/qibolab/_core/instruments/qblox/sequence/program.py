@@ -50,24 +50,7 @@ def setup(
     trailing.
     """
     return (
-        [
-            Line(
-                instruction=Move(source=0, destination=Registers.bin.value),
-                comment="init bin counter",
-            ),
-            Line(
-                instruction=Move(source=0, destination=Registers.bin_reset.value),
-                comment="init bin reset",
-            ),
-            Line(
-                instruction=Move(source=0, destination=Registers.phase_delta.value),
-                comment="init delta phase register",
-            ),
-            Line(
-                instruction=Move(source=0, destination=Registers.zero.value),
-                comment="init zero register",
-            ),
-        ]
+        Registers.init_zero_registers()
         + [
             Line(
                 instruction=Move(source=lp.length, destination=lp.reg),
