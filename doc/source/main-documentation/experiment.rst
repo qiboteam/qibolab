@@ -125,6 +125,14 @@ running. ``<<=`` and ``concatenate`` are its in-place forms. Use this
 behavior deliberately when stages are allowed to overlap; it is not a
 substitute for a global boundary.
 
+.. figure:: figures/sequence-timing.svg
+    :alt: With preparation lasting 80 ns on a and 20 ns on b, piping starts the next stage on b and c at 80 ns. Concatenation starts that stage at 20 ns, overlapping a.
+    :width: 100%
+
+    The example above on independent channel clocks. Piping (``|``) waits for
+    the whole preparation; concatenation (``<<``) waits only for the channels
+    used by the next stage. Hatched intervals are synchronization delays.
+
 Ordinary ``append``, ``extend``, and list-like ``+`` add entries without
 inserting synchronization. For a boundary between selected channels,
 ``sequence.align(channels)`` adds a shared ``Align`` instruction to them.

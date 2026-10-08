@@ -10,6 +10,16 @@ qubits, their connectivity and the native pulse sequences.
 its pulses and packages the acquisitions as Qibo measurement outcomes. It is
 not a state-vector simulator.
 
+.. _circuit_execution_flow:
+
+.. figure:: figures/circuit-workflow.svg
+    :alt: A Qibo transpilation pipeline places, routes, and rewrites a general circuit. Qibolab compiles the compatible circuit using platform natives, executes the pulses, and maps acquisition identifiers to measurement outcomes.
+    :width: 100%
+
+    From circuit to measured bits. Transpilation is a separate preparation
+    step; the Qibolab backend handles compilation, execution, and result
+    bookkeeping. A compatible circuit can skip transpilation.
+
 The circuit interface is optional. Install ``qibolab[backend]`` to include Qibo;
 the base Qibolab installation remains sufficient for working directly with pulse
 sequences. An emulator platform additionally needs ``qibolab[emulator]``. Installing

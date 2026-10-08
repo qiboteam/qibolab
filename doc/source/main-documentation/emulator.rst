@@ -19,6 +19,13 @@ actual pulse program, including the dissipation represented in that model.
 Agreement with ideal gates depends on the model and the native pulse
 calibrations; it is not guaranteed by selecting an emulator.
 
+.. figure:: figures/emulation-models.svg
+    :alt: An ideal circuit simulator applies gate operators to a quantum state. A dummy platform returns random acquisition arrays. An emulator evolves a physical model under pulses and returns model-derived acquisition arrays.
+    :width: 100%
+
+    Three different sources of results. Dummy and emulator platforms share
+    the pulse-execution interface, not the physics behind their acquisitions.
+
 Installation and platform selection
 -----------------------------------
 

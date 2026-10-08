@@ -18,6 +18,13 @@ settings. A ``Platform`` combines these parts with a name and manages execution
 and connections. ``Hardware`` alone has neither calibrated pulse definitions nor
 an execution method; a parameters file alone cannot reconstruct the instruments.
 
+.. figure:: figures/platform-model.svg
+    :alt: Hardware supplies instruments and qubit-to-channel wiring; Parameters supplies configurations, native sequences, and defaults. Platform combines both to execute experiments.
+    :width: 100%
+
+    Wiring and operating parameters are separate inputs to a platform.
+    Channel identifiers link the wiring to its configurations.
+
 The :ref:`platform construction tutorial <tutorial_platform>` demonstrates this
 composition without depending on a particular laboratory integration.
 :ref:`main_doc_storage` explains how to persist the parameters and discover
