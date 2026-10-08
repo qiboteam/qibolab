@@ -4,7 +4,7 @@ from typing import get_args
 from pydantic import BaseModel
 from typing_extensions import TypeIs
 
-from ...q1asm.ast_ import Block, Line, block_to_lines
+from ...q1asm.ast_ import Block, Line, Lineable, block_to_lines
 from .components import BlockRule, LineRule, Pipeline, State, Step
 
 
