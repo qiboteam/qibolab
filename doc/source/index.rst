@@ -1,47 +1,43 @@
-.. title::
-   Qibolab
+.. title:: Qibolab
 
+Qibolab: from experiments to quantum hardware
+=============================================
 
-What is Qibolab?
-================
+Qibolab provides a Python interface for defining pulse experiments and executing
+them on quantum platforms. A platform brings together the laboratory's hardware
+arrangement, its configuration, and the native pulse operations used to control
+the device. An experiment describes what to play, what to vary, and what data
+to acquire.
 
-.. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.7973899.svg
-   :target: https://doi.org/10.5281/zenodo.7973899
+You can use the pulse API independently of
+`Qibo <https://qibo.science/qibo/stable/>`_. With the optional Qibo backend,
+Qibolab also translates quantum circuits into native pulse sequences and returns
+circuit measurement results. For calibration protocols and analysis, it works
+with `Qibocal <https://qibo.science/qibocal/stable/>`_.
 
-Qibolab is the dedicated `Qibo <https://github.com/qiboteam/qibo>`_ package for
-quantum hardware control. This module automates the implementation of quantum
-circuits on quantum hardware.
+Start with :doc:`getting-started/installation` and
+:doc:`getting-started/experiment`. The first experiment runs without hardware
+using a dummy platform, which returns random data with the expected layout.
+It is a way to learn the API, not a quantum simulator.
 
-Structure
-^^^^^^^^^
+How to use these docs
+---------------------
 
-Qibolab's architecture comprises two primary components:
+The conceptual guides explain the platform and experiment models, result
+layout, and the path from a circuit to pulses. The tutorials build on those
+ideas with concrete tasks: constructing sequences, sweeping parameters,
+assembling platforms, and saving calibrations. The API reference is for looking
+up signatures and fields after you understand the workflow.
 
+If you already have a laboratory platform, focus on :doc:`tutorials/pulses`
+and :doc:`tutorials/sweeps`. If you are integrating a new setup, begin with
+:doc:`main-documentation/platform`, then :doc:`tutorials/lab` and
+:doc:`tutorials/storage`. Circuit users can go directly to
+:doc:`tutorials/circuits` after installing the backend extra.
 
-- the :ref:`Platform API <main_doc_platform>`, which facilitates the custom allocation
-  of quantum hardware platforms and laboratory setups, and
-- its :ref:`Experiment API <main_doc_experiment>`, which provides the tools to define
-  arbitrary experiments, based on pulse sequences, for execution on the configured
-  platforms.
-
-Platforms’ definition involve describing the arrangement of physical devices using
-Qibolab's abstractions. This is achieved through provided :ref:`drivers
-<main_doc_instruments>`, which offer support for both commercial and open-source
-firmware for hardware control.
-
-In addition to pulse execution, Qibolab platforms function as backends for :ref:`quantum
-circuit deployment <tutorials_circuits>` on hardware. This functionality is enabled by
-an integrated circuit :ref:`compiler <main_doc_compiler>`, which translates quantum
-circuits into pulse sequences.
-
-
-Qibolab is designed to be used in conjunction with `Qibocal
-<https://github.com/qiboteam/qibocal>`_, which supplies a comprehensive suite of
-calibration procedures for any Qibolab-based platform.
-
-
-Contents
-^^^^^^^^
+These pages describe Qibolab's common interfaces. Individual instrument
+drivers, their implementation, and device-specific setup are intentionally
+outside the scope of this documentation.
 
 .. toctree::
     :maxdepth: 2
@@ -52,57 +48,46 @@ Contents
 
 .. toctree::
     :maxdepth: 2
-    :caption: Core components
+    :caption: Conceptual guides
 
     main-documentation/platform
     main-documentation/experiment
-    main-documentation/drivers
-    main-documentation/compiler
     main-documentation/circuits
+    main-documentation/compiler
+    main-documentation/emulator
 
 .. toctree::
     :maxdepth: 2
     :caption: Tutorials
 
-    tutorials/lab
     tutorials/pulses
-    tutorials/circuits
+    tutorials/sweeps
     tutorials/calibration
-    tutorials/instrument
-    tutorials/emulator
+    tutorials/lab
     tutorials/storage
+    tutorials/circuits
+    tutorials/emulator
+
+.. toctree::
+    :maxdepth: 2
+    :caption: API reference
+
+    api-reference/public
+    api-reference/platform
+    api-reference/backend
 
 .. toctree::
     :maxdepth: 1
-    :caption: Reference
-
-    api-reference/qibolab
-
-.. toctree::
-    :maxdepth: 2
-    :caption: Contributing
-
-    Developer guides <https://qibo.science/qibo/stable/developer-guides/index.html>
-
-.. toctree::
-    :maxdepth: 2
-    :caption: Appendix
+    :caption: Further reading
 
     references
-    Publications <https://qibo.science/qibo/stable/appendix/citing-qibo.html>
+    Qibo documentation <https://qibo.science/qibo/stable/>
+    Qibocal documentation <https://qibo.science/qibocal/stable/>
+    Developer guides <https://qibo.science/qibo/stable/developer-guides/index.html>
+    Citation policy <https://qibo.science/qibo/stable/appendix/citing-qibo.html>
 
-.. toctree::
-    :maxdepth: 1
-    :caption: Documentation links
-
-    Qibo docs <https://qibo.science/qibo/stable/>
-    Qibolab docs <https://qibo.science/qibolab/stable/>
-    Qibocal docs <https://qibo.science/qibocal/stable/>
-    Qibosoq docs <https://qibo.science/qibosoq/stable/>
-
-
-Indices and tables
-^^^^^^^^^^^^^^^^^^
+Indices
+-------
 
 * :ref:`genindex`
 * :ref:`search`

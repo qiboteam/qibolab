@@ -1,256 +1,239 @@
-.. admonition:: Work in progress
+.. _tutorials_calibration:
 
-    This page is only partially updated from a previous version of Qibolab.
+From experiments to calibration
+===============================
 
-    In case of doubts, contact the `Qibo developers
-    <https://github.com/qiboteam/qibo#contacts>`_.
+Calibration connects an experimental observation to a parameter used in later
+experiments. Finding a resonance, for example, is not just a frequency sweep:
+you also need to interpret the response, choose a fitted value, and decide
+whether to store it as the platform's new operating frequency.
 
-Calibration experiments
-=======================
+This tutorial shows how to express three common measurements with Qibolab.
+It is not a complete calibration procedure. For automated protocols, fitting,
+reports, and calibration management, use
+`Qibocal <https://qibo.science/qibocal/stable/>`_. Qibolab supplies the execution
+interface on which those procedures depend.
 
-Let's see some examples of the typical experiments needed to calibrate and
-characterize a qubit.
+The examples run on ``dummy`` so that you can inspect their structure without
+hardware. Its random outputs contain no resonance or state information. To
+collect meaningful data, replace ``dummy`` with a calibrated laboratory platform
+and choose safe ranges for your device. A numerical model is another option,
+but it must support the particular experiment; see :doc:`emulator`.
 
-.. note::
-   This is just for demonstration purposes! In the `Qibo <https://qibo.science/qibo/stable/>`_ framework these experiments are already coded and available in the `Qibocal API <https://qibo.science/qibocal/stable/>`_.
+Common setup
+------------
 
-Let's consider a platform called `single_qubit` with, as expected, a single qubit.
+We will use integrated I/Q data for spectroscopy and retain individual shots
+for the readout comparison:
 
-Resonator spectroscopy
-----------------------
-
-The first experiment we conduct is a resonator spectroscopy. The experiment is
-as follows:
-
-1. A measurement pulse (pulse on the readout line, followed by an acquisition)
-    is fired at a specific frequency.
-2. We repeat point 1 for different frequencies.
-3. We plot the acquired amplitudes, identifying the peak/deep value as the
-   resonator frequency.
-
-We start by initializing the platform, creating a sequence composed of only a measurement
-and a sweeper around the pre-defined frequency.
-We then define the execution parameters and launch the experiment.
-In few seconds, the experiment will be finished and we can proceed to plot it.
-This is done in the following script:
-
-.. testcode:: python
+.. testcode::
 
     import numpy as np
-    import matplotlib.pyplot as plt
     from qibolab import (
         AcquisitionType,
         AveragingMode,
         Parameter,
+        Pulse,
         PulseSequence,
+        Rectangular,
         Sweeper,
         create_platform,
     )
 
-    # allocate platform
     platform = create_platform("dummy")
+    qubit_id = 0
+    qubit = platform.qubits[qubit_id]
+    natives = platform.natives.single_qubit[qubit_id]
 
-    qubit = platform.qubits[0]
-    natives = platform.natives.single_qubit[0]
-    sequence = natives.MZ.create_sequence()
+The frequency configurations are in hertz. Pulse lengths and relaxation times
+are in nanoseconds. A sweep changes a parameter during execution; it does not
+write a calibration back to the platform.
 
-    # allocate frequency sweeper
-    f0 = platform.config(qubit.probe).frequency
-    sweeper = Sweeper(
+Probe-frequency spectroscopy
+----------------------------
+
+A probe-frequency sweep measures the readout response while varying the
+carrier frequency of the probe channel. We use the platform's native measurement
+as the sequence, and sweep around its current frequency. The small range here
+is illustrative, not a recommended search range for an unknown resonator.
+
+.. testcode::
+
+    readout_sequence = natives.MZ()
+    probe_frequency = platform.config(qubit.probe).frequency
+    probe_sweep = Sweeper(
         parameter=Parameter.frequency,
-        range=(f0 - 2e8, f0 + 2e8, 1e6),
         channels=[qubit.probe],
+        values=probe_frequency + np.linspace(-10e6, 10e6, 21),
     )
 
-    results = platform.execute(
-        [sequence],
-        [[sweeper]],
-        nshots=1000,
-        relaxation_time=50,
-        averaging_mode=AveragingMode.CYCLIC,
-        acquisition_type=AcquisitionType.INTEGRATION,
-    )
+    platform.connect()
+    try:
+        results = platform.execute(
+            [readout_sequence],
+            sweepers=[[probe_sweep]],
+            nshots=64,
+            acquisition_type=AcquisitionType.INTEGRATION,
+            averaging_mode=AveragingMode.CYCLIC,
+        )
+    finally:
+        platform.disconnect()
 
-    acq = sequence.acquisitions[0][1]
-    signal = results[acq.id]
-    amplitudes = np.abs(signal[..., 0] + 1j * signal[..., 1])
-    frequencies = sweeper.values
+    readout_id = readout_sequence.acquisitions[0][1].id
+    probe_iq = results[readout_id]
+    assert probe_iq.shape == (21, 2)
+    probe_response = probe_iq[:, 0] + 1j * probe_iq[:, 1]
+    probe_magnitude = np.abs(probe_response)
+    probe_phase = np.unwrap(np.angle(probe_response))
 
-    plt.title("Resonator Spectroscopy")
-    plt.xlabel("Frequencies [Hz]")
-    plt.ylabel("Amplitudes [a.u.]")
+Cyclic averaging removes the shot axis, leaving one I/Q pair per frequency.
+We form a complex response from those two components. Magnitude and phase
+can both be informative: depending on the readout arrangement, a resonance
+can appear as a peak, a dip, or a phase change. Selecting the largest sample
+is not a general substitute for fitting the appropriate response model.
 
-    plt.plot(frequencies, amplitudes)
+If Matplotlib is available, inspect the magnitude as follows:
+
+.. code-block:: python
+
+    import matplotlib.pyplot as plt
+
+    plt.plot(probe_sweep.values / 1e9, probe_magnitude)
+    plt.xlabel("Probe frequency [GHz]")
+    plt.ylabel("Integrated magnitude [a.u.]")
     plt.show()
 
-.. image:: resonator_spectroscopy_light.svg
-   :class: only-light
-.. image:: resonator_spectroscopy_dark.svg
-   :class: only-dark
+For dummy data this plot is noise. Do not extract a calibration from it.
 
-Qubit spectroscopy
-------------------
+Drive-frequency spectroscopy
+----------------------------
 
-For a qubit spectroscopy experiment, the procedure is almost identical. A
-typical qubit spectroscopy experiment is as follows:
+Qubit spectroscopy adds a drive pulse before the readout and varies the drive
+frequency. A relatively long, weak pulse can reveal a transition even before
+a pi pulse has been calibrated. Its amplitude and duration must be chosen for
+the device: neither an arbitrary amplitude nor a native pi pulse is universally
+suitable for spectroscopy.
 
-1. A first pulse is sent to the drive line, in order to excite the qubit. Since
-   the qubit parameters are not known, this is typically a very long pulse (2
-   microseconds) at low amplitude.
-2. A measurement, tuned with resonator spectroscopy, is performed.
-3. We repeat point 1 for different frequencies of the drive pulse.
-4. We plot the acquired amplitudes, identifying the deep/peak value as the qubit
-   frequency.
+We explicitly construct such a pulse rather than claiming that a native gate
+has already been modified:
 
-The main difference introduced by this experiment is a slightly more
-complex pulse sequence. Therefore with start with that:
+.. testcode::
 
-.. testcode:: python
-
-    import numpy as np
-    import matplotlib.pyplot as plt
-    from qibolab import (
-        AcquisitionType,
-        AveragingMode,
-        Parameter,
-        PulseSequence,
-        Sweeper,
-        create_platform,
+    spectroscopy_pulse = Pulse(
+        duration=2000,
+        amplitude=0.02,
+        envelope=Rectangular(),
     )
+    drive_sequence = PulseSequence([(qubit.drive, spectroscopy_pulse)])
+    spectroscopy_sequence = drive_sequence | natives.MZ()
 
-    # allocate platform
-    platform = create_platform("dummy")
-
-    qubit = platform.qubits[0]
-    natives = platform.natives.single_qubit[0]
-
-    # create pulse sequence and add pulses
-    sequence = natives.RX() | natives.MZ()
-
-    # allocate frequency sweeper
-    f0 = platform.config(qubit.drive).frequency
-    sweeper = Sweeper(
+    drive_frequency = platform.config(qubit.drive).frequency
+    drive_sweep = Sweeper(
         parameter=Parameter.frequency,
-        range=(f0 - 2e8, f0 + 2e8, 1e6),
         channels=[qubit.drive],
+        values=drive_frequency + np.linspace(-20e6, 20e6, 17),
     )
 
-    results = platform.execute(
-        [sequence],
-        [[sweeper]],
-        nshots=1000,
-        relaxation_time=50,
-        averaging_mode=AveragingMode.CYCLIC,
-        acquisition_type=AcquisitionType.INTEGRATION,
-    )
+    platform.connect()
+    try:
+        results = platform.execute(
+            [spectroscopy_sequence],
+            sweepers=[[drive_sweep]],
+            nshots=64,
+            acquisition_type=AcquisitionType.INTEGRATION,
+            averaging_mode=AveragingMode.CYCLIC,
+        )
+    finally:
+        platform.disconnect()
 
-    acq = sequence.acquisitions[0][1]
-    signal = results[acq.id]
-    amplitudes = np.abs(signal[..., 0] + 1j * signal[..., 1])
-    frequencies = sweeper.values
+    spectroscopy_id = spectroscopy_sequence.acquisitions[0][1].id
+    spectroscopy_iq = results[spectroscopy_id]
+    assert spectroscopy_iq.shape == (17, 2)
+    spectroscopy_response = spectroscopy_iq[:, 0] + 1j * spectroscopy_iq[:, 1]
 
-    plt.title("Qubit Spectroscopy")
-    plt.xlabel("Frequencies [Hz]")
-    plt.ylabel("Amplitudes [a.u.]")
+The ``|`` composition ensures that readout follows excitation even though the
+operations use different channels. The probe frequency remains at its configured
+value; only the drive frequency is swept. In a real calibration workflow, the
+probe frequency and readout pulse should already give a usable state-dependent
+response.
 
-    plt.plot(frequencies, amplitudes)
-    plt.show()
+The measured observable is still an integrated readout response, not a direct
+measurement of the drive waveform or an automatically inferred excited-state
+probability. Turning it into a population estimate requires a readout calibration.
+The :doc:`sweep tutorial <sweeps>` explains how to extend this to a
+frequency-amplitude grid.
 
+Compare single-shot readout clouds
+----------------------------------
 
-Note that the drive pulse has been changed to match the characteristics required
-for the experiment.
+Once a state-preparation pulse is calibrated, compare readouts with and without
+that pulse. Preserve individual I/Q samples: averaging would discard the
+distribution needed to estimate a classifier.
 
-.. image:: qubit_spectroscopy_light.svg
-   :class: only-light
-.. image:: qubit_spectroscopy_dark.svg
-   :class: only-dark
+.. testcode::
 
-Single shot classification
---------------------------
+    ground = natives.MZ()
+    excited = natives.RX() | natives.MZ()
 
-To avoid seeing other very similar experiment, let's jump to the single shot
-classification experiment. The single-shot classification experiment is
-conducted towards the end of the single-qubit calibration process and assumes
-the availability of already calibrated pulses.
+    platform.connect()
+    try:
+        results = platform.execute(
+            [ground, excited],
+            nshots=128,
+            acquisition_type=AcquisitionType.INTEGRATION,
+            averaging_mode=AveragingMode.SINGLESHOT,
+        )
+    finally:
+        platform.disconnect()
 
-Two distinct pulse sequences are prepared for the experiment:
+    ground_iq = results[ground.acquisitions[0][1].id]
+    excited_iq = results[excited.acquisitions[0][1].id]
+    assert ground_iq.shape == excited_iq.shape == (128, 2)
 
-1. Sequence with only a measurement pulse.
-2. Sequence comprising an RX pulse (X gate) followed by a measurement pulse.
+These are two independent sequences in one execution request, not two readouts
+within a single shot of one sequence. Each sequence has its own acquisition
+identifier. Hardware support determines whether batching reduces communication
+overhead; do not assume that a list of sequences is one contiguous pulse program.
 
-For each sequence, the qubit is initialized in state 0 (no operation applied),
-and a measurement is executed. This process is repeated multiple times. Unlike
-previous experiments, the results of each individual measurement are saved
-separately, avoiding averaging. Both measurements are repeated: first with the
-single-pulse sequence and then with the two-pulse sequence. The goal is to
-compare the outcomes and visualize the differences in the IQ plane between the
-two states.
+On hardware, plot both arrays in the I/Q plane as in the
+:ref:`first experiment <first_experiment>`. Cluster separation can inform the
+choice of integration weights, rotation angle, and discrimination threshold.
+It does not by itself prove a particular fidelity: state preparation errors,
+relaxation during readout, and classifier evaluation all matter. The dummy
+platform produces random data for both preparations, so it cannot demonstrate
+this separation.
 
-1. Prepare the single-pulse sequence: Measure the qubit multiple times in state
-   0.
-2. Prepare the two-pulse sequence: Apply an RX pulse followed by measurement,
-   and perform the same measurement multiple times.
-3. Plotting the Results: Plot the single-shot results for both sequences,
-   highlighting the differences in the IQ plane between the two states.
+Apply and persist a calibration deliberately
+--------------------------------------------
 
-This experiment serves to assess the effectiveness of single-qubit calibration
-and its impact on qubit states in the IQ plane.
+Keep measurement and parameter changes separate. First evaluate a candidate
+with a temporary configuration update:
 
-.. testcode:: python
+.. code-block:: python
 
-    import numpy as np
-    import matplotlib.pyplot as plt
-    from qibolab import (
-        AcquisitionType,
-        AveragingMode,
-        Parameter,
-        Sweeper,
-        create_platform,
-    )
+    # fitted_frequency is obtained from analysis of physical measurement data.
+    sequence = natives.MZ()
+    platform.connect()
+    try:
+        confirmation = platform.execute(
+            [sequence],
+            updates=[{qubit.probe: {"frequency": fitted_frequency}}],
+            acquisition_type=AcquisitionType.INTEGRATION,
+            averaging_mode=AveragingMode.CYCLIC,
+        )
+    finally:
+        platform.disconnect()
 
-    # allocate platform
-    platform = create_platform("dummy")
+``updates`` affects that execution's configuration, leaving the stored platform
+parameters unchanged. Once you accept a calibration, change the in-memory
+parameters explicitly:
 
-    qubit = platform.qubits[0]
-    natives = platform.natives.single_qubit[0]
+.. code-block:: python
 
-    # create pulse sequence 1
-    zero_sequence = natives.MZ()
+    platform.update({f"configs.{qubit.probe}.frequency": fitted_frequency})
 
-    # create pulse sequence 2
-    one_sequence = natives.RX() | natives.MZ()
-
-    results = platform.execute(
-        [zero_sequence, one_sequence],
-        nshots=1000,
-        relaxation_time=50_000,
-        averaging_mode=AveragingMode.SINGLESHOT,
-        acquisition_type=AcquisitionType.INTEGRATION,
-    )
-
-    acq0 = zero_sequence.acquisitions[0][1]
-    acq1 = one_sequence.acquisitions[0][1]
-
-    plt.title("Single shot classification")
-    plt.xlabel("I [a.u.]")
-    plt.ylabel("Q [a.u.]")
-    plt.scatter(
-        results[acq1.id][..., 0],
-        results[acq1.id][..., 1],
-        label="One state",
-    )
-    plt.scatter(
-        results[acq0.id][..., 0],
-        results[acq0.id][..., 1],
-        label="Zero state",
-    )
-    plt.show()
-
-.. image:: classification_light.svg
-   :class: only-light
-.. image:: classification_dark.svg
-   :class: only-dark
-
-Note that in this experiment we passed both sequences in the same ``platform.execute`` command.
-In this case the sequences will be unrolled to a single sequence automatically, which is
-then deployed with a single communication with the instruments, to reduce communication bottleneck.
+An in-memory update is still not a disk write. Use the persistence workflow in
+:doc:`storage` to save it to an appropriate destination, preferably preserving
+the previous calibration. Native pulse calibrations belong in
+``parameters.native_gates`` rather than in the channel frequency configuration;
+:doc:`lab` explains how those parts fit together.

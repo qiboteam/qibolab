@@ -75,14 +75,12 @@ class IqChannel(Channel):
 
 
 class AcquisitionChannel(Channel):
+    """Input channel with optional references to its probe and pump components."""
+
     twpa_pump: str | None = None
     """Name of the TWPA pump component.
 
     None, if there is no TWPA, or it is not configurable.
     """
     probe: ChannelId | None = None
-    """Name of the corresponding measure/probe channel.
-
-    FIXME: This is temporary solution to be able to relate acquisition channel to corresponding probe channel wherever needed in drivers,
-    until we make acquire channels completely independent, and users start putting explicit acquisition commands in pulse sequence.
-    """
+    """Identifier of the IQ output used by a combined readout, if configured."""
