@@ -47,6 +47,14 @@ array will have two columns, not three. We intentionally use compiler-supported
 gates; an arbitrary Qibo circuit would first need transpilation as explained in
 :ref:`main_doc_compiler`.
 
+.. figure:: figures/native-circuit.svg
+    :alt: Logical wire 0, mapped to physical qubit 0, receives GPI2 with phi pi over two. CZ joins physical qubits 0 and 2, which are then measured. Wire 1 is untouched and unmeasured. Results contain 128 rows and two columns in measured-wire order, 0 then 2.
+    :width: 100%
+
+    The exact gate structure above, with time progressing to the right
+    (gate widths do not represent pulse durations). Only measured wires
+    become sample columns; dummy samples do not establish entanglement.
+
 Gate arguments remain logical indices even when ``wire_names`` contains
 different physical identifiers. Check the mapping, pair calibration and
 compiled timing before using a nontrivial placement on hardware. Changing

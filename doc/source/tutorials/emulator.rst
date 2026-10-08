@@ -81,6 +81,14 @@ These are two independent experiments, not two measurements within one
 evolution. Their physical meaning depends on the initial state and native
 calibrations provided by your numerical platform.
 
+.. figure:: figures/emulated-experiments.svg
+    :alt: A baseline sequence contains only MZ, while an independent rotated sequence contains RX then MZ. Their distinct acquisition identifiers select separate arrays of 1000 classified shots; each mean estimates its own outcome-one fraction.
+    :width: 100%
+
+    Compare two independent preparations, not two readouts of one evolution.
+    Native widths are schematic. The physical model and calibration determine
+    the fractions; no ideal population or mid-sequence collapse is assumed.
+
 Acquire and interpret the shots
 -------------------------------
 

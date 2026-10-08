@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="390" viewBox="0 0 760 390" role="img" aria-labelledby="title desc">
+  <title id="title">Single-shot readout clouds retain spread and overlap</title>
+  <desc id="desc">Two independent experiments, MZ and RX followed by MZ, each return a distinct 128-by-2 array. Illustrative I/Q scatter clouds overlap around a candidate boundary. The illustrated points are not measured data or dummy-platform results; no fidelity or fitted threshold is implied.</desc>
+  <rect width="760" height="390" rx="12" fill="#fff"/>
+  <g font-family="sans-serif" font-size="17" fill="#243047">
+    <text x="28" y="34" font-size="21" font-weight="bold">Two preparations, separate single-shot I/Q arrays</text>
+    <rect x="28" y="68" width="300" height="73" rx="8" fill="#f0eaff" stroke="#7145bd"/>
+    <text x="48" y="97" font-weight="bold">Ground preparation: MZ</text><text x="48" y="123">ground_iq.shape = (128, 2)</text>
+    <rect x="28" y="164" width="300" height="73" rx="8" fill="#e8f4fa" stroke="#387c99"/>
+    <text x="48" y="193" font-weight="bold">Excited preparation: RX | MZ</text><text x="48" y="219">excited_iq.shape = (128, 2)</text>
+    <text x="28" y="283">Single shots retain the spread.</text><text x="28" y="310">Averaging hides the overlap.</text>
+    <path d="M400 315 V80 M400 315 H712" fill="none" stroke="#526078" stroke-width="2"/>
+    <text x="390" y="80" text-anchor="end">Q</text><text x="716" y="338">I</text>
+    <ellipse cx="485" cy="236" rx="65" ry="42" transform="rotate(-28 485 236)" fill="#f0eaff"/>
+    <ellipse cx="604" cy="178" rx="64" ry="44" transform="rotate(-28 604 178)" fill="#e8f4fa"/>
+    <g fill="#7145bd">
+      <circle cx="450" cy="254" r="5"/><circle cx="461" cy="229" r="5"/><circle cx="468" cy="260" r="5"/><circle cx="475" cy="212" r="5"/><circle cx="481" cy="237" r="5"/><circle cx="489" cy="266" r="5"/><circle cx="496" cy="218" r="5"/><circle cx="503" cy="248" r="5"/><circle cx="512" cy="203" r="5"/><circle cx="518" cy="229" r="5"/><circle cx="534" cy="213" r="5"/><circle cx="554" cy="208" r="5"/>
+    </g>
+    <g fill="#287c99">
+      <circle cx="536" cy="224" r="5"/><circle cx="561" cy="198" r="5"/><circle cx="576" cy="175" r="5"/><circle cx="585" cy="204" r="5"/><circle cx="591" cy="150" r="5"/><circle cx="603" cy="183" r="5"/><circle cx="611" cy="209" r="5"/><circle cx="617" cy="158" r="5"/><circle cx="627" cy="183" r="5"/><circle cx="636" cy="137" r="5"/><circle cx="648" cy="169" r="5"/><circle cx="654" cy="192" r="5"/>
+    </g>
+    <path d="M497 98 L608 298" stroke="#526078" stroke-width="2" stroke-dasharray="6 4"/>
+    <text x="520" y="77" font-size="16">Candidate boundary</text>
+    <text x="380" y="368" text-anchor="middle" font-size="17" font-weight="bold">Schematic only: not measured data or a fitted classifier</text>
+  </g>
+</svg>

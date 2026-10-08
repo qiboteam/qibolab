@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="330" viewBox="0 0 760 330" role="img" aria-labelledby="title desc">
+  <title id="title">A duration sweep shifts the readout boundary</title>
+  <desc id="desc">Each schedule pipes native RX, a drive-channel delay, and fresh native MZ. The delay is 40, 80, or 120 ns, so measurement moves later by 40 ns at each point. Wait widths share a scale; native RX and MZ widths are schematic. Single-shot discrimination returns shape (8, 3).</desc>
+  <defs>
+    <pattern id="delay" width="8" height="8" patternUnits="userSpaceOnUse"><rect width="8" height="8" fill="#f4f5f8"/><path d="M-2 2 L2 -2 M0 8 L8 0 M6 10 L10 6" stroke="#9ba5b5"/></pattern>
+  </defs>
+  <rect width="760" height="330" rx="12" fill="#fff"/>
+  <g font-family="sans-serif" font-size="17" fill="#243047">
+    <text x="28" y="35" font-size="21" font-weight="bold">RX | wait | MZ</text>
+    <text x="28" y="64">Same preparation, three idle intervals; time progresses right</text>
+    <text x="28" y="114">40 ns</text><text x="28" y="179">80 ns</text><text x="28" y="244">120 ns</text>
+    <path d="M140 108 H710 M140 173 H710 M140 238 H710" stroke="#d9dfe8"/>
+    <g fill="#f0eaff" stroke="#7145bd"><rect x="140" y="87" width="85" height="42" rx="4"/><rect x="140" y="152" width="85" height="42" rx="4"/><rect x="140" y="217" width="85" height="42" rx="4"/></g>
+    <g fill="url(#delay)" stroke="#9ba5b5"><rect x="225" y="87" width="120" height="42"/><rect x="225" y="152" width="240" height="42"/><rect x="225" y="217" width="360" height="42"/></g>
+    <g fill="#e8f4fa" stroke="#387c99"><rect x="345" y="87" width="110" height="42" rx="4"/><rect x="465" y="152" width="110" height="42" rx="4"/><rect x="585" y="217" width="110" height="42" rx="4"/></g>
+    <g text-anchor="middle"><text x="182" y="114">RX</text><text x="182" y="179">RX</text><text x="182" y="244">RX</text><text x="285" y="114">Wait</text><text x="345" y="179">Wait</text><text x="405" y="244">Wait</text><text x="400" y="114">MZ</text><text x="520" y="179">MZ</text><text x="640" y="244">MZ</text></g>
+    <path d="M345 78 V138 M465 143 V203 M585 208 V268" stroke="#243047" stroke-width="2" stroke-dasharray="4 4"/>
+    <text x="380" y="303" text-anchor="middle">Result: 8 shots x 3 delays; no physical decay in dummy data</text>
+  </g>
+</svg>

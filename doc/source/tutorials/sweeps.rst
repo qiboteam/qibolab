@@ -215,6 +215,14 @@ before moving to the next. Both averaged modes have the same shape.
 Select a mode supported by the platform rather than assuming the modes
 are interchangeable in their experimental noise behavior.
 
+.. figure:: figures/sweep-settings.svg
+    :alt: Separate frequency and amplitude groups visit all 20 points in a four-by-five grid. Grouped amplitude and phase sweepers visit just five paired points along a diagonal. Their example result shapes are (8, 4, 5, 2) and (5, 2), respectively.
+    :width: 100%
+
+    Sweep settings, not measured responses. Separate groups form a grid;
+    sweepers within one group advance together. The displayed shapes also
+    reflect the examples' different averaging modes.
+
 Parallel groups use zip-like length semantics in the core shape model:
 their length is the **minimum** length of the contained sweepers.
 Unequal arrays therefore do not imply broadcasting or a Cartesian
@@ -317,6 +325,14 @@ preserves that ordering; a schedule valid at one duration is not enough
 to establish validity at every scan point. In particular, compiling
 alignment markers into fixed delays before defining a duration sweep
 can bake in the original timing.
+
+.. figure:: figures/delay-sweep.svg
+    :alt: Three relaxation schedules each prepare with RX, wait for 40, 80, or 120 ns, then start a fresh MZ readout. Increasing the wait shifts measurement later; the example returns eight shots at each of three delays.
+    :width: 100%
+
+    The intended relaxation experiment: sweeping the idle interval moves
+    the measurement boundary. Wait widths are proportional to their durations;
+    RX and MZ widths are schematic. Dummy results do not show physical decay.
 
 ``Parameter.duration_interpolated`` is another pulse-duration parameter,
 intended for implementations that support interpolated-duration

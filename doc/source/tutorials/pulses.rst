@@ -93,6 +93,14 @@ The carrier frequency is configured on ``qubit.drive``, not on
 expressed in GS/s. Before using a custom pulse on hardware, choose its
 parameters against the channel's calibration and allowed output range.
 
+.. figure:: figures/pulse-envelopes.svg
+    :alt: The 40 ns Gaussian has a bell-shaped I envelope near amplitude 0.2 and zero Q. The 4 ns rectangular pulse has four I samples at 0.25 and zero Q.
+    :width: 100%
+
+    Sampled envelopes for the two pulses above at 1 GS/s. The panels use
+    different time and amplitude scales. These are digital envelopes, not
+    carrier-modulated signals or measured qubit responses.
+
 Make the measurement wait
 -------------------------
 
@@ -125,6 +133,14 @@ The ``|`` operator is essential: it starts the measurement stage only
 after the preparation ends. The explicit schedule shows the 140 ns
 delay inserted on the acquisition channel. ``align_to_delays`` returns a
 new sequence and leaves the alignment-based original intact.
+
+.. figure:: figures/pulse-experiment.svg
+    :alt: On the drive channel, a 40 ns excitation is followed by a 100 ns wait. Alignment delays the acquisition channel until 140 ns, when native MZ begins. The readout identifier selects an array of eight I/Q pairs.
+    :width: 100%
+
+    Excite, wait, then measure: the drive preparation ends at 140 ns.
+    The native readout is drawn schematically, not to the same time scale;
+    its timing comes from the platform's calibration.
 
 By contrast, ordinary list-like addition only appends entries. Since
 the native measurement uses a different channel, it would start at time

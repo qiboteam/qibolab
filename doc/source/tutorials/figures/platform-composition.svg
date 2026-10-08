@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="390" viewBox="0 0 760 390" role="img" aria-labelledby="title desc">
+  <title id="title">Copy parameters, share hardware objects</title>
+  <desc id="desc">An existing dummy platform supplies instrument, qubit, and coupler mappings to Hardware without cloning devices. Serializing and validating its parameters creates an independent Parameters model. The new Platform combines both inputs and starts disconnected. Only one platform should own the shared instruments' connection lifecycle.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0 1 L8 5 L0 9" fill="none" stroke="#526078" stroke-width="1.5"/></marker>
+  </defs>
+  <rect width="760" height="390" rx="12" fill="#fff"/>
+  <g font-family="sans-serif" font-size="17" fill="#243047">
+    <rect x="195" y="22" width="370" height="51" rx="8" fill="#f4f5f8" stroke="#526078"/>
+    <text x="380" y="54" text-anchor="middle" font-size="19" font-weight="bold">existing = create_platform("dummy")</text>
+    <path d="M290 73 V92 H195 V119" fill="none" stroke="#526078" stroke-width="2" marker-end="url(#arrow)"/>
+    <path d="M470 73 V92 H565 V119" fill="none" stroke="#526078" stroke-width="2" marker-end="url(#arrow)"/>
+    <rect x="28" y="126" width="334" height="115" rx="9" fill="#f0eaff" stroke="#7145bd"/>
+    <text x="48" y="156" font-size="21" font-weight="bold">Hardware mappings</text>
+    <text x="48" y="185">Shared instrument objects</text><text x="48" y="215">Devices are not cloned</text>
+    <rect x="398" y="126" width="334" height="115" rx="9" fill="#e8f4fa" stroke="#387c99"/>
+    <text x="418" y="156" font-size="21" font-weight="bold">JSON parameter round trip</text>
+    <text x="418" y="185">Serialize, then validate</text><text x="418" y="215">Independent Parameters model</text>
+    <path d="M195 241 V262 H300 V282" fill="none" stroke="#526078" stroke-width="2" marker-end="url(#arrow)"/>
+    <path d="M565 241 V262 H460 V282" fill="none" stroke="#526078" stroke-width="2" marker-end="url(#arrow)"/>
+    <rect x="195" y="288" width="370" height="61" rx="8" fill="#f4f5f8" stroke="#526078"/>
+    <text x="380" y="314" text-anchor="middle" font-size="19" font-weight="bold">Platform(name="my_experiment", ...)</text>
+    <text x="380" y="338" text-anchor="middle" font-size="16">Starts disconnected; owns its parameter model</text>
+    <text x="380" y="376" text-anchor="middle" font-size="16">One connection owner at a time for the shared instruments</text>
+  </g>
+</svg>

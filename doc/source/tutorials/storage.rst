@@ -126,6 +126,14 @@ These two patterns are alternatives, not two layers of required loading.
 Calling or importing your factory directly is also valid and needs no discovery
 configuration.
 
+.. figure:: figures/platform-discovery.svg
+    :alt: QIBOLAB_PLATFORMS points to a parent directory. create_platform locates my_platform/platform.py and calls create. A Hardware return is combined with adjacent parameters.json; a Platform return is used directly. dump writes only parameters.json.
+    :width: 100%
+
+    Discovery follows one of two factory branches. The environment points
+    to the parent directory; ``dump`` writes operating data, not the factory
+    or results. Neither loading branch connects instruments.
+
 Environment-based discovery
 ---------------------------
 
