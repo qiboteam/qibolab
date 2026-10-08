@@ -19,7 +19,7 @@ from qibolab._core.pulses import Pulse, PulseId, PulseLike, Rectangular
 from qibolab._core.serialize import Model
 from qibolab._core.sweeper import ParallelSweepers, Parameter, Range, Sweeper
 
-from .asm import MAX_PARAM, convert
+from .asm import MAX_PARAM, _validate_sweeper_value, convert
 
 __all__ = ["is_offset_rectangular"]
 
@@ -135,6 +135,33 @@ class Param(Model):
             + ")"
         )
 
+    @classmethod
+    def from_range(
+        cls,
+        irange: Range,
+        kind: Parameter,
+        role: ParamRole,
+        pulse: PulseId | None,
+        channel: ChannelId | None,
+    ) -> "Param":
+        """Create a Param from a sweep range with validation.
+
+        Validates the entire range (start, stop, step) before converting.
+        """
+        start_, stop, step = irange
+        start = int(convert(start_ - _duration_shift(role, pulse), kind))
+        # Validate all points in the range
+        for value in (start, stop, step):
+            _validate_sweeper_value(value, kind)
+        return cls(
+            reg=Register(number=0),
+            start=int(convert(start, kind)),
+            step=int(convert(step, kind)),
+            pulse=pulse,
+            channel=channel,
+            role=role,
+        )
+
 
 class LoopParams(Model):
     """Parameters involved in a single loop level."""
@@ -219,15 +246,12 @@ def _unravel_sweeps(sweepers: list[ParallelSweepers]) -> Iterable[tuple[int, Par
     return (
         (
             j,
-            Param(
-                reg=Register(number=0),
-                start=int(
-                    convert(irange[0] - _duration_shift(role, pulse), sweep.parameter)
-                ),
-                step=int(convert(irange[2], sweep.parameter)),
-                pulse=pulse.id if pulse is not None else None,
-                channel=channel,
-                role=role,
+            Param.from_range(
+                irange,
+                sweep.parameter,
+                role,
+                pulse.id if pulse is not None else None,
+                channel,
             ),
         )
         # the first sweeper should be the outermost, thus reverse them during the
