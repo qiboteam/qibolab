@@ -395,6 +395,7 @@ def test_port_config_twpa_attenuation():
         out=True,
         lo=OscillatorConfig(frequency=6.5e9, power=-10.0),
         mixer=None,
+        is_qcm_non_rf_type=False,
     )
     assert p1.att == 10
 
@@ -405,6 +406,7 @@ def test_port_config_twpa_attenuation():
         out=True,
         lo=OscillatorConfig(frequency=6.5e9, power=-5.0),
         mixer=None,
+        is_qcm_non_rf_type=False,
     )
     assert p2.att == 4
 
@@ -415,6 +417,7 @@ def test_port_config_twpa_attenuation():
         out=True,
         lo=OscillatorConfig(frequency=6.5e9, power=-11.5),
         mixer=None,
+        is_qcm_non_rf_type=False,
     )
     assert p3.att == 10
 
