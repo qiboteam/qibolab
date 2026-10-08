@@ -11,6 +11,11 @@ platform's calibrated operations. Qibolab performs the latter step automatically
 through the :ref:`Qibo backend <main_doc_backend>`; calling the backend directly
 does not perform the former.
 
+The :ref:`circuit workflow diagram <circuit_execution_flow>` shows where these
+boundaries sit: transpilation produces a compatible circuit, while compilation
+uses platform natives to produce a channel schedule. Acquisition identifiers
+then connect that schedule back to the circuit's measurement gates.
+
 For a general circuit, prepare an appropriate Qibo transpilation pipeline before
 handing the circuit to Qibolab. The
 `Qibo transpiler examples

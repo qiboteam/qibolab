@@ -23,11 +23,11 @@ It is a way to learn the API, not a quantum simulator.
 How to use these docs
 ---------------------
 
-The conceptual guides explain the platform and experiment models, result
-layout, and the path from a circuit to pulses. The tutorials build on those
-ideas with concrete tasks: constructing sequences, sweeping parameters,
-assembling platforms, and saving calibrations. The API reference is for looking
-up signatures and fields after you understand the workflow.
+The tutorials walk through concrete tasks: constructing sequences, sweeping
+parameters, assembling platforms, and saving calibrations. The conceptual guides
+explain the underlying platform and experiment models, result layout, and the
+path from a circuit to pulses. The API reference is for looking up signatures
+and fields after you understand the workflow.
 
 If you already have a laboratory platform, focus on :doc:`tutorials/pulses`
 and :doc:`tutorials/sweeps`. If you are integrating a new setup, begin with
@@ -48,16 +48,6 @@ outside the scope of this documentation.
 
 .. toctree::
     :maxdepth: 2
-    :caption: Conceptual guides
-
-    main-documentation/platform
-    main-documentation/experiment
-    main-documentation/circuits
-    main-documentation/compiler
-    main-documentation/emulator
-
-.. toctree::
-    :maxdepth: 2
     :caption: Tutorials
 
     tutorials/pulses
@@ -67,6 +57,16 @@ outside the scope of this documentation.
     tutorials/storage
     tutorials/circuits
     tutorials/emulator
+
+.. toctree::
+    :maxdepth: 2
+    :caption: Conceptual guides
+
+    main-documentation/platform
+    main-documentation/experiment
+    main-documentation/circuits
+    main-documentation/compiler
+    main-documentation/emulator
 
 .. toctree::
     :maxdepth: 2
