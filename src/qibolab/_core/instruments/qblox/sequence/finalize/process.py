@@ -54,7 +54,7 @@ def _line_traverse(
                 result.append(mapped)
                 break
         else:
-            result.append(line)
+            result.append([line])
 
     return result
 
@@ -106,10 +106,5 @@ def traverse(instructions: Block | list[Block], step: Step) -> list[Block]:
 
 
 def transform(block: Block, pipeline: Pipeline) -> list[Line]:
-    """...
-
-    .. todo::
-        return ``list[Line]`` to be more general -> still need to wrap into a
-        ``Program(elements=...)`` at call site.
-    """
+    """Apply the pipeline in order and return a flat list of annotated lines."""
     return _to_lines(reduce(traverse, pipeline, block))
