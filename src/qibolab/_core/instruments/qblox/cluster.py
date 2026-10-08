@@ -22,6 +22,7 @@ from qibolab._core.components import (
 )
 from qibolab._core.execution_parameters import (
     AcquisitionType,
+    AveragingMode,
     ExecutionParameters,
 )
 from qibolab._core.identifier import ChannelId, Result
@@ -316,6 +317,7 @@ class Cluster(Controller):
                 sequencers = self._configure_hardware_per_sequence(
                     configs=configs,
                     acquisition=options_.acquisition_type,
+                    averaging_mode=options_.averaging_mode,
                     sequences=sequences_,
                 )
 
@@ -397,21 +399,22 @@ class Cluster(Controller):
     def _enable_raw_acquisition(
         self,
         acq_sequencers: dict[SlotId, list[int]],
+        averaging_mode: AveragingMode,
     ) -> None:
         """Configure scope acquisition settings on each module.
 
         For every module (identified by its slot), this method builds a
-        ``ModuleConfig`` that enables the scope acquisition averaging mode
-        on both paths when the requested ``acquisition_mode`` is
-        ``AcquisitionType.RAW``.  In RAW mode, each acquisition sequencer
-        listed in ``acq_sequencers`` is individually selected on the module
-        so that the scope acquisition mode is applied per-sequencer.
+        ``ModuleConfig`` that enables scope acquisition averaging on both
+        paths only when the averaging mode performs averaging. In RAW mode,
+        each acquisition sequencer listed in ``acq_sequencers`` is individually
+        selected on the module so that the scope acquisition mode is applied
+        per-sequencer.
         """
         for slot, seq_indices in acq_sequencers.items():
             config_updates = config.ModuleConfig(
                 ports={},
-                scope_acq_avg_mode_en_path0=True,
-                scope_acq_avg_mode_en_path1=True,
+                scope_acq_avg_mode_en_path0=averaging_mode.average,
+                scope_acq_avg_mode_en_path1=averaging_mode.average,
             )
             readout_module = self._modules[slot]
 
@@ -424,6 +427,7 @@ class Cluster(Controller):
         self,
         configs: Configs,
         acquisition: AcquisitionType,
+        averaging_mode: AveragingMode,
         sequences: dict[ChannelId, Q1Sequence] | None = None,
     ) -> SequencerMap:
         """Configure the hardware for a specific sequence.
@@ -450,7 +454,10 @@ class Cluster(Controller):
         # at the time being we only dynamically change the modules for RAW acquisition
         # but in the future it can be expanded
         if acquisition is AcquisitionType.RAW:
-            self._enable_raw_acquisition(acq_sequencers=acquisition_sequencers)
+            self._enable_raw_acquisition(
+                acq_sequencers=acquisition_sequencers,
+                averaging_mode=averaging_mode,
+            )
 
         return sequencers
 
