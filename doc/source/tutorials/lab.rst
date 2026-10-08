@@ -52,6 +52,14 @@ are still shared with ``existing``: composing hardware this way does not clone
 physical devices or create independent connection ownership. Use only one
 platform to manage these shared instruments at a time.
 
+.. figure:: figures/platform-composition.svg
+    :alt: The existing platform supplies shared instrument objects and hardware mappings, while a JSON round trip creates an independent Parameters model. Both are passed to the new Platform constructor; parameters are copied, but physical devices are not.
+    :width: 100%
+
+    What the composition example copies, and what it shares. Editing the new
+    parameter model does not edit the original model; the two platforms must
+    not independently manage the same instrument connections.
+
 With an integration-provided hardware object, the constructor has exactly the
 same form. Replace the copied dummy parameters with a ``Parameters`` model
 containing the integration's calibrated configurations and pulse sequences, or

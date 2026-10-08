@@ -163,6 +163,15 @@ probability. Turning it into a population estimate requires a readout calibratio
 The :doc:`sweep tutorial <sweeps>` explains how to extend this to a
 frequency-amplitude grid.
 
+.. figure:: figures/spectroscopy-experiments.svg
+    :alt: Probe spectroscopy sweeps the probe carrier over 21 points with native MZ alone. Drive spectroscopy sweeps the drive carrier over 17 points during a 2000 ns rectangular pulse of amplitude 0.02, then measures at a fixed probe frequency.
+    :width: 100%
+
+    Two spectroscopy experiments, two different sweep targets. The diagrams
+    show sequence stages rather than exact native readout timing. The offsets
+    and result shapes match the examples; neither scan automatically fits or
+    saves a resonance.
+
 Compare single-shot readout clouds
 ----------------------------------
 
@@ -202,6 +211,14 @@ It does not by itself prove a particular fidelity: state preparation errors,
 relaxation during readout, and classifier evaluation all matter. The dummy
 platform produces random data for both preparations, so it cannot demonstrate
 this separation.
+
+.. figure:: figures/readout-clouds.svg
+    :alt: Independent MZ and RX-then-MZ preparations produce separate arrays of 128 I/Q pairs. A schematic I/Q plot shows overlapping ground- and excited-preparation clouds with a candidate discrimination boundary.
+    :width: 100%
+
+    Why retain single shots: a mean I/Q pair hides the cloud's spread and
+    overlap. These points and the candidate boundary are illustrative only,
+    not dummy data, measured fidelity, or a fitted classifier.
 
 Apply and persist a calibration deliberately
 --------------------------------------------
