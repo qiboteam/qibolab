@@ -3,7 +3,13 @@
 import numpy as np
 
 from qibolab._core.execution_parameters import ExecutionParameters
-from qibolab._core.instruments.qblox.q1asm.ast_ import Add, Line, SetPhDelta
+from qibolab._core.instruments.qblox.q1asm.ast_ import (
+    Add,
+    Arithmetic,
+    Line,
+    Nop,
+    SetPhDelta,
+)
 from qibolab._core.instruments.qblox.sequence.asm import Registers
 from qibolab._core.instruments.qblox.sequence.sequence import compile
 from qibolab._core.pulses import VirtualZ
@@ -34,6 +40,12 @@ def test_virtualz_with_phase_sweeper():
     assert not any(isinstance(i.instruction, SetPhDelta) for i in line_instrs), (
         "Did not expect 'SetPhDelta' instruction when phase is swept."
     )
+    for index, line in enumerate(line_instrs):
+        if isinstance(line.instruction, Arithmetic):
+            assert isinstance(line_instrs[index + 1].instruction, Nop)
+        if isinstance(line.instruction, Nop):
+            assert index > 0
+            assert isinstance(line_instrs[index - 1].instruction, Arithmetic)
 
 
 def test_virtualz_without_phase_sweeper():
