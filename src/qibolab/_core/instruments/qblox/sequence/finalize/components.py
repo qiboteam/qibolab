@@ -35,13 +35,8 @@ class LineRule(Model, Generic[State]):
         lineable = block[0]
         instr = lineable.instruction if isinstance(lineable, Line) else lineable
         annotated = [
-            el
-            for el in (
-                (
-                    Line(instruction=instr, label=line.label, comment=line.comment),
-                    *(el for el in block[1:]),
-                )
-            )
+            Line(instruction=instr, label=line.label, comment=line.comment),
+            *block[1:],
         ]
         return annotated, state
 
