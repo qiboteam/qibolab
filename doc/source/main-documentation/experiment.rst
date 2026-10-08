@@ -1,341 +1,296 @@
-.. admonition:: Work in progress
-
-    This page is only partially updated from a previous version of Qibolab.
-
-    In case of doubts, contact the `Qibo developers
-    <https://github.com/qiboteam/qibo#contacts>`_.
-
 .. _main_doc_experiment:
 
-Experiment
-==========
+Experiments with pulses
+=======================
 
-Pulses
-------
+A pulse-level experiment describes what the control electronics should do,
+when they should do it, and which measurements should be returned. Unlike a
+gate circuit, it exposes the duration and shape of each control operation.
+This is useful when measuring a relaxation time, calibrating a rotation, or
+testing a waveform that is not yet part of the platform's native gates.
 
-In Qibolab, an extensive API is available for working with pulses and pulse sequences, a fundamental aspect of quantum experiments.
-At the heart of this API is the :class:`qibolab.Pulse` object, which empowers users to define and customize pulses with specific parameters.
+Three pieces work together. A :class:`qibolab.PulseSequence` schedules
+instructions on named channels; the platform supplies the channel
+configuration and calibrated native operations; execution options specify
+repetitions and acquisition. Optional sweepers repeat the same schedule with
+different parameter values. Keeping these pieces separate lets you change a
+frequency scan without rebuilding a waveform, or change the acquisition mode
+without rewriting the experiment.
 
-Additionally, pulses are defined by an envelope shape, represented by a subclass of :class:`qibolab._core.pulses.envelope.BaseEnvelope`.
-Qibolab offers a range of pre-defined pulse shapes which can be found in :py:mod:`qibolab._core.pulses.envelope`.
+This guide explains that model. For a complete first experiment, follow
+:ref:`tutorials_pulses`; for scans and their data axes, continue with
+:ref:`tutorials_sweeps`. The examples here use ``create_platform("dummy")``
+and require no laboratory connection. The dummy platform returns random
+arrays with the expected result layout: it is **not a physical simulation**
+of qubits, resonators, or the effect of the pulses.
 
-- Rectangular (:class:`qibolab.Rectangular`)
-- Exponential (:class:`qibolab.Exponential`)
-- Gaussian (:class:`qibolab.Gaussian`)
-- Drag (:class:`qibolab.Drag`)
-- SNZ (:class:`qibolab.Snz`)
-- Custom (:class:`qibolab.Custom`)
+Waveforms are not schedules
+---------------------------
 
-To illustrate, here is an examples of how to instantiate a pulse using the Qibolab API:
+A :class:`qibolab.Pulse` specifies a duration, a digital amplitude, an
+envelope, and an optional relative phase. Durations are in **nanoseconds**,
+phases in **radians**, and digital amplitudes are dimensionless, normalized
+to the range ``[-1, 1]``. An amplitude is not a voltage or a rotation angle:
+its physical effect depends on the channel and its calibration.
 
-.. testsetup:: python
+.. testcode:: experiment
 
-    from qibolab import create_platform
-    from qibolab import (
-        AcquisitionType,
-        AveragingMode,
+    from qibolab import Gaussian, Pulse
+
+    drive_pulse = Pulse(
+        duration=40,
+        amplitude=0.2,
+        envelope=Gaussian(rel_sigma=0.2),
+        relative_phase=0.0,
     )
+    assert drive_pulse.duration == 40
 
-    options = dict(
-        nshots=1000,
-        relaxation_time=10,
-        fast_reset=False,
-        acquisition_type=AcquisitionType.INTEGRATION,
-        averaging_mode=AveragingMode.CYCLIC,
+The Gaussian's ``rel_sigma`` is a fraction of the pulse duration, not a
+time in nanoseconds: this pulse has a nominal standard deviation of
+``0.2 * 40 = 8`` ns. Envelopes supply in-phase and quadrature waveforms.
+For example, a Gaussian has a zero quadrature envelope, whereas DRAG
+adds a derivative-shaped quadrature component. The envelope library is
+described by the API reference; choosing a shape does not in itself
+calibrate a gate.
+
+Frequency is deliberately absent from the ordinary pulse fields. The
+configured carrier frequency belongs to the channel and is expressed in
+**hertz**. Thus ``platform.config(qubit.drive).frequency`` is a frequency
+in Hz, and a frequency sweeper supplies values in Hz. Waveform sampling
+uses a different convention: sampling rates are in GS/s, numerically
+equivalent to samples/ns. ``pulse.envelopes(rate)`` returns a ``(2, N)``
+array with ``N = int(pulse.duration * rate)``. These are amplitude-scaled
+envelopes, not the final carrier-modulated output; the relative phase is
+not applied by this sampling method.
+
+Not every instruction emits a waveform. A ``Delay`` advances one channel's
+clock without output. A ``VirtualZ`` changes the drive-channel phase frame
+and has zero duration. An ``Acquisition`` requests data on an acquisition
+channel. A ``Readout`` combines a probe pulse with an acquisition and is
+placed on the acquisition channel; the platform associates it with the
+corresponding probe channel. Its sequence duration is its acquisition
+duration plus its ``time_of_flight``, in ns. Using a calibrated native
+measurement is normally preferable to constructing this timing yourself.
+
+Each channel has its own clock
+------------------------------
+
+A sequence is an ordered collection of ``(channel, instruction)`` pairs.
+Instructions on the **same** channel play consecutively. Different
+channels advance independently and can play simultaneously, regardless
+of where their entries appear in the collection. The sequence duration is
+the longest channel duration, not the sum of all instructions.
+
+This distinction matters when preparing a qubit and then measuring it.
+Simply appending a measurement on a different channel does not make it
+wait for the drive pulse. Use an alignment boundary when one stage must
+finish before another starts.
+
+.. testcode:: experiment
+
+    from qibolab import Delay, PulseSequence
+
+    preparation = PulseSequence(
+        [
+            ("a", Delay(duration=80)),
+            ("b", Delay(duration=20)),
+        ]
     )
+    next_stage = PulseSequence(
+        [
+            ("b", Delay(duration=40)),
+            ("c", Delay(duration=10)),
+        ]
+    )
+    piped = preparation | next_stage
+    concatenated = preparation << next_stage
+    assert preparation.duration == 80
+    assert piped.channel_duration("b") == 120
+    assert piped.channel_duration("c") == 90
+    assert concatenated.channel_duration("b") == 60
+    assert concatenated.channel_duration("c") == 30
+    assert concatenated.duration == 80
+
+Here the channel names are just a timing illustration, not channels to
+execute on a platform. The ``|`` operator inserts an ``Align`` boundary
+on the union of both sequences' channels. Everything in the right-hand
+stage therefore starts after the left-hand stage ends: at 80 ns in this
+example. ``|=`` performs the same operation in place.
+
+The ``<<`` operator has a more local meaning. It synchronizes only the
+channels used by the right-hand sequence, at their latest time in the
+left-hand sequence. Here ``b`` is at 20 ns and the new channel ``c`` at
+zero, so the right-hand stage starts at 20 ns while ``a`` is still
+running. ``<<=`` and ``concatenate`` are its in-place forms. Use this
+behavior deliberately when stages are allowed to overlap; it is not a
+substitute for a global boundary.
+
+Ordinary ``append``, ``extend``, and list-like ``+`` add entries without
+inserting synchronization. For a boundary between selected channels,
+``sequence.align(channels)`` adds a shared ``Align`` instruction to them.
+``align_to_delays()`` returns an equivalent schedule with explicit delays
+instead of alignment markers, useful when inspecting timing. It does not
+modify the original. Similarly, ``trim()`` removes trailing delays in a
+new sequence; do not trim an idle interval that is part of the experiment.
+
+Native operations and measurement identity
+------------------------------------------
+
+The native operations in ``platform.natives`` are calibrated sequence
+factories, rather than instructions to reuse directly. Calling ``RX()``
+or ``MZ()`` creates a fresh sequence with fresh instruction identifiers;
+``create_sequence()`` is the equivalent explicit spelling. This preserves
+the calibrated parameters without reusing the identity of a previous
+measurement. Native availability depends on the platform.
+
+.. testcode:: experiment
+
+    from qibolab import AcquisitionType, AveragingMode, create_platform
 
     platform = create_platform("dummy")
-
-.. testcode:: python
-
-    from qibolab import Pulse, Rectangular
-
-    pulse = Pulse(
-        duration=40.0,  # Pulse duration in ns
-        amplitude=0.5,  # Amplitude normalized to [-1, 1]
-        relative_phase=0.0,  # Phase in radians
-        envelope=Rectangular(),
-    )
-
-Here, we defined a rectangular drive pulse using the generic Pulse object.
-
-Both the Pulses objects and the PulseShape object have useful plot functions and several different various helper methods.
-
-To organize pulses into sequences, Qibolab provides the :class:`qibolab.PulseSequence` object. Here's an example of how you can create and manipulate a pulse sequence:
-
-.. testcode:: python
-
-    from qibolab import Pulse, PulseSequence, Rectangular
-
-    pulse1 = Pulse(
-        duration=40,  # timing, in all qibolab, is expressed in ns
-        amplitude=0.5,  # this amplitude is relative to the range of the instrument
-        relative_phase=0,  # phases are in radians
-        envelope=Rectangular(),
-    )
-    pulse2 = Pulse(
-        duration=40,  # timing, in all qibolab, is expressed in ns
-        amplitude=0.5,  # this amplitude is relative to the range of the instrument
-        relative_phase=0,  # phases are in radians
-        envelope=Rectangular(),
-    )
-    pulse3 = Pulse(
-        duration=40,  # timing, in all qibolab, is expressed in ns
-        amplitude=0.5,  # this amplitude is relative to the range of the instrument
-        relative_phase=0,  # phases are in radians
-        envelope=Rectangular(),
-    )
-    pulse4 = Pulse(
-        duration=40,  # timing, in all qibolab, is expressed in ns
-        amplitude=0.5,  # this amplitude is relative to the range of the instrument
-        relative_phase=0,  # phases are in radians
-        envelope=Rectangular(),
-    )
-    drive_channel_qubit0 = platform.qubits[0].drive
-    sequence = PulseSequence(
-        [
-            (drive_channel_qubit0, pulse1),
-            (drive_channel_qubit0, pulse2),
-            (drive_channel_qubit0, pulse3),
-            (drive_channel_qubit0, pulse4),
-        ],
-    )
-
-    print(f"Total duration: {sequence.duration}")
-
-
-.. testoutput:: python
-    :hide:
-
-    Total duration: 160.0
-
-
-When conducting experiments on quantum hardware, pulse sequences are vital. Assuming you have already initialized a platform, executing an experiment is as simple as:
-
-.. testcode:: python
-
-    result = platform.execute([sequence])
-
-Lastly, when conducting an experiment, it is not always required to define a pulse from scratch.
-Usual pulses, such as pi-pulses or measurements, are already defined in the platform runcard and can be easily initialized with platform methods.
-These are relying on parameters held in the :ref:`main_doc_native` data structures.
-Typical experiments may include both pre-defined pulses and new ones:
-
-.. testcode:: python
-
-    from qibolab import Rectangular
-
     natives = platform.natives.single_qubit[0]
-    sequence = natives.RX() | natives.MZ()
+    measurement = natives.MZ()
+    sequence = natives.RX() | measurement
+    readout = measurement.acquisitions[0][1]
 
-    results = platform.execute([sequence])
+    another_measurement = natives.MZ()
+    assert readout.id != another_measurement.acquisitions[0][1].id
 
-
-Sweepers
---------
-
-Sweeper objects, represented by the :class:`qibolab.Sweeper` class, stand as a crucial component in experiments and calibration tasks within the Qibolab framework.
-
-Consider a scenario where a resonator spectroscopy experiment is performed. This process involves a sequence of steps:
-
-1. Define a pulse sequence.
-2. Define a readout pulse with frequency :math:`A`.
-3. Execute the sequence.
-4. Define a new readout pulse with frequency :math:`A + \epsilon`.
-5. Execute the sequence again.
-6. Repeat for increasing frequencies :math:`A + 2 \epsilon`, :math:`A + 3 \epsilon`, and so on.
-
-This approach is suboptimal and time-consuming, mainly due to the frequent communication between the control device and the Qibolab user after each execution. Such communication overhead significantly extends experiment duration.
-
-In supported control devices, an efficient technique involves defining a "sweeper" or a parameter scan directly on the device. This scan, applied to specific parameters, allows multiple variations to be executed in a single communication round, drastically reducing experiment time.
-
-To address the inefficiency, Qibolab introduces the concept of Sweeper objects.
-
-Sweeper objects in Qibolab are characterized by a :class:`qibolab.Parameter`. This parameter, crucial to the sweeping process, can be one of several types:
-
-- Amplitude
-- Duration
-- Relative phase
-- Start
-
---
-
-- Frequency
-- Offset
-
-The first group includes parameters of the pulses, while the second group includes parameters of channels.
-
-To designate the pulse(s) or channel(s) to which a sweeper is applied, you can utilize the ``pulses`` or ``channels`` parameter within the Sweeper object.
-
-.. note::
-
-   It is possible to simultaneously execute the same sweeper on different pulses or channels. The ``pulses`` or ``channels`` attribute is designed as a list, allowing for this flexibility.
-
-To effectively specify the sweeping behavior, Qibolab provides the ``values`` attribute along with the ``type`` attribute.
-
-The ``values`` attribute comprises an array of numerical values that define the sweeper's progression.
-
-Let's see some examples.
-Consider now a system with three qubits (qubit 0, qubit 1, qubit 2) with resonator frequency at 4 GHz, 5 GHz and 6 GHz.
-A typical resonator spectroscopy experiment could be defined with:
-
-.. testcode:: python
-
-    import numpy as np
-
-    from qibolab import Parameter, Sweeper
-
-    natives = platform.natives.single_qubit
-
-    sequence = (
-        natives[0].MZ()  # readout pulse for qubit 0 at 4 GHz
-        | natives[1].MZ()  # readout pulse for qubit 1 at 5 GHz
-        | natives[2].MZ()  # readout pulse for qubit 2 at 6 GHz
-    )
-
-    sweepers = [
-        Sweeper(
-            parameter=Parameter.frequency,
-            values=platform.config(qubit.probe).frequency
-            + np.arange(-200_000, +200_000, 1),  # define an interval of swept values
-            channels=[qubit.probe],
+    platform.connect()
+    try:
+        results = platform.execute(
+            [sequence],
+            nshots=8,
+            relaxation_time=100,
+            acquisition_type=AcquisitionType.INTEGRATION,
+            averaging_mode=AveragingMode.SINGLESHOT,
         )
-        for qubit in platform.qubits.values()
-    ]
+    finally:
+        platform.disconnect()
 
-    results = platform.execute([sequence], [sweepers], **options)
+    assert set(results) == {readout.id}
+    assert results[readout.id].shape == (8, 2)
 
-In this way, we first define three parallel sweepers with an interval of 400 MHz (-200 MHz --- 200 MHz). The resulting probed frequency will then be:
-    - for qubit 0: [3.8 GHz, 4.2 GHz]
-    - for qubit 1: [4.8 GHz, 5.2 GHz]
-    - for qubit 2: [5.8 GHz, 6.2 GHz]
+Save the measurement that actually went into the experiment. Calling
+``MZ()`` again afterwards creates a different identifier and cannot locate
+the earlier result. ``sequence.acquisitions`` finds both ``Acquisition``
+and ``Readout`` events, excluding delays on acquisition channels. A
+``Readout``'s public ``id`` is its nested acquisition's identifier.
 
-It is possible to define and executes multiple sweepers at the same time, in a nested loop style.
-For example:
+Sequence composition and shallow copies preserve instruction identities;
+they do not create fresh measurements. All acquisition identifiers must
+be unique within one call to ``execute``, including across different
+sequences. Consequently, passing ``[sequence, sequence.copy()]`` when it
+contains a measurement raises an error. Build independent alternatives
+with separate native factory calls, or use an instruction's ``new()``
+method when deliberately cloning it with a fresh identity.
 
-.. testcode:: python
+Choosing what to acquire
+------------------------
 
-    qubit = platform.qubits[0]
-    natives = platform.natives.single_qubit[0]
-    rx_sequence = natives.RX()
-    sequence = rx_sequence | natives.MZ()
+``platform.execute`` takes a **list of sequences**, an optional grouped
+list of sweepers, and keyword execution options. Multiple sequences are
+independent experiments, not implicitly concatenated stages. The platform
+may batch their execution, but measurements are still returned separately
+by identifier. Sequence channels must exist on the selected platform:
+obtain them from ``platform.qubits`` rather than assuming names from a
+different laboratory.
 
-    f0 = platform.config(qubit.drive).frequency
-    sweeper_freq = Sweeper(
-        parameter=Parameter.frequency,
-        range=(f0 - 100_000, f0 + 100_000, 10_000),
-        channels=[qubit.drive],
-    )
-    rx_pulse = rx_sequence[0][1]
-    sweeper_amp = Sweeper(
-        parameter=Parameter.amplitude,
-        range=(0, 0.43, 0.3),
-        pulses=[rx_pulse],
-    )
+``nshots`` controls repetitions; ``relaxation_time`` is the wait between
+repetitions in ns. Omitting either, or passing ``None``, uses
+``platform.settings``. A short wait is convenient for dummy examples but
+does not establish a suitable reset time for real qubits.
+``fast_reset=True`` requests an alternative reset mechanism only where
+supported. On hardware, connect before execution and always disconnect
+afterwards, including when an exception occurs.
 
-    results = platform.execute([sequence], [[sweeper_freq], [sweeper_amp]], **options)
+Acquisition determines the information retained. ``DISCRIMINATION``
+returns state labels for individual shots, using the platform's readout
+calibration. ``INTEGRATION`` returns a demodulated, integrated I/Q pair.
+``RAW`` retains a sampled waveform rather than reducing it to one I/Q
+pair. Do not assume raw data are already demodulated, or that their
+normalization is a universal voltage scale.
 
-Let's say that the RX pulse has, from the runcard, a frequency of 4.5 GHz and an amplitude of 0.3, the parameter space probed will be:
+Averaging determines whether individual repetitions remain accessible.
+``SINGLESHOT`` retains the shot axis. ``CYCLIC`` and ``SEQUENTIAL`` average
+it away. Conceptually, cyclic averaging revisits the whole scan for each
+repetition, whereas sequential averaging completes the repetitions at
+one scan point before advancing. Cyclic averaging can reduce bias from
+slow drift. These modes have the same output shape but different
+acquisition ordering; the selected hardware must support the requested
+combination. Averaged binary discrimination produces population
+estimates rather than individual 0/1 outcomes.
 
-- amplitudes: [0, 0.03, 0.06, 0.09, 0.12, ..., 0.39, 0.42]
-- frequencies: [4.4999, 4.49991, 4.49992, ...., 4.50008, 4.50009] (GHz)
-
-Sweepers given in the same list will be applied in parallel, in a Python ``zip`` style,
-while different lists define nested loops, with the first list corresponding to the outer loop.
-
-.. warning::
-
-   Different control devices may have different limitations on the sweepers.
-   It is possible that the sweeper will raise an error, if not supported, or that it will be automatically converted as a list of pulse sequences to perform sequentially.
-
-Execution Parameters
---------------------
-
-In the course of several examples, you've encountered the ``**options`` argument in function calls like:
-
-.. testcode:: python
-
-   res = platform.execute([sequence], **options)
-
-Let's now delve into the details of the ``options`` and understand its parts.
-
-The ``options`` extra arguments, is a vital element for every hardware execution.
-It encompasses essential information that tailors the execution to specific requirements:
-
-- ``nshots``: Specifies the number of experiment repetitions.
-- ``relaxation_time``: Introduces a wait time between repetitions, measured in nanoseconds (ns).
-- ``fast_reset``: Enables or disables fast reset functionality, if supported; raises an error if not supported.
-- ``acquisition_type``: Determines the acquisition mode for results.
-- ``averaging_mode``: Defines the mode for result averaging.
-
-The first three parameters are straightforward in their purpose. However, let's take a closer look at the last two parameters.
-
-Supported acquisition types, accessible via the :class:`qibolab.AcquisitionType` enumeration, include:
-
-- Discrimination: Distinguishes states based on acquired voltages.
-- Integration: Returns demodulated and integrated waveforms.
-- Raw: Offers demodulated, yet unintegrated waveforms.
-
-Supported averaging modes, available through the :class:`qibolab.AveragingMode` enumeration, consist of:
-
-- Cyclic: Provides averaged results, yielding a single IQ point per measurement.
-- Singleshot: Supplies non-averaged results.
-
-.. note::
-
-    Two averaging modes actually exists: cyclic and sequential.
-    In sequential mode, a sweeper is executed with the repetition loop nested inside, while cyclic mode places the sweeper as the outermost loop. Cyclic execution generally offers better noise resistance.
-    Ideally, use the cyclic mode. However, some devices lack support for it and will automatically convert it to sequential execution.
+For a one-off change to channel configuration, the ``updates`` execution
+option accepts a list of component-name-to-property mappings. They are
+applied on top of the platform configuration for that execution, with
+later entries taking precedence, without replacing the stored platform
+parameters. A scan over many values is instead a job for sweepers.
 
 .. _main_doc_results:
 
-Results
--------
+Reading the result arrays
+-------------------------
 
-``platform.execute`` returns a dictionary, mapping the acquisition pulse id to the results of the corresponding measurements.
-The results of each measurement are a numpy array with dimension that depends on the number of shots, acquisition type,
-averaging mode and the number of swept points, if sweepers were used.
+The result dictionary maps each acquisition identifier to a NumPy array.
+It does not have a leading sequence or qubit axis: several readouts mean
+several dictionary entries. This makes the retained readout object, or
+``sequence.acquisitions``, the reliable route from an experiment to its
+data.
 
-For example in
+Without sweeps, the shapes are:
 
-.. testcode:: python
+.. list-table::
+   :header-rows: 1
+   :widths: 30 35 35
 
-    qubit = platform.qubits[0]
-    natives = platform.natives.single_qubit[0]
+   * - Acquisition
+     - ``SINGLESHOT``
+     - ``CYCLIC`` or ``SEQUENTIAL``
+   * - ``DISCRIMINATION``
+     - ``(nshots,)``
+     - ``()`` (a scalar array)
+   * - ``INTEGRATION``
+     - ``(nshots, 2)``
+     - ``(2,)``
+   * - ``RAW``
+     - ``(nshots, samples, 2)``
+     - ``(samples, 2)``
 
-    ro_sequence = natives.MZ()
-    sequence = natives.RX() | ro_sequence
+The final length-two axis holds I and Q, in that order. ``samples`` is
+the number of acquired time samples for that readout, determined by
+acquisition duration and the platform's acquisition sampling behavior.
+It is not the drive-pulse duration, and need not be identical for
+different readouts.
 
+A sweep adds one axis per **group** of sweepers, between the optional
+shot axis and the acquisition axes. If the group lengths are ``L0`` and
+``L1``, single-shot integration has shape ``(nshots, L0, L1, 2)`` and
+averaged integration has shape ``(L0, L1, 2)``. Single-shot
+discrimination is ``(nshots, L0, L1)``; averaged raw acquisition is
+``(L0, L1, samples, 2)``. ``ExecutionParameters.results_shape`` expresses
+this rule when given concrete ``nshots`` and, for raw acquisition, the
+sample count.
 
-    ro_pulse = ro_sequence[0][1]
-    result = platform.execute(
-        [sequence],
-        nshots=1000,
-        relaxation_time=10,
-        fast_reset=False,
-        acquisition_type=AcquisitionType.INTEGRATION,
-        averaging_mode=AveragingMode.CYCLIC,
-    )
+Sweepers in one group advance together in a zip-like traversal; separate
+groups define nested loops, with the first group outermost. Two
+sweepers in one group therefore do **not** create a two-dimensional
+grid. The :ref:`sweep tutorial <tutorials_sweeps>` demonstrates both
+arrangements, including how to index their results.
 
+From a valid schedule to a valid hardware experiment
+----------------------------------------------------
 
-``result`` will be a dictionary with a single key ``ro_pulse.id`` and an array of
-two elements, the averaged I and Q components of the integrated signal.
-If instead, ``(AcquisitionType.INTEGRATION, AveragingMode.SINGLESHOT)`` was used, the array would have shape ``(options["nshots"], 2)``,
-while for ``(AcquisitionType.DISCRIMINATION, AveragingMode.SINGLESHOT)`` the shape would be ``(options["nshots"],)`` with values 0 or 1.
+The Python model describes the intended experiment, not all the
+constraints of a particular control system. Hardware may restrict timing
+resolution, waveform length, amplitude and frequency ranges, acquisition
+windows, the number of measurements, supported sweep parameters, or the
+combination of acquisition and averaging modes. A duration sweep can
+also change when later instructions start, so a fixed alignment strategy
+needs to remain meaningful over the whole scan.
 
-The shape of the values of an integrated acquisition with two sweepers will be:
-
-.. testcode:: python
-
-    f0 = platform.config(qubit.drive).frequency
-    sweeper1 = Sweeper(
-        parameter=Parameter.frequency,
-        range=(f0 - 100_000, f0 + 100_000, 1),
-        channels=[qubit.drive],
-    )
-    sweeper2 = Sweeper(
-        parameter=Parameter.frequency,
-        range=(f0 - 200_000, f0 + 200_000, 1),
-        channels=[qubit.probe],
-    )
-    shape = (options["nshots"], len(sweeper1.values), len(sweeper2.values), 2)
+Check the platform's calibrated configuration and supported capabilities
+before executing a new experiment. A successful dummy execution verifies
+API use and array layout, not physical feasibility or experimental
+correctness. In particular, no contrast, oscillation, or decay inferred
+from dummy random values is a prediction about the proposed experiment.

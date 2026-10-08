@@ -1,73 +1,82 @@
-Install
-=======
-
 .. _installing-qibolab:
 
-Qibolab
-^^^^^^^
-Installing with pip
-"""""""""""""""""""
+Installation
+============
 
-The installation using ``pip`` is the recommended approach to use Qibolab.
-After updating ``pip``, if needed, install Qibolab with:
-
-.. code-block:: bash
-
-   pip install qibolab
-
-
-Installing from source
-""""""""""""""""""""""
-
-It is possible to install Qibolab from source, althought it is not recommended if not strictly required.
-
-
-In order to install ``qibolab`` from source, you have to clone the GitHub repository with:
+Qibolab requires Python 3.11, 3.12, or 3.13. The base package provides the pulse
+and platform APIs and a built-in dummy platform, so you can work through the
+:doc:`first experiment <experiment>` without laboratory equipment or Qibo.
+Install it in a virtual environment:
 
 .. code-block:: bash
 
-      git clone https://github.com/qiboteam/qibolab.git
-      cd qibolab
+    python -m venv .venv
+    source .venv/bin/activate
+    python -m pip install qibolab
 
-Then, to install the package
+On Windows PowerShell, activate the environment with
+``.venv\Scripts\Activate.ps1`` instead. Using ``python -m pip`` ensures that
+packages are installed for the interpreter you will run.
 
-- if no changes on the source code are needed, one can still use ``pip``
+Choose the optional features you need
+-------------------------------------
 
-  .. code-block:: bash
+Circuit execution through Qibo is optional. Install the ``backend`` extra to
+use Qibolab as a Qibo backend:
 
-        pip install .
+.. code-block:: bash
 
-- otherwise, to modify the source code, it is possible to install using ``uv`` or ``pip``
+    python -m pip install "qibolab[backend]"
 
-  .. code-block:: bash
+Numerical emulation has a separate set of dependencies:
 
-        uv sync         # recommended
-        pip install -e . # not recommended
+.. code-block:: bash
 
-_______________________
+    python -m pip install "qibolab[emulator]"
 
-.. _Instruments:
+You can combine extras as ``"qibolab[backend,emulator]"``. Installing emulation
+dependencies does not automatically create or calibrate an emulated platform;
+see the :doc:`emulation guide <../main-documentation/emulator>` for the
+distinction between a dummy platform and a numerical model.
 
-Supported instruments
-^^^^^^^^^^^^^^^^^^^^^
+For real hardware, install the integration dependencies required by the
+platform supplied by your laboratory. They are separate from the base
+package, and their installation and device-specific setup are outside the
+scope of this documentation. Loading a platform definition may import those
+dependencies even before you connect to equipment.
 
-Qibolab supports the following control instruments:
+Install from source
+--------------------
 
-* Quantum Machines
-* Qblox
-* Xilinx RFSoCs
+For development, clone the repository and create an editable installation:
 
-In order to use Qibolab on with one of these instruments chosen instrument,
-additional dependencies need to be installed.
+.. code-block:: bash
 
-.. note::
+    git clone https://github.com/qiboteam/qibolab.git
+    cd qibolab
+    python -m pip install -e .
 
-    Some packages are available which collect and pin the required compatible
-    dependencies, such as ``qibolab-qm`` and ``qibolab-qblox``. Search on `PyPI
-    <https://pypi.org/search/?q=%22qibolab-%22&o=>`_ for them
+The repository also supports ``uv``. ``uv sync`` installs the project and its
+default development dependency group; request other groups or extras explicitly:
 
-.. note::
+.. code-block:: bash
 
-    The ``qcodes`` package is also required to operate some local oscillators (e.g. TWPA
-    pumps). While there is no dedicated package to restrict the dependency yet, any
-    available version is supposed to be suitable to control them
+    uv sync --group docs --extra backend --extra emulator
+    uv run make -C doc html
+
+The generated documentation is written to ``doc/build/html``. To execute the
+documentation's testable examples independently of a cached Sphinx environment:
+
+.. code-block:: bash
+
+    uv run make -C doc doctest SPHINXOPTS='--fresh-env'
+
+Finding laboratory platforms
+-----------------------------
+
+An installed Qibolab package and a configured laboratory platform are different
+things. Except for ``dummy``, ``create_platform("name")`` looks for a local
+platform definition using ``QIBOLAB_PLATFORMS``. Neither installing the base
+package nor installing an extra supplies your laboratory's wiring or calibration
+parameters. Follow :doc:`../tutorials/storage` to configure platform discovery,
+and :doc:`../tutorials/lab` if you are assembling a platform yourself.

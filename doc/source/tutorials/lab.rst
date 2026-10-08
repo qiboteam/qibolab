@@ -1,405 +1,269 @@
-.. admonition:: Work in progress
-
-    This page is only partially updated from a previous version of Qibolab.
-
-    In case of doubts, contact the `Qibo developers
-    <https://github.com/qiboteam/qibo#contacts>`_.
-
 .. _tutorial_platform:
 
-How to connect Qibolab to your lab?
-===================================
+Constructing and customizing a platform
+=======================================
 
-In this section we will show how to let Qibolab communicate with your lab's
-instruments and run an experiment.
+A laboratory integration supplies instrument objects and declares the channels
+that they control. Qibolab combines this hardware description with operating
+parameters to form a :class:`qibolab.Platform`. This tutorial starts at that
+boundary: it does not require a particular instrument implementation or explain
+how to configure one. The runnable examples use ``create_platform("dummy")``
+and never communicate with a physical device.
 
-The main required object, in this case, is the :class:`qibolab.Platform`.
-A Platform is defined as a QPU (quantum processing unit with one or more qubits)
-controlled by one ore more instruments.
+For a real laboratory, obtain the instrument objects and channel declarations
+from the integration maintained for your setup. Before connecting, verify that
+the qubit-to-channel mapping agrees with the wiring and that the operating
+parameters are appropriate for the device. A model that validates successfully
+is not necessarily calibrated or safe to execute.
 
-How to define a platform for a self-hosted QPU?
------------------------------------------------
+Composing hardware and parameters
+---------------------------------
 
-The :class:`qibolab.Platform` object holds all the information required
-to execute programs, and in particular :class:`qibolab.PulseSequence` in
-a real QPU. It is comprised by different objects that contain information about
-the native gates and the lab's instrumentation.
+:class:`qibolab.Hardware` groups instrument, qubit, and optional coupler
+mappings. It is deliberately independent of the calibration parameters.
+Here an existing dummy platform supplies those mappings; in a laboratory the
+same step can use a ``Hardware`` object supplied by an external integration.
 
-This is permanently stored as its constructing function, ``create()``, defined in a
-source file, but whose data could be stored in a package-defined format, for which
-loading (and even dumping) methods are provided.
-The details of this process are explained in the following sections.
+.. doctest:: lab-composition
 
-.. note::
+    >>> from qibolab import Parameters, Platform, create_platform
+    >>> from qibolab.platform import Hardware
+    >>> existing = create_platform("dummy")
+    >>> hardware = Hardware(
+    ...     instruments=existing.instruments,
+    ...     qubits=existing.qubits,
+    ...     couplers=existing.couplers,
+    ... )
+    >>> parameters = Parameters.model_validate_json(existing.parameters.model_dump_json())
+    >>> platform = Platform(
+    ...     name="my_experiment",
+    ...     parameters=parameters,
+    ...     instruments=hardware.instruments,
+    ...     qubits=hardware.qubits,
+    ...     couplers=hardware.couplers,
+    ... )
+    >>> platform.name
+    'my_experiment'
+    >>> platform.is_connected
+    False
 
-   The main distinction between the content of the Python source file and the parameters
-   stored as data is based on the possibility to automatically read and consume these
-   parameters, and possibly even update them in a calibration process.
+The JSON round trip makes an independent parameter model. The instrument objects
+are still shared with ``existing``: composing hardware this way does not clone
+physical devices or create independent connection ownership. Use only one
+platform to manage these shared instruments at a time.
 
-   More parameters may be introduced, and occasionally some platforms are defining them
-   in the source, in a first stage.
+With an integration-provided hardware object, the constructor has exactly the
+same form. Replace the copied dummy parameters with a ``Parameters`` model
+containing the integration's calibrated configurations and pulse sequences, or
+load that model from your own storage. No directory layout or environment
+variable is required for direct construction. If the integration instead
+supplies separate instrument and qubit mappings, pass them as
+``Hardware(instruments=provided_instruments, qubits=provided_qubits)`` and include
+``couplers=provided_couplers`` when applicable. These are already constructed
+objects from the integration; this composition step does not instantiate
+instrument classes.
 
-   The general idea is to retain as much flexibility as possible, while avoiding the
-   custom handling of commonly structured data by each platform, that would also
-   complicate its handling by downstream projects.
+Checking the mapping
+--------------------
 
-Registering platforms
-^^^^^^^^^^^^^^^^^^^^^
+The qubit map is the starting point for finding the channels needed by an
+experiment. Native operations are keyed by the same physical qubit identifiers.
+Inspect both, rather than assuming that the qubit's number is a physical port:
 
-The ``create()`` function described in the above example can be called or imported
-directly in any Python script. Alternatively, it is also possible to make the platform
-available as
+.. doctest:: lab-composition
 
-.. code-block::  python
+    >>> qubit_id = 0
+    >>> qubit = platform.qubits[qubit_id]
+    >>> qubit.drive, qubit.acquisition
+    ('0/drive', '0/acquisition')
+    >>> all(channel in platform.channels for channel in qubit.channels)
+    True
+    >>> platform.config(qubit.drive).kind
+    'iq'
+    >>> platform.natives.single_qubit[qubit_id].MZ is not None
+    True
 
-    from qibolab import create_platform
+The test above establishes that the identifiers are declared, not that their
+physical paths are correctly wired. ``Qubit.default("q0")`` is useful when an
+integration adopts names such as ``"q0/drive"``, but it only creates the
+identifier container. It neither allocates an output nor adds that output to an
+instrument's channels. Optional qubit fields can remain ``None`` when the
+corresponding role is not needed.
 
-    platform = create_platform("my_platform")
+Component configurations should agree with the channel types and all shared
+references. For instance, an IQ channel referring to an oscillator requires an
+appropriate configuration under that oscillator's identifier. A component that
+is also a separately configurable instrument uses the same identifier in
+``configs`` and ``instruments``. The conceptual distinctions and units are
+described in :ref:`main_doc_platform`.
 
+Customizing an existing definition
+----------------------------------
 
-To do so, ``create()`` needs to be saved in a module called ``platform.py`` inside
-a folder with the name of this platform (in this case ``my_platform``).
-Moreover, the environment flag ``QIBOLAB_PLATFORMS`` needs to point to the directory
-that contains this folder.
-Examples of advanced platforms are available at `this
-repository <https://github.com/qiboteam/qibolab_platforms_qrc>`_.
+Start with known parameters when adapting an existing platform.
+``Platform.update`` accepts dotted paths and replaces the in-memory parameter
+model; it does not alter the hardware mapping or automatically save a file.
+For this dummy-only example, choose explicit deterministic values:
+
+.. doctest:: lab-composition
+
+    >>> platform.update(
+    ...     {
+    ...         "settings.nshots": 4,
+    ...         "settings.relaxation_time": 1000,
+    ...         f"configs.{qubit.drive}.frequency": 4.1e9,
+    ...         "native_gates.single_qubit.0.RX.0.1.duration": 40,
+    ...         "native_gates.single_qubit.0.RX.0.1.amplitude": 0.2,
+    ...     }
+    ... )
+    >>> platform.settings.nshots, platform.settings.relaxation_time
+    (4, 1000)
+    >>> platform.natives.single_qubit[0].RX[0][1].duration
+    40.0
+    >>> platform.config(qubit.drive).frequency
+    4100000000.0
+
+The timing values are in ns, the frequency is in Hz, and the pulse amplitude is
+normalized and dimensionless. These are demonstration values, not calibration
+recommendations. Updating a native operation changes its stored template;
+construct new sequences after the update.
+
+Now make a measurement sequence, connect, execute, and release the connection:
+
+.. doctest:: lab-composition
+
+    >>> sequence = platform.natives.single_qubit[qubit_id].MZ.create_sequence()
+    >>> acquisition = sequence.acquisitions[0][1]
+    >>> platform.connect()
+    >>> try:
+    ...     results = platform.execute(
+    ...         [sequence],
+    ...         updates=[{qubit.drive: {"frequency": 4.2e9}}],
+    ...     )
+    ... finally:
+    ...     platform.disconnect()
+    ...
+    >>> results[acquisition.id].shape
+    (4,)
+    >>> platform.config(qubit.drive).frequency
+    4100000000.0
+    >>> platform.is_connected
+    False
+
+The result values are generated by the dummy platform, so only their shape is
+shown. The dictionary is keyed by ``acquisition.id``, a UUID, rather than by
+qubit number or the sequence's position in the execution batch. A stored JSON
+qubit key such as ``"0"`` is also distinct from the integer key ``0`` used in
+this example's in-memory qubit and native mappings.
+
+``updates`` here is a **list of configuration overrides**, not the dotted
+path dictionary accepted by ``Platform.update``. The override affects this call
+without changing the saved parameter model. ``nshots`` and ``relaxation_time``
+can also be supplied as execution keywords to override their stored defaults.
+To retain a deliberate parameter change across runs, use ``update`` followed by
+``dump`` as explained in :ref:`main_doc_storage`.
+
+Starting a new parameter model
+------------------------------
+
+When no parameter model exists yet,
+:func:`qibolab.platform.initialize_parameters` can generate a structural
+starting point from a ``Hardware`` object:
+
+.. doctest:: lab-initialization
+
+    >>> from qibolab import create_platform
+    >>> from qibolab.platform import Hardware, initialize_parameters
+    >>> existing = create_platform("dummy")
+    >>> hardware = Hardware(
+    ...     instruments=existing.instruments,
+    ...     qubits=existing.qubits,
+    ...     couplers=existing.couplers,
+    ... )
+    >>> initial = initialize_parameters(
+    ...     hardware,
+    ...     natives={"RX", "MZ", "CZ"},
+    ...     pairs=["0-1"],
+    ... )
+    >>> initial.settings.nshots, initial.settings.relaxation_time
+    (1000, 100000)
+    >>> initial.configs[hardware.qubits[0].drive].frequency
+    0.0
+    >>> pulse = initial.native_gates.single_qubit[0].RX[0][1]
+    >>> pulse.duration, pulse.amplitude
+    (0.0, 0.0)
+    >>> list(initial.native_gates.two_qubit)
+    [(0, 1)]
+    >>> initial.native_gates.two_qubit[(0, 1)].CZ[0][0]
+    '0/flux'
+
+This helper does not measure the device, copy the existing platform's
+calibration, or discover valid two-qubit interactions. It inspects the hardware's
+channel mappings and generates zero-valued DC biases, IQ frequencies,
+acquisition timing, and oscillator frequency/power where those channel types
+and references are present. Mixer offsets start at zero and IQ corrections
+retain their model defaults. Other components or integration-specific
+configuration fields may need to be supplied separately.
+
+With ``natives`` omitted, single-qubit native fields remain undefined.
+Requested gate names select the supported template fields; they do not
+implement or calibrate the operations. Generated pulses have zero duration and
+amplitude. ``MZ`` receives a zero-duration readout template, and couplers receive
+a ``CP`` template on their flux line. Required roles must already exist: for
+example, ``RX12`` needs a ``drive_extra[(1, 2)]`` entry.
+
+Pairs are explicitly supplied as strings such as ``"0-1"``. Their generated
+two-qubit templates initially act on the first qubit's drive or flux channel,
+depending on the operation. This placeholder is not a determination of the
+correct participating qubit or coupler. Replace it with the full calibrated
+sequence appropriate to the interaction.
+
+Before using the model on hardware, fill and calibrate its configurations and
+native sequences, set meaningful execution defaults, and verify the routing.
+``initialize_parameters`` is a convenient schema bootstrap, not a shortcut
+around that process.
+
+For an on-disk definition whose ``create()`` returns ``Hardware``,
+:func:`qibolab.platform.reset_parameters` performs the corresponding bootstrap
+and writes ``parameters.json``. It **overwrites existing parameters**, requires
+the current platform-discovery environment, and is not intended as a routine
+load operation. See :ref:`main_doc_storage` for that environment and the
+difference between loading hardware and loading a full platform.
 
 .. _parameters_json:
 
-Loading platform parameters from JSON
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Serializing parameters independently
+------------------------------------
 
-Operating a QPU requires calibrating a set of parameters, the number of which increases
-with the number of qubits. Hardcoding such parameters in the ``create()`` function is
-not scalable.
-However, since ``create()`` is part of a Python module, is is possible to load
-parameters from an external file or database.
+Parameters are ordinary validated models and can be serialized without a
+platform directory. This is useful when an application stores calibrations in
+a database or manages versions independently of the hardware factory:
 
-Qibolab provides some utility functions, accessible through
-:py:mod:`qibolab._core.parameters`, for loading calibration parameters stored in a JSON
-file with a specific format.
-Here is an example
+.. doctest:: lab-composition
 
-.. admonition:: Parameters dictionary
-  :collapsible: closed
+    >>> payload = platform.parameters.model_dump_json(indent=2)
+    >>> restored = Parameters.model_validate_json(payload)
+    >>> restored.settings.nshots
+    4
+    >>> restored.configs[qubit.drive].frequency
+    4100000000.0
+    >>> restored.native_gates.single_qubit[0].RX[0][1].amplitude
+    0.2
 
-  .. code-block::  json
+The JSON has three top-level sections, ``settings``, ``configs``, and
+``native_gates``. Typed configurations and instructions carry a ``kind`` field
+used for deserialization. Pair identifiers become hyphen-separated string keys;
+sequence entries contain a channel identifier and a serialized instruction.
+Prefer generating this representation with ``model_dump_json`` instead of
+hand-writing large dictionaries.
 
-      {
-        "settings": {
-          "nshots": 1024,
-          "relaxation_time": 50000
-        },
-        "configs": {
-          "0/drive": {
-            "kind": "iq",
-            "frequency": 4855663000
-          },
-          "1/drive": {
-            "kind": "iq",
-            "frequency": 5800563000
-          },
-          "0/flux": {
-            "kind": "dc",
-            "offset": 0.0
-          },
-          "1/flux": {
-            "kind": "dc",
-            "offset": 0.0
-          },
-          "0/probe": {
-            "kind": "iq",
-            "frequency": 7453265000
-          },
-          "1/probe": {
-            "kind": "iq",
-            "frequency": 7655107000
-          },
-          "0/acquisition": {
-            "kind": "acquisition",
-            "delay": 0,
-            "smearing": 0
-          },
-          "1/acquisition": {
-            "kind": "acquisition",
-            "delay": 0,
-            "smearing": 0
-          },
-          "01/coupler": {
-            "kind": "dc",
-            "offset": 0.12
-          }
-        },
-        "native_gates": {
-          "single_qubit": {
-            "0": {
-              "RX": [
-                [
-                  "0/drive",
-                  {
-                    "kind": "pulse",
-                    "duration": 40,
-                    "amplitude": 0.0484,
-                    "envelope": {
-                      "kind": "drag",
-                      "rel_sigma": 0.2,
-                      "beta": -0.02
-                    }
-                  }
-                ]
-              ],
-              "MZ": [
-                  [
-                    "0/acquisition",
-                    {
-                        "kind": "readout",
-                        "acquisition": {
-                            "kind": "acquisition",
-                            "duration": 620.0
-                        },
-                        "probe": {
-                            "kind": "pulse",
-                            "duration": 620.0,
-                            "amplitude": 0.003575,
-                            "envelope": {
-                                "kind": "rectangular"
-                            }
-                        }
-                    }
-                ]
-              ]
-            },
-            "1": {
-              "RX": [
-                [
-                  "1/drive",
-                  {
-                    "kind": "pulse",
-                    "duration": 40,
-                    "amplitude": 0.05682,
-                    "envelope": {
-                      "kind": "drag",
-                      "rel_sigma": 0.2,
-                      "beta": -0.04
-                    }
-                  }
-                ]
-              ],
-              "MZ": [
-                [
-                  "1/acquisition",
-                  {
-                      "kind": "readout",
-                      "acquisition": {
-                          "kind": "acquisition",
-                          "duration": 960.0
-                      },
-                      "probe": {
-                          "kind": "pulse",
-                          "duration": 960.0,
-                          "amplitude": 0.00325,
-                          "envelope": {
-                              "kind": "rectangular"
-                          }
-                      }
-                  }
-                ]
-              ]
-            }
-          },
-          "two_qubit": {
-            "0-1": {
-              "CZ": [
-                [
-                  "01/coupler",
-                  {
-                    "kind": "pulse",
-                    "duration": 40,
-                    "amplitude": 0.1,
-                    "envelope": {
-                      "kind": "rectangular"
-                    }
-                  }
-                ],
-                [
-                  "0/flux",
-                  {
-                    "kind": "pulse",
-                    "duration": 30,
-                    "amplitude": 0.6025,
-                    "envelope": {
-                      "kind": "rectangular"
-                    }
-                  }
-                ],
-                [
-                  "0/drive",
-                  {
-                    "kind": "virtualz",
-                    "phase": -1
-                  }
-                ],
-                [
-                  "1/drive",
-                  {
-                    "kind": "virtualz",
-                    "phase": -3
-                  }
-                ]
-              ]
-            }
-          }
-        }
-      }
+If an external integration supplies additional configuration kinds, it must
+register them with ``qibolab.ConfigKinds.extend`` before deserializing them.
+This registry is process-wide, so changing it during a session affects later
+loads. Built-in configuration kinds need no registration.
 
-This file contains different sections: ``configs`` defines the default configuration of channel
-parameters, while ``native_gates`` specifies the calibrated pulse parameters for implementing
-single and two-qubit gates.
-Note that such parameters may slightly differ depending on the QPU architecture.
-
-Providing the above JSON is not sufficient to instantiate a
-:class:`qibolab.Platform`. This should still be done using a
-``create()`` method. The ``create()`` method should be put in a
-file named ``platform.py`` inside the ``my_platform`` directory.
-Here is the ``create()`` method that loads the parameters from the JSON:
-
-.. testcode::  python
-
-    # my_platform / platform.py
-
-    from pathlib import Path
-    from qibolab import (
-        AcquisitionChannel,
-        DcChannel,
-        IqChannel,
-        Platform,
-        Qubit,
-    )
-    from qibolab.instruments import DummyInstrument
-
-    FOLDER = Path.cwd()
-
-
-    def create():
-        qubits = {}
-        for q in range(2):
-            qubits[q] = Qubit(
-                drive=f"{q}/drive",
-                flux=f"{q}/flux",
-                probe=f"{q}/probe",
-                acquisition=f"{q}/acquisition",
-            )
-
-        couplers = {0: Qubit(flux="01/coupler")}
-
-        channels = {}
-        for q in range(2):
-            channels[qubits[q].drive] = IqChannel(
-                device="my_instrument", path="1", mixer=None, lo=None
-            )
-            channels[qubits[q].flux] = DcChannel(device="my_instrument", path="2")
-            channels[qubits[q].probe] = IqChannel(
-                device="my_instrument", path="0", mixer=None, lo=None
-            )
-            channels[qubits[q].acquisition] = AcquisitionChannel(
-                device="my_instrument", path="0", twpa_pump=None, probe=qubits[q].probe
-            )
-
-        channels[couplers[0].flux] = DcChannel(device="my_instrument", path="5")
-
-        instruments = {
-            "my_instrument": DummyInstrument(
-                name="my_instrument", address="0.0.0.0:0", channels=channels
-            )
-        }
-
-        return Platform.load(FOLDER, instruments, qubits, couplers=couplers)
-
-Note that this assumes that the JSON with parameters is saved as ``<folder>/parameters.json`` where ``<folder>``
-is the directory containing ``platform.py``.
-
-
-Instrument settings
-^^^^^^^^^^^^^^^^^^^
-
-The parameters of the previous example contains only parameters associated to the
-channel configuration and the native gates. In some cases parameters associated to
-instruments also need to be calibrated.
-An example is the frequency and the power of local oscillators, such as the one used to
-pump a traveling wave parametric amplifier (TWPA).
-
-The parameters JSON can contain such parameters in the ``configs`` section:
-
-.. code-block::  json
-
-    {
-        "settings": {
-            "nshots": 1024,
-            "relaxation_time": 50000
-        },
-        "configs": {
-            "twpa_pump": {
-                "kind": "oscillator",
-                "frequency": 4600000000,
-                "power": 5
-            }
-        },
-    }
-
-
-Note that the key used in the JSON have to be the same with the instrument name used in
-the instrument dictionary when instantiating the :class:`qibolab.Platform`, in this case
-``"twpa_pump"``.
-
-.. testcode::  python
-
-    # my_platform / platform.py
-
-    from pathlib import Path
-    from qibolab import (
-        AcquisitionChannel,
-        DcChannel,
-        IqChannel,
-        Platform,
-        Qubit,
-    )
-    from qibolab.instruments import DummyInstrument
-
-    FOLDER = Path.cwd()
-
-
-    def create():
-        qubits = {}
-        for q in range(2):
-            qubits[q] = Qubit(
-                drive=f"{q}/drive",
-                flux=f"{q}/flux",
-                probe=f"{q}/probe",
-                acquisition=f"{q}/acquisition",
-            )
-
-        couplers = {0: Qubit(flux="01/coupler")}
-
-        channels = {}
-        for q in range(2):
-            channels[qubits[q].drive] = IqChannel(
-                device="my_instrument", path="1", mixer=None, lo=None
-            )
-            channels[qubits[q].flux] = DcChannel(device="my_instrument", path="2")
-            channels[qubits[q].probe] = IqChannel(
-                device="my_instrument", path="0", mixer=None, lo=None
-            )
-            channels[qubits[q].acquisition] = AcquisitionChannel(
-                device="my_instrument", path="0", twpa_pump=None, probe=qubits[q].probe
-            )
-
-        channels[couplers[0].flux] = DcChannel(device="my_instrument", path="5")
-
-        instruments = {
-            "my_instrument": DummyInstrument(
-                name="my_instrument", address="0.0.0.0:0", channels=channels
-            ),
-            "twpa_pump": DummyLocalOscillator(name="twpa_pump", address="0.0.0.1:0"),
-        }
-
-        return Platform.load(FOLDER, instruments, qubits, couplers=couplers)
+Loading ``Parameters`` validates the data but does not create hardware objects,
+open connections, or verify a physical calibration. Reuse the explicit
+``Platform`` constructor from the first example to combine a restored model
+with the integration's hardware. Alternatively, adopt the conventional
+``platform.py`` and ``parameters.json`` layout in :ref:`main_doc_storage`.

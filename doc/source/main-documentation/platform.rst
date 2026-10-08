@@ -3,264 +3,283 @@
 Platforms
 =========
 
-One of the core goals of Qibolab is to allow the execution of the experiments defined
-with its own :ref:`Experiment API <main_doc_experiment>` on diverse platforms.
-
-In order to do this, the main abstraction introduced is exactly the
-:class:`.Platform` itself, which is intended to represent a collection of
-instruments, suitably connected to the device operated as a QPU.
-
-The handling of the instruments it will be mainly internal to the Qibolab itself, and it
-is defined by the instruments' drivers.
-
-Usage
------
-
-The whole workflow is supposed to be the following:
-
-#. the experiment is defined by the user using the mentioned :ref:`Experiment API
-   <main_doc_experiment>`, together with an optional set of temporary configuration
-   updates
-#. the execution is invoked through :meth:`.Platform.execute`, which acts as the
-   single entry point
-#. internally, the configurations and experiment definition are shared with all the
-   registered instruments, iterating over those registered in the platform, and
-   converting the instructions to the each instrument's representation (which is the main
-   role of the driver), finally uploading them
-#. the experiment is then triggerred
-#. upon completion, results are downloaded from the relevant sources, and collected into
-   a single collection, which is returned as the output of :meth:`.Platform.execute`
-
-.. note::
-
-    Because of internal Qibolab's limitations, currently it is assumed that there is
-    just a single instrument capable of producing pulses (a
-    :class:`._core.instruments.abstract.Controller` instance). While all the
-    other instruments will play a passive role (e.g. LOs), which boils down in only
-    supporting configurations, but do not execute any synchronized operation.
-
-    This limitation will be lifted in future releases.
-
-    However, it is mostly affecting the way instruments' drivers are written, since a
-    single driver should span all the active components. Once this is done, it only
-    limits the composability of existing instruments.
-
-The only other active operations which are relevant for the experimental workflow
-consist in instruments' initialization and close up, which are performed through
-:meth:`.Platform.connect` and :meth:`.Platform.disconnect` methods.
-
-.. hint::
-
-    The platform just exposes the API for pulse-based experiments. However, it is always
-    central for hardware execution.
-
-    Indeed, Qibolab exposes a Qibo compatible backend for circuits execution,
-    :class:`.QibolabBackend`. Which at its heart, it is powered by a platform
-    itself.
-
-    Cf. :ref:`main_doc_backend` and :ref:`main_doc_compiler`.
-
-However, there is a further relevant role which is performed by the
-:class:`.Platform`: parameters' persistance.
-
-Parameters
-^^^^^^^^^^
-
-The role of the :class:`.Platform` is to store all the information required to
-execution.
-While what exactly means execution is possibly debatable, since it is strictly related
-to the purpose the QPU is being used for, to have a clear target we intend as executing
-circuits.
-Most (but not necessarily all) of the information required to perform different
-experiments will be anyhow contained in this.
-
-Specifically, the major ingredient for circuits' execution is the definition of a set of
-native gates as low-level operations that can be achieved by the instruments. In
-practice, each gate is represented by a "pulse" sequence.
-
-.. note::
-
-    There are also operations which are not strictly mapping to a pulse sequence, e.g.
-    the active reset of qubits, where, after a measurement of the qubit, a :math:`pi`
-    rotation is conditionally applied to reset the qubit in its ground state.
-
-    This kind of operations are temporarily not supported by Qibolab, and for this
-    reason the set of native operations reduces to pulse sequences.
-
-The details of the pulse sequences definiton are described in details in the mentioned
-:ref:`Experiment API <main_doc_experiment>`.
-However, the important part is that each experiment supports its serialization, and it
-is stored as such among the platform's so-called *parameters*.
-
-The other main element which constitutes the :class:`.Parameters` are the
-common hardware configurations.
-E.g., one possible configuration is the frequency of the local oscillator used for the
-upconversion of a certain set of channels.
-
-The main separation between the general hardware configurations and the experiments
-definitions (gates' pulse sequences) is the time in which they play role in the overall
-experiment execution:
-
-- pulse sequences are intended to contain operations which are executed according to a
-  precise schedule, which is often to happen in *real time*
-- the only moment when the general configurations will play a role is in the experiment
-  preparation, thus *ahead of time*
-
-All this information is known by the platform object, and can be arbitrarily queried,
-following the declared schema (which is part of Qibolab's public API).
-Moreover, the parameters are serialized on disk with a single method call
-(:meth:`.Platform.dump`), for persistence across different runs.
-
-.. important::
-
-   The serialization is so frequent, and such a relevant part of the platform's
-   operations, which Qibolab supports as a pattern their loading from a file named
-   ``parameters.json``, through the :meth:`.Platform.load` method.
-
-   However, this pattern is fully optional, as it is described in depth in
-   :ref:`main_doc_storage`.
-
-Definition
-----------
-
-In the last section, the structure of platform's parameters has been described. These
-are not the only constituent of the platform, since there is another important
-information which needs to be defined: the hardware layer.
-
-Indeed, to actually use a platform, a crucial information regards how to address each
-involved instrument, and how to route the pulses to the correct channels.
-
-This complementary information is represented by the :class:`.Hardware` class,
-which can be promoted to full-fledged :class:`.Platform` by providing an instance
-of :class:`.Parameters`.
-The information contain by a :class:`.Hardware` is the following:
-
-- :attr:`.Hardware.instruments`, an identifier to instrument instance mapping,
-  which may require further parameters to be instantiated
-- :attr:`.Hardware.qubits` and :attr:`.Hardware.couplers`, which are
-  just collections of channels identifiers, to easily retrieve channels from their role
-  (described in the section below)
-
-These two objects are mainly used to manage and access channels, which are then
-described in the next two sections.
-Indeed, the information of instruments may vary according to specific instrument kind
-(i.e. class), but the common minimal content are:
-
-- the network address, use to communicate with the device
-- the information regarding the controlled channels - cf. next section
-
-Other than the data they hold, the :class:`.Instrument`, and especially the
-:class:`.Controller` (those instruments generating pulses and acquiring signals),
-are the computational units used by Qibolab to delegate the compilation of experiments
-instructions and configurations over a diverse set of possible instruments.
-More on this topic will be described in the :ref:`main_doc_instruments` section.
-
-.. note::
-
-   While this section intends to describe the concepts behind platforms' definition, a
-   practical guide can be found in a :ref:`dedicated tutorial <tutorial_platform>`.
-
-Channels
-^^^^^^^^
-
-The mentioned *channels identifiers* label are the central ingredient to pulse routing
-in the instruments' drivers. Indeed, one of the few parameters common to all instruments
-instances is exactly the channel mapping.
-Indeed, the channels are intended to be "owned" by the instrument generating the pulses
-for that channel. This is true both at a conceptual and practical level, since the
-instrument instance will then contain the only :class:`.Channel` instance, which
-store the information related to:
-
-- the *path* specifier, which is required to direct instructions to the correct location
-  within the instrument
-- other related instrument and channels (e.g. the *probe* channel on the same
-  transmission line of an *acquisition* channel, or the mixer and local oscillator
-  related to a certain modulated channel)
-
-Because of this second point, different kind of channels may be defined.
-E.g. a :class:`.DcChannel` is distinguished from an :class:`.IqChannel`
-because of modulation, which potentially requires to coordinate the operation of such a
-channel with an external mixer (identified by :attr:`.IqChannel.mixer`).
-
-.. note::
-
-  Qibolab enforces strict channel validation during :meth:`.Platform.execute`.
-  If a pulse sequence references a channel that is not declared in the platform,
-  execution fails with an error.
-
-  This is a deliberate design choice: pulses with undeclared channels are not silently
-  ignored, because that can hide mistakes in the platform setup and produce misleading
-  experimental outcomes.
-
-  If a workflow needs a channel-like placeholder with no physical output, this should be
-  introduced through a dummy instrument/channel in the platform.
-
-Configurations
-~~~~~~~~~~~~~~
-
-Notice that channel identifiers play even a further role: they identify the channels'
-configurations in the overall configuration mapping, part of the platform's parameters
-(as described above).
-
-There is clear distinction between channels, which are owned by instruments, and
-represented by the class :class:`.Channel`, and configurations, denoted by
-subclasses :class:`.Config`.
-
-- channels only contain identifiers to other instruments or channels, and their
-  :attr:`.Channel.path`
-- all channel-related configurations are instead stored in :class:`.Config` subclasses
-
-Moreover, the configurations are stored among :attr:`.Parameters.configurations`, while
-the channels , as discussed in the previous section.
-
-Other than the conceptual distinction, the classifiction is pretty much mirrored, since
-there are both :class:`.DcChannel` and :class:`.DcConfig`, :class:`.IqChannel` and
-:class:`.IqConfig`, :class:`.AcquisitionChannel` and :class:`.AcquisitionConfig`.
-However, not all the configurations have to be channel configurations, e.g.
-:class:`OscillatorConfig` used for local oscillators.
-Moreover, since the configurations host actual parameters, it is pretty common that they
-are further specialized by instruments to add room for device-specific parameters.
-
-Qubits
-^^^^^^
-
-The :class:`.Qubit` class serves as a container for the channels that are used to
-control the corresponding physical qubit.
-
-These channels encompass distinct types, each serving a specific purpose:
-
-- :attr:`.Qubit.probe`, measurement probe from controller device to the qubits
-- :attr:`.Qubit.acquisition`, measurement acquisition from qubits to controller
-- :attr:`.Qubit.drive`, used to control the single qubit Hamiltonian
-- :attr:`.Qubit.flux`, tuning the qubit frequency through magnetic flux
-- :attr:`.Qubit.drive_extra`, additional drive channels at different frequencies
-
-The container structure is specifically engineered to match the typical roles in the
-superconducting qubits.
-However, this is just a structured collection for ease of access. Notice how the
-channels (described in the section above) only retain the information related to their
-operations, but not directly to the role they play in any experiment.
-In this sense, the names above are just established as a convention, but they introduce
-no limitation to the way the :class:`.Qubit` is used (see the note below).
-
-Indeed, all elements are optional, because not all hardware platforms and elements
-require them.
-E.g., flux channels are typically relevant only for flux-tunable qubits.
-
-Moreover, the :class:`.Qubit` class is also be used to represent coupler qubits,
-when these are part of the platform. This case is quite complementary to the fixed
-frequency transmon: only the :attr:`.Qubit.flux` line is used.
-
-.. note::
-
-    While :attr:`.Qubit.drive_extra` is named after *drive* role, there is no
-    restriction to the type of channels it can contain, playing essentially the role of
-    unadministered free space.
-
-    What is often expected for these channels would be to be used for additional drives
-    to implement further type of gates involving the qubit, and especially the same
-    physical line of the :attr:`.Qubit.drive` channel. Mainly, this will be used
-    to implement gates supposed to act on higher levels (qudits), and cross-resonance
-    interactions.
-
-    At present time, these guidelines are not enforced anyhow in Qibolab.
+A :class:`qibolab.Platform` brings together a device's wiring, its operating
+parameters, and the instruments needed to execute pulse sequences. It is the
+entry point for pulse experiments through :meth:`qibolab.Platform.execute`, and
+also supplies the native operations used when compiling circuits. The same
+experiment can therefore be expressed independently of the particular laboratory
+that runs it, provided that its channels and required operations exist there.
+
+There are two complementary parts to a platform. :class:`qibolab.Hardware`
+describes *what is connected*: instrument objects and mappings of qubits and
+couplers to channels. :class:`qibolab.Parameters` describes *how it is operated*:
+component configurations, native pulse sequences, and default execution
+settings. A ``Platform`` combines these parts with a name and manages execution
+and connections. ``Hardware`` alone has neither calibrated pulse definitions nor
+an execution method; a parameters file alone cannot reconstruct the instruments.
+
+The :ref:`platform construction tutorial <tutorial_platform>` demonstrates this
+composition without depending on a particular laboratory integration.
+:ref:`main_doc_storage` explains how to persist the parameters and discover
+platform definitions.
+
+Hardware, qubits, and channels
+------------------------------
+
+``Hardware.instruments`` maps instrument identifiers to existing instrument
+objects supplied by an integration. ``Hardware.qubits`` maps physical qubit
+identifiers to :class:`qibolab.Qubit` objects. ``Hardware.couplers`` is an
+optional, separate mapping of coupler identifiers to the same kind of object.
+These mappings describe the laboratory topology rather than a calibration.
+``Platform`` exposes the corresponding mappings directly.
+
+A ``Qubit`` is a convenient collection of **channel identifiers**, not a
+collection of channel objects. Its ``drive`` identifies the line used to drive
+the qubit, ``flux`` identifies a tuning line, ``probe`` identifies the readout
+excitation, and ``acquisition`` identifies the input used to collect the
+measurement. These fields are optional: for example, a fixed-frequency qubit
+need not have a flux line. ``drive_extra`` is a mapping for additional channels,
+including transitions such as ``(1, 2)`` or drives associated with another qubit.
+A coupler is usually represented by a ``Qubit`` with only its flux field set.
+
+``Qubit.default(name)`` generates conventional identifiers such as
+``"q0/drive"``; it does not declare channels on an instrument. Likewise,
+``Qubit.coupler(name)`` generates ``"coupler_<name>/flux"`` without allocating
+hardware. Declaring a qubit and making the referenced channels available are
+separate responsibilities.
+
+Channel objects belong to the controlling instrument's channel mapping.
+``Platform.channels`` gathers those mappings into a dictionary keyed by channel
+identifier. A :class:`qibolab.Channel` describes routing through ``device`` and
+``path``; the meaning of these addresses is supplied by the integration.
+:class:`qibolab.DcChannel` represents an unmodulated output and
+:class:`qibolab.IqChannel` a modulated output. An IQ channel can refer to a local
+oscillator and mixer by their component identifiers.
+:class:`qibolab.AcquisitionChannel` represents an input and can refer to its
+associated probe channel and a pump component.
+
+Two channels can share a physical output or a local oscillator. This is why a
+channel stores routing and references, while the adjustable values live in a
+separate configuration database. Changing a shared component's configuration
+affects all channels referring to that component, not just the qubit from which
+the component was found.
+
+For example, the built-in dummy platform can be inspected without opening a
+hardware connection:
+
+.. doctest:: platform-model
+
+    >>> from qibolab import create_platform
+    >>> platform = create_platform("dummy")
+    >>> qubit = platform.qubits[0]
+    >>> qubit.drive
+    '0/drive'
+    >>> qubit.drive in platform.channels
+    True
+    >>> platform.qubit_channels[qubit.drive]
+    0
+    >>> platform.config(qubit.drive).kind
+    'iq'
+
+Here ``0`` is a qubit identifier, whereas ``"0/drive"`` is a channel identifier
+and also the key of that channel's configuration. A configuration is not what
+declares the channel: adding a key to ``parameters.configs`` does not make a new
+output available to a sequence.
+
+.. _main_doc_parameters:
+
+Operating parameters
+--------------------
+
+``platform.parameters`` is a serializable ``Parameters`` model with three
+sections. They have different roles and should not be treated as interchangeable.
+
+Component configurations
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+``parameters.configs`` maps component identifiers to :class:`qibolab.Config`
+subclasses. ``platform.config(identifier)`` retrieves an entry, and
+``platform.components`` gives the set of configured identifiers. This set can
+include more than ``platform.channels``: oscillators and mixers, for example,
+are configurable components without being sequence channels.
+
+An :class:`qibolab.IqConfig` holds the channel's carrier frequency and its
+frequency-dependent IQ corrections, ``scale_q`` and ``phase_q``.
+:class:`qibolab.DcConfig` holds a bias offset and optional filters.
+:class:`qibolab.AcquisitionConfig` holds acquisition timing and optional
+discrimination or integration parameters, such as ``threshold``, ``iq_angle``,
+and ``kernel``. A :class:`qibolab.OscillatorConfig` holds an oscillator's
+frequency and power, while :class:`qibolab.MixerOffsetConfig` holds per-component
+IQ offsets for suppressing LO leakage.
+
+These values configure the preparation of an execution. They are distinct from
+the precisely scheduled instructions inside a :class:`qibolab.PulseSequence`.
+For example, an IQ configuration supplies a carrier frequency, while a pulse
+supplies an envelope, duration, amplitude, and relative phase. If a configuration
+key also names an entry in ``platform.instruments``, execution applies that
+configuration to the corresponding instrument before playing the sequences.
+
+Native operations
+^^^^^^^^^^^^^^^^^
+
+``parameters.native_gates``, also available as ``platform.natives``, contains
+``single_qubit``, ``coupler``, and ``two_qubit`` mappings. Their keys identify
+qubits, couplers, and qubit pairs respectively. Entries hold pulse-sequence
+templates for native operations such as ``RX``, ``RX90``, ``RX12``, ``MZ``,
+``CZ``, ``CNOT``, or ``iSWAP``. Not every platform defines every operation;
+an absent operation has value ``None``.
+
+A native's ``create_sequence()`` (or calling the native directly) makes a
+sequence with fresh instruction identifiers. This is important for measurements:
+each acquisition in a batch must have a unique identifier so that results do
+not overwrite one another. Native definitions are reusable templates, not
+measurement results or promises that an operation has been calibrated.
+
+``platform.pairs`` lists pairs present in the two-qubit native mapping; it does
+not infer connectivity from the wiring. Pairs are ordered tuples. Reverse
+lookup is supported only when the registered operations for the pair are
+symmetric; a directional operation such as ``CNOT`` cannot be assumed to exist
+in both directions.
+
+Default settings
+^^^^^^^^^^^^^^^^
+
+``parameters.settings``, also available as ``platform.settings``, holds the
+default ``nshots`` and ``relaxation_time``. A newly constructed default
+``Parameters`` uses 1000 shots and a relaxation time of 100000 ns, but a loaded
+platform can have different defaults.
+
+Execution keyword arguments override these defaults for a single call.
+Acquisition type and averaging mode are execution options, not fields of
+``Settings``. By default an execution requests discrimination results without
+averaging; explicitly selecting options is preferable when an experiment needs
+another result format. See :ref:`main_doc_experiment` for sequence and execution
+details.
+
+Identifiers and units
+---------------------
+
+Qubit and coupler identifiers can be integers or strings and belong to separate
+mappings. Use the actual mapping keys when accessing their native operations.
+A circuit's logical qubit index is not necessarily the laboratory's physical
+qubit name. Channel identifiers are strings and must be unique across the
+platform's controlling instruments. Instrument identifiers are keys of
+``instruments``; component identifiers are keys of ``configs``. These namespaces
+are related by explicit references, not by automatic name matching, except when
+a component configuration is applied to an instrument with the same key.
+
+In memory, a two-qubit key is a tuple such as ``(0, 1)``. JSON represents it as
+``"0-1"``; transition keys in ``drive_extra`` use the same hyphen-separated
+convention. Integer qubit keys become JSON object keys and are validated back
+into qubit identifiers on loading. In particular, a serialized key ``"0"`` does
+not imply that ``platform.qubits["0"]`` works when the in-memory key is the
+integer ``0``: dictionary access uses the actual identifier type. Avoid
+ambiguous names involving the pair separator, or dots when relying on dotted
+parameter-update paths.
+
+Qibolab uses nanoseconds for pulse and acquisition durations, delays, and
+relaxation times; frequencies are in Hz, and phases are in radians. Pulse
+amplitudes are dimensionless, normalized to the range from -1 to 1.
+``IqConfig.scale_q`` is dimensionless, ``phase_q`` is in radians, and mixer
+offsets ``offset_i`` and ``offset_q`` are in mV. ``Platform.sampling_rate`` is
+expressed in giga-samples per second (samples per ns), whereas an exponential
+filter's ``tau`` is measured in samples. Bias, power, threshold, and integration
+weight conventions must be checked against the supplied integration; they
+should not be confused with normalized pulse amplitude. Models store numbers,
+not unit-aware quantities, and schema validation is not a hardware safety check.
+
+Execution and connection lifecycle
+----------------------------------
+
+Constructing or loading a platform does not connect it to the laboratory.
+Call ``connect()`` before using real hardware and ``disconnect()`` when finished,
+normally using ``try``/``finally`` around the experiment. The ``is_connected``
+flag tracks this lifecycle; repeated connection or disconnection calls do not
+re-open or re-close an already managed connection. ``execute()`` does not call
+``connect()`` on the user's behalf.
+
+An execution validates sequence channel identifiers and acquisition uniqueness,
+fills missing shot and relaxation settings, prepares configurations, and
+delegates the sequences and any sweepers to the controlling instruments.
+It returns a dictionary indexed by acquisition instruction identifier (a UUID),
+not by qubit identifier or sequence position. For a ``Readout``, its ``id`` is
+the contained acquisition's identifier. The result arrays' shapes depend on the
+acquisition and averaging options. An
+undeclared sequence channel raises ``ValueError`` rather than being silently
+ignored. The platform does not infer missing channel declarations from qubits
+or configuration entries.
+
+Integration and synchronization capabilities still constrain which collections
+of instruments can operate together; arbitrary multi-controller composition
+should not be assumed to work merely because it can be represented in a
+``Hardware`` object.
+
+Temporary overrides and saved changes
+-------------------------------------
+
+There are two deliberately different update interfaces.
+``execute(updates=[...])`` takes a list of component-configuration updates.
+Each entry maps a component identifier to fields and values; later entries win
+if they modify the same field. These updates apply to the execution's copy of
+the configurations and leave ``platform.parameters`` unchanged.
+
+.. doctest:: platform-updates
+
+    >>> from qibolab import create_platform
+    >>> platform = create_platform("dummy")
+    >>> qubit = platform.qubits[0]
+    >>> original_frequency = platform.config(qubit.drive).frequency
+    >>> sequence = platform.natives.single_qubit[0].MZ.create_sequence()
+    >>> platform.connect()
+    >>> try:
+    ...     results = platform.execute(
+    ...         [sequence],
+    ...         nshots=4,
+    ...         updates=[{qubit.drive: {"frequency": 4.1e9}}],
+    ...     )
+    ... finally:
+    ...     platform.disconnect()
+    ...
+    >>> platform.config(qubit.drive).frequency == original_frequency
+    True
+    >>> results[sequence.acquisitions[0][1].id].shape
+    (4,)
+
+The override is temporary in the **parameter model**: it is not a guarantee
+that every physical instrument setting is immediately restored after the call.
+A subsequent execution without the override prepares the stored defaults.
+These updates change configurations, not native pulse templates.
+
+``platform.update({...})`` instead takes dotted paths into the full serialized
+parameter structure and replaces the platform's parameter model. It can change
+settings, component configurations, and native pulse definitions:
+
+.. doctest:: platform-updates
+
+    >>> platform.update(
+    ...     {
+    ...         "settings.nshots": 8,
+    ...         f"configs.{qubit.drive}.frequency": 4.2e9,
+    ...         "native_gates.single_qubit.0.RX.0.1.amplitude": 0.2,
+    ...     }
+    ... )
+    >>> platform.settings.nshots
+    8
+    >>> platform.config(qubit.drive).frequency
+    4200000000.0
+    >>> platform.natives.single_qubit[0].RX[0][1].amplitude
+    0.2
+
+In the native path above, ``0.1`` selects instruction zero's pulse: each
+serialized sequence item is a ``[channel, instruction]`` pair. Such paths
+depend on the sequence's structure. A sequence already created from a native
+does not change when its template is updated; create a new sequence to use the
+new definition.
+
+``update()`` persists for the lifetime of this platform object, but does not
+write a file or immediately configure connected instruments. To keep the new
+parameters across sessions, explicitly call ``platform.dump(directory)``.
+That operation writes only ``parameters.json`` to an existing directory: it
+does not save the hardware factory, connections, or execution results.
+See :ref:`parameters_json` and :ref:`main_doc_storage` for round trips and
+directory-based loading.
