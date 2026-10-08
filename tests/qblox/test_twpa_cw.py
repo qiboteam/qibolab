@@ -6,7 +6,7 @@ import pytest
 from qibolab._core.components import IqChannel, OscillatorConfig
 from qibolab._core.execution_parameters import AcquisitionType, ExecutionParameters
 from qibolab._core.instruments.qblox.cluster import Cluster
-from qibolab._core.instruments.qblox.config.port import PortAddress
+from qibolab._core.instruments.qblox.config.port import PortAddress, PortConfig
 from qibolab._core.instruments.qblox.config.sequencer import SequencerConfig
 from qibolab._core.instruments.qblox.q1asm.ast_ import (
     Loop,
@@ -74,7 +74,7 @@ def test_q1sequence_from_twpa_frequency_out_of_range():
         values=np.array([6.0e9, 6.1e9, 6.2e9]),
         channels=["twpa_ch"],
     )
-    with pytest.raises(ValueError, match="Frequency must be a float between"):
+    with pytest.raises(ValueError, match="IF frequency must be a float between"):
         Q1Sequence.from_twpa(
             options=options,
             sweepers=[[sweeper]],
@@ -190,7 +190,7 @@ def test_sequencer_config_build_twpa_cw():
 
 
 def test_sequencer_config_build_twpa_with_mixer():
-    from qibolab._core.components import IqMixerConfig
+    from qibolab._core.components import MixerOffsetConfig
 
     c = Cluster(
         address="addr",
@@ -200,9 +200,7 @@ def test_sequencer_config_build_twpa_with_mixer():
     address = PortAddress.from_path("8/o1")
     configs = {
         "twpa": OscillatorConfig(frequency=6.5e9, power=10.0),
-        "mixer2": IqMixerConfig(
-            scale_q=1.05, phase_q=2.5, offset_i=0.01, offset_q=-0.02
-        ),
+        "mixer2": MixerOffsetConfig(offset_i=0.01, offset_q=-0.02),
     }
 
     seq = Q1Sequence.cw()
@@ -217,8 +215,20 @@ def test_sequencer_config_build_twpa_with_mixer():
     )
 
     assert cfg.nco_freq == 0
-    assert cfg.mixer_corr_gain_ratio == 1.05
-    assert cfg.mixer_corr_phase_offset_degree == 2.5
+    assert cfg.mixer_corr_gain_ratio is None
+    assert cfg.mixer_corr_phase_offset_degree is None
+
+    port = PortConfig.build(
+        channel=c.all_channels["twpa"],
+        config=configs["twpa"],
+        in_=False,
+        out=True,
+        lo=configs["twpa"],
+        mixer=configs["mixer2"],
+        is_qcm_non_rf_type=False,
+    )
+    assert port.offset_path0 == 0.01
+    assert port.offset_path1 == -0.02
 
 
 def test_sequencer_config_build_twpa_swept():

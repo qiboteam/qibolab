@@ -76,7 +76,7 @@ class Cluster(Controller):
     Maps TWPA identifiers (which match keys in :attr:`Parameters.configs`
     holding the :class:`OscillatorConfig` for the pump tone) to a tuple of
     ``(port_path, mixer_config_name)`` where ``mixer_config_name`` optionally
-    references an :class:`IqMixerConfig` in :attr:`Parameters.configs` (or
+    references a :class:`MixerOffsetConfig` in :attr:`Parameters.configs` (or
     ``None`` if not used).
 
     Each entry generates either a continuous-wave tone in the background or a
