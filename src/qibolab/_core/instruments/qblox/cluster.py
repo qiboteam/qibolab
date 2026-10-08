@@ -142,6 +142,19 @@ def _validate_raw_acquisitions(sequences: dict[ChannelId, Q1Sequence]) -> None:
             )
 
 
+def _validate_raw_averaging_mode(options: ExecutionParameters) -> None:
+    """Reject RAW averaging modes that exceed Qblox scope-memory limits."""
+    if (
+        options.acquisition_type is AcquisitionType.RAW
+        and options.averaging_mode is not AveragingMode.CYCLIC
+    ):
+        # Qblox scope memory cannot retain a separate RAW trace for every shot.
+        raise NotImplementedError(
+            "Qblox RAW acquisition requires AveragingMode.CYCLIC because of "
+            "scope acquisition memory limits."
+        )
+
+
 def _merge_phases_if_no_phase_sweeper(
     sweepers: list[ParallelSweepers],
     sequences: list[PulseSequence],
@@ -248,6 +261,7 @@ class Cluster(Controller):
     ) -> dict[PulseId, Result]:
         """Execute the given experiment."""
 
+        _validate_raw_averaging_mode(options)
         self.reset()
 
         processed_sequences, phase_sweeper_present = _merge_phases_if_no_phase_sweeper(
@@ -317,7 +331,6 @@ class Cluster(Controller):
                 sequencers = self._configure_hardware_per_sequence(
                     configs=configs,
                     acquisition=options_.acquisition_type,
-                    averaging_mode=options_.averaging_mode,
                     sequences=sequences_,
                 )
 
@@ -399,22 +412,21 @@ class Cluster(Controller):
     def _enable_raw_acquisition(
         self,
         acq_sequencers: dict[SlotId, list[int]],
-        averaging_mode: AveragingMode,
     ) -> None:
         """Configure scope acquisition settings on each module.
 
         For every module (identified by its slot), this method builds a
         ``ModuleConfig`` that enables scope acquisition averaging on both
-        paths only when the averaging mode performs averaging. In RAW mode,
-        each acquisition sequencer listed in ``acq_sequencers`` is individually
-        selected on the module so that the scope acquisition mode is applied
-        per-sequencer.
+        paths. RAW acquisition is restricted to cyclic averaging because of
+        scope acquisition memory limits. Each acquisition sequencer listed in
+        ``acq_sequencers`` is individually selected on the module so that the
+        scope acquisition mode is applied per-sequencer.
         """
         for slot, seq_indices in acq_sequencers.items():
             config_updates = config.ModuleConfig(
                 ports={},
-                scope_acq_avg_mode_en_path0=averaging_mode.average,
-                scope_acq_avg_mode_en_path1=averaging_mode.average,
+                scope_acq_avg_mode_en_path0=True,
+                scope_acq_avg_mode_en_path1=True,
             )
             readout_module = self._modules[slot]
 
@@ -427,7 +439,6 @@ class Cluster(Controller):
         self,
         configs: Configs,
         acquisition: AcquisitionType,
-        averaging_mode: AveragingMode,
         sequences: dict[ChannelId, Q1Sequence] | None = None,
     ) -> SequencerMap:
         """Configure the hardware for a specific sequence.
@@ -454,10 +465,7 @@ class Cluster(Controller):
         # at the time being we only dynamically change the modules for RAW acquisition
         # but in the future it can be expanded
         if acquisition is AcquisitionType.RAW:
-            self._enable_raw_acquisition(
-                acq_sequencers=acquisition_sequencers,
-                averaging_mode=averaging_mode,
-            )
+            self._enable_raw_acquisition(acq_sequencers=acquisition_sequencers)
 
         return sequencers
 
