@@ -389,7 +389,7 @@ class Cluster(Controller):
                 mixers,
                 is_qcm_non_rf_type=module.is_qcm_type and not module.is_rf_type,
             )
-# We can disconnect the module only when initializing it for the first time (for static configurations).
+            # We can disconnect the module only when initializing it for the first time (for static configurations).
             modcfg.disconnect_module(module)
             modcfg.update_module(module)
         return modcfgs
