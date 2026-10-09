@@ -36,7 +36,7 @@ otherwise they are handled by the internal compiler.
 https://docs.qblox.com/en/main/tutorials/q1asm_tutorials/intermediate/nco_control_adv.html#:~:text=Internally,%20the%20processor%20stores
 
 Thus, we compile instructions setting negative values as suggested: first setting them
-to 0, than subtracting the desired amount. This is more reliable than manually
+to 0, then subtracting the desired amount. This is more reliable than manually
 complementing the number, since it makes no assumption about the registers size.
 
 https://docs.qblox.com/en/main/cluster/troubleshooting.html#:~:text=How%20do%20I%20set%20negative%20numbers
