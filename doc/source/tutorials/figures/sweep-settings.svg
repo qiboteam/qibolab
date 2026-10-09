@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="380" viewBox="0 0 760 380" role="img" aria-labelledby="title desc">
+  <title id="title">Cartesian sweep groups versus paired sweepers</title>
+  <desc id="desc">The left panel visits all combinations of four frequency offsets, minus 2, minus 1, 0, and plus 1 MHz, with five amplitudes from 0 to 0.4. The right panel pairs those five amplitudes with five phases from 0 to pi. The first example retains eight shots and produces shape (8, 4, 5, 2); the second uses cyclic averaging and produces (5, 2).</desc>
+  <rect width="760" height="380" rx="12" fill="#fff"/>
+  <g font-family="sans-serif" font-size="17" fill="#243047">
+    <text x="28" y="34" font-size="21" font-weight="bold">Separate groups: a grid</text>
+    <text x="417" y="34" font-size="21" font-weight="bold">One group: paired settings</text>
+    <text x="28" y="61" font-size="16">[[frequency], [amplitude]]</text>
+    <text x="417" y="61" font-size="16">[[amplitude, phase]]</text>
+    <path d="M130 90 V249 H346 M485 90 V249 H701" fill="none" stroke="#526078" stroke-width="2"/>
+    <path d="M145 110 H325 M145 150 H325 M145 190 H325 M145 230 H325 M145 110 V230 M190 110 V230 M235 110 V230 M280 110 V230 M325 110 V230" stroke="#d9dfe8"/>
+    <g fill="#7145bd">
+      <circle cx="145" cy="110" r="5"/><circle cx="190" cy="110" r="5"/><circle cx="235" cy="110" r="5"/><circle cx="280" cy="110" r="5"/><circle cx="325" cy="110" r="5"/>
+      <circle cx="145" cy="150" r="5"/><circle cx="190" cy="150" r="5"/><circle cx="235" cy="150" r="5"/><circle cx="280" cy="150" r="5"/><circle cx="325" cy="150" r="5"/>
+      <circle cx="145" cy="190" r="5"/><circle cx="190" cy="190" r="5"/><circle cx="235" cy="190" r="5"/><circle cx="280" cy="190" r="5"/><circle cx="325" cy="190" r="5"/>
+      <circle cx="145" cy="230" r="5"/><circle cx="190" cy="230" r="5"/><circle cx="235" cy="230" r="5"/><circle cx="280" cy="230" r="5"/><circle cx="325" cy="230" r="5"/>
+    </g>
+    <g text-anchor="end" font-size="16"><text x="120" y="116">-2</text><text x="120" y="156">-1</text><text x="120" y="196">0</text><text x="120" y="236">+1</text><text x="475" y="116">&#960;</text><text x="475" y="176">&#960;/2</text><text x="475" y="236">0</text></g>
+    <path d="M500 230 L680 110" fill="none" stroke="#287c99" stroke-width="2" stroke-dasharray="4 4"/>
+    <g fill="#287c99"><circle cx="500" cy="230" r="6"/><circle cx="545" cy="200" r="6"/><circle cx="590" cy="170" r="6"/><circle cx="635" cy="140" r="6"/><circle cx="680" cy="110" r="6"/></g>
+    <g text-anchor="middle" font-size="16"><text x="145" y="273">0</text><text x="190" y="273">0.1</text><text x="235" y="273">0.2</text><text x="280" y="273">0.3</text><text x="325" y="273">0.4</text><text x="500" y="273">0</text><text x="545" y="273">0.1</text><text x="590" y="273">0.2</text><text x="635" y="273">0.3</text><text x="680" y="273">0.4</text><text x="235" y="299">Amplitude</text><text x="590" y="299">Amplitude</text></g>
+    <text transform="translate(48 170) rotate(-90)" text-anchor="middle" font-size="16">Frequency offset [MHz]</text>
+    <text transform="translate(432 170) rotate(-90)" text-anchor="middle" font-size="16">Relative phase [rad]</text>
+    <rect x="28" y="317" width="330" height="47" rx="8" fill="#f0eaff"/><rect x="402" y="317" width="330" height="47" rx="8" fill="#e8f4fa"/>
+    <text x="193" y="337" text-anchor="middle" font-size="16">20 settings; SINGLESHOT</text><text x="193" y="358" text-anchor="middle" font-size="16">I/Q shape: (8, 4, 5, 2)</text>
+    <text x="567" y="337" text-anchor="middle" font-size="16">5 settings; CYCLIC</text><text x="567" y="358" text-anchor="middle" font-size="16">I/Q shape: (5, 2)</text>
+  </g>
+</svg>

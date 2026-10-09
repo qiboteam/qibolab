@@ -105,17 +105,14 @@ class IqConfig(Config):
 
 
 class AcquisitionConfig(Config):
-    """Configuration for acquisition channel.
-
-    Currently, in qibolab, acquisition channels are FIXME:
-    """
+    """Acquisition timing and optional integration or discrimination parameters."""
 
     kind: Literal["acquisition"] = "acquisition"
 
     delay: float
-    """Delay between readout pulse start and acquisition start."""
+    """Delay between readout pulse start and acquisition start, in ns."""
     smearing: float
-    """FIXME:"""
+    """Acquisition timing margin in ns, interpreted by the platform integration."""
 
     # FIXME: this is temporary solution to deliver the information to drivers
     # until we make acquisition channels first class citizens in the sequences

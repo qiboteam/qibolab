@@ -4,10 +4,6 @@
 # list see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
-from pathlib import Path
-
-from sphinx.ext import apidoc
-
 import qibolab
 
 # -- Project information -----------------------------------------------------
@@ -21,8 +17,6 @@ release = qibolab.__version__
 
 # -- General configuration ---------------------------------------------------
 
-
-autodoc_mock_imports = ["icarusq_rfsoc_driver", "keysight", "qm", "qibosoq"]
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
@@ -44,7 +38,8 @@ bibtex_bibfiles = ["refs.bib"]
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = []
+# Ignore legacy apidoc output, including instrument-driver pages.
+exclude_patterns = ["api-reference/qibolab.rst", "api-reference/qibolab.*.rst"]
 
 
 # -- Options for HTML output -------------------------------------------------
@@ -98,6 +93,9 @@ intersphinx_mapping = {"python": ("https://docs.python.org/3", None)}
 # -- Autodoc ------------------------------------------------------------------
 #
 autodoc_member_order = "bysource"
+autodoc_default_options = {
+    "exclude-members": "model_config,model_fields,model_computed_fields",
+}
 
 # Do not reconstruct annotations from source/type comments. This can add
 # Pydantic's internal types to Qibolab classes, while those types may not be
@@ -108,21 +106,8 @@ autodoc_member_order = "bysource"
 autodoc_use_type_comments = False
 
 
-# app setup hook
-
-
-def run_apidoc(_):
-    """Extract autodoc directives from package structure."""
-    source = Path(__file__).parent
-    docs_dest = source / "api-reference"
-    package = source.parents[1] / "src" / "qibolab"
-    apidoc.main(["--no-toc", "--module-first", "-o", str(docs_dest), str(package)])
-
-
 def setup(app):
     app.add_css_file("css/style.css")
-
-    app.connect("builder-inited", run_apidoc)
 
 
 html_show_sourcelink = False

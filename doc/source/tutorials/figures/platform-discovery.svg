@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="500" viewBox="0 0 760 500" role="img" aria-labelledby="title desc">
+  <title id="title">Directory discovery and the two factory return types</title>
+  <desc id="desc">QIBOLAB_PLATFORMS contains search roots such as laboratory_platforms, not the my_platform child directory. create_platform finds that child, imports platform.py, and calls create. If it returns Hardware, the loader reads adjacent parameters.json to construct a Platform. If it returns Platform, that object is used directly without an automatic JSON load. Platform.dump writes only parameters.json, overwriting an existing file in an existing directory.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0 1 L8 5 L0 9" fill="none" stroke="#526078" stroke-width="1.5"/></marker>
+  </defs>
+  <rect width="760" height="500" rx="12" fill="#fff"/>
+  <g font-family="sans-serif" font-size="17" fill="#243047">
+    <text x="28" y="32" font-size="21" font-weight="bold">QIBOLAB_PLATFORMS points to the parent</text>
+    <rect x="28" y="52" width="704" height="89" rx="8" fill="#f4f5f8" stroke="#526078"/>
+    <text x="48" y="79" font-family="monospace">laboratory_platforms/</text>
+    <text x="78" y="104" font-family="monospace">my_platform/</text>
+    <text x="108" y="128" font-family="monospace" font-size="16">platform.py + parameters.json</text>
+    <path d="M380 141 V166" stroke="#526078" stroke-width="2" marker-end="url(#arrow)"/>
+    <rect x="70" y="172" width="620" height="65" rx="8" fill="#f4f5f8" stroke="#526078"/>
+    <text x="380" y="199" text-anchor="middle" font-weight="bold">create_platform("my_platform")</text>
+    <text x="380" y="224" text-anchor="middle">Locate directory; import platform.py; call create()</text>
+    <path d="M280 237 V256 H195 V278" fill="none" stroke="#526078" stroke-width="2" marker-end="url(#arrow)"/>
+    <path d="M480 237 V256 H565 V278" fill="none" stroke="#526078" stroke-width="2" marker-end="url(#arrow)"/>
+    <rect x="28" y="285" width="334" height="106" rx="9" fill="#f0eaff" stroke="#7145bd"/>
+    <text x="195" y="315" text-anchor="middle" font-size="21" font-weight="bold">Returns Hardware</text>
+    <text x="195" y="344" text-anchor="middle">Read adjacent parameters.json</text>
+    <text x="195" y="373" text-anchor="middle">Combine with Platform.load</text>
+    <rect x="398" y="285" width="334" height="106" rx="9" fill="#e8f4fa" stroke="#387c99"/>
+    <text x="565" y="315" text-anchor="middle" font-size="21" font-weight="bold">Returns Platform</text>
+    <text x="565" y="344" text-anchor="middle">Use the object directly</text>
+    <text x="565" y="373" text-anchor="middle">No automatic adjacent JSON load</text>
+    <rect x="28" y="419" width="704" height="61" rx="8" fill="#f4f5f8" stroke="#526078"/>
+    <text x="380" y="445" text-anchor="middle">platform.dump(directory) writes only parameters.json</text>
+    <text x="380" y="469" text-anchor="middle" font-size="16">Existing directory required; existing parameters are overwritten</text>
+  </g>
+</svg>

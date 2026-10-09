@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="410" viewBox="0 0 760 410" role="img" aria-labelledby="title desc">
+  <title id="title">Probe-frequency and drive-frequency spectroscopy</title>
+  <desc id="desc">Probe spectroscopy executes native MZ at 21 probe-frequency offsets from minus 10 to plus 10 MHz and returns averaged I/Q shape (21, 2). Drive spectroscopy applies a 2000 ns rectangular drive pulse at amplitude 0.02 with 17 drive-frequency offsets from minus 20 to plus 20 MHz, then native MZ at a fixed probe frequency, returning shape (17, 2). Readout timings are schematic.</desc>
+  <rect width="760" height="410" rx="12" fill="#fff"/>
+  <g font-family="sans-serif" font-size="17" fill="#243047">
+    <text x="28" y="34" font-size="21" font-weight="bold">Probe spectroscopy: sweep the readout carrier</text>
+    <text x="28" y="81">Drive</text><text x="28" y="127">Readout</text>
+    <path d="M160 75 H710" stroke="#d9dfe8"/>
+    <text x="175" y="81" font-size="16">No drive excitation</text>
+    <rect x="160" y="103" width="510" height="45" rx="5" fill="#e8f4fa" stroke="#387c99"/>
+    <text x="415" y="131" text-anchor="middle">Native MZ; probe frequency varies</text>
+    <text x="160" y="177" font-size="16">21 offsets: -10 to +10 MHz; averaged I/Q: (21, 2)</text>
+    <path d="M28 199 H732" stroke="#d9dfe8"/>
+    <text x="28" y="233" font-size="21" font-weight="bold">Drive spectroscopy: sweep the excitation carrier</text>
+    <text x="28" y="279">Drive</text><text x="28" y="337">Readout</text>
+    <path d="M160 272 H710 M160 330 H710" stroke="#d9dfe8"/>
+    <rect x="160" y="252" width="310" height="43" rx="5" fill="#f0eaff" stroke="#7145bd"/>
+    <path d="M169 288 V261 H461 V288" fill="none" stroke="#7145bd" stroke-width="2"/>
+    <text x="315" y="280" text-anchor="middle" font-size="16">2000 ns; amplitude 0.02</text>
+    <rect x="470" y="308" width="220" height="45" rx="5" fill="#e8f4fa" stroke="#387c99"/>
+    <text x="580" y="336" text-anchor="middle">MZ; probe fixed</text>
+    <path d="M470 246 V358" stroke="#243047" stroke-width="2" stroke-dasharray="4 4"/>
+    <text x="160" y="387" font-size="16">17 drive offsets: -20 to +20 MHz; averaged I/Q: (17, 2)</text>
+  </g>
+</svg>
