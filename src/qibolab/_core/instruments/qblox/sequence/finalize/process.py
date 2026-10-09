@@ -36,6 +36,8 @@ def _init_state(rule: LineRule[State] | BlockRule[State]) -> State:
 def _line_traverse(
     lines: list[Line], rules: tuple[LineRule, ...] | LineRule
 ) -> list[Block]:
+    # pydantic models are iterable (over their fields), so a single rule passed
+    # directly would be unpacked into field tuples.
     if isinstance(rules, LineRule):
         rules = (rules,)
     states = [_init_state(rule) for rule in rules]

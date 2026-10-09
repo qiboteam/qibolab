@@ -1,19 +1,103 @@
+import pytest
+
 from qibolab._core.instruments.qblox.q1asm.ast_ import (
+    Add,
+    And,
+    Arithmetic,
+    Asl,
+    Asr,
     Line,
     Loop,
     Move,
+    Nop,
+    Not,
+    Or,
     Reference,
     Register,
+    SetPhDelta,
+    Stop,
     Sub,
     Wait,
+    Xor,
 )
 from qibolab._core.instruments.qblox.sequence.asm import Registers
 from qibolab._core.instruments.qblox.sequence.finalize import (
     DEFAULT_PIPELINE,
     move,
+    register,
     transform,
     wait,
 )
+
+
+@pytest.mark.parametrize(
+    "instruction",
+    [
+        Move(source=5, destination="R7"),
+        Move(source="R6", destination="R7"),
+        Not(source="R6", destination="R7"),
+        Add(a="R6", b=5, destination="R7"),
+        Sub(a="R6", b=5, destination="R7"),
+        And(a="R6", b=5, destination="R7"),
+        Or(a="R6", b=5, destination="R7"),
+        Xor(a="R6", b=5, destination="R7"),
+        Asl(a="R6", b=5, destination="R7"),
+        Asr(a="R6", b=5, destination="R7"),
+    ],
+)
+def test_update_nop_after_arithmetic(instruction):
+    line = Line(instruction=instruction, label="update", comment="register update")
+    result = transform([line], ((register.update_nop,),))
+    assert result == [line, Line.instr(Nop())]
+
+
+def test_update_nop_leaves_other_instructions_untouched():
+    block = [
+        SetPhDelta(value="R7"),
+        Wait(duration=4),
+        Loop(a="R7", address="@start"),
+        Nop(),
+        Stop(),
+    ]
+    result = transform(block, ((register.update_nop,),))
+    assert [line.instruction for line in result] == block
+
+
+def test_update_nop_between_consecutive_updates():
+    block = [
+        Move(source=0, destination="R7"),
+        Add(a="R7", b=5, destination="R7"),
+        Sub(a="R7", b=3, destination="R7"),
+        SetPhDelta(value="R7"),
+    ]
+    result = transform(block, ((register.update_nop,),))
+    assert [line.instruction for line in result] == [
+        block[0],
+        Nop(),
+        block[1],
+        Nop(),
+        block[2],
+        Nop(),
+        block[3],
+    ]
+
+
+def test_default_pipeline_negative_move_nops():
+    line = Line(
+        instruction=Move(source=-5, destination="R7"),
+        label="negative",
+        comment="initialize register",
+    )
+    result = transform([line], DEFAULT_PIPELINE)
+    assert [line.instruction for line in result] == [
+        Move(source=0, destination="R7"),
+        Nop(),
+        Sub(a="R7", b=5, destination="R7"),
+        Nop(),
+    ]
+    assert result[0].label == line.label
+    assert result[0].comment == line.comment
+    assert all(line.label is None for line in result[1:])
 
 
 def test_merge_wait_consecutive():
@@ -149,3 +233,7 @@ def test_default_pipeline_combined():
     # the loop moves the iteration count to the preassigned wait register
     wait_move = [m for m in moves if m.instruction.destination == Registers.wait.value]
     assert len(wait_move) == 1
+    for index, line in enumerate(result):
+        if isinstance(line.instruction, Arithmetic):
+            assert isinstance(result[index + 1].instruction, Nop)
+    assert sum(isinstance(line.instruction, Nop) for line in result) == 3

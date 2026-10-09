@@ -10,7 +10,6 @@ from ..q1asm.ast_ import (
     Instruction,
     Line,
     Move,
-    Nop,
     Program,
     Stop,
     Wait,
@@ -19,13 +18,7 @@ from .acquisition import AcquisitionSpec, MeasureId
 from .experiment import experiment
 from .finalize import DEFAULT_PIPELINE, transform
 from .loops import LoopSpec, Registers, loop, loops
-from .sweepers import (
-    Param,
-    params,
-    params_reshape,
-    sweep_sequence,
-    update_instructions,
-)
+from .sweepers import Param, params, params_reshape, sweep_sequence, update_instructions
 from .waveforms import PulseRealization
 
 __all__ = ["Program"]
@@ -66,9 +59,6 @@ def setup(
             for p in params
             if p.channel in channel or p.pulse in pulses
         ]
-        # wait one clock cycle before parameters' update
-        # cf. .loops._sweep_update()
-        + [Nop()]
         + [
             inst
             for p in params
