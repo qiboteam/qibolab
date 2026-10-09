@@ -67,7 +67,7 @@ class BlockRule(Model, Generic[State]):
 Step: TypeAlias = tuple[LineRule, ...] | BlockRule
 """Transformation step.
 
-It is supposed to iterate through the entire set of instructions exactly one.
+It is supposed to iterate through the entire set of instructions exactly once.
 
 It can be composed of:
 
@@ -77,8 +77,8 @@ It can be composed of:
 Semantics
 ---------
 
-The reason for the type of allowed stepes is to unambiguously define how they match the
-instructions. Keep the intuition straightforward is explicitly favored over efficiency.
+The reason for the type of allowed steps is to unambiguously define how they match the
+instructions. Keeping the intuition straightforward is explicitly favored over efficiency.
 
 If multiple line-oriented transformations are specified, they are tested first-to-last
 against each instruction line. The first one which matches, applies the transformation,
@@ -100,7 +100,7 @@ is closed.
 """
 
 
-Pipeline: TypeAlias = tuple[Step]
+Pipeline: TypeAlias = tuple[Step, ...]
 """Series of transformation from Q1ASM-like code into executable.
 
 A pipeline is transforming a possibly internal extension of Q1ASM into a different one.
