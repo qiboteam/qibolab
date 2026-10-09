@@ -149,7 +149,7 @@ class Param(Model):
         Validates the entire range (start, stop, step) before converting.
         """
         start_, stop, step = irange
-        start = int(convert(start_ - _duration_shift(role, pulse), kind))
+        start = start_ - _duration_shift(role, pulse)
         # Validate all points in the range
         for value in (start, stop, step):
             _validate_sweeper_value(value, kind)
