@@ -141,7 +141,7 @@ class Param(Model):
         irange: Range,
         kind: Parameter,
         role: ParamRole,
-        pulse: PulseId | None,
+        pulse: PulseLike | None,
         channel: ChannelId | None,
     ) -> "Param":
         """Create a Param from a sweep range with validation.
@@ -157,7 +157,7 @@ class Param(Model):
             reg=Register(number=0),
             start=int(convert(start, kind)),
             step=int(convert(step, kind)),
-            pulse=pulse,
+            pulse=pulse.id if pulse is not None else None,
             channel=channel,
             role=role,
         )
@@ -250,7 +250,7 @@ def _unravel_sweeps(sweepers: list[ParallelSweepers]) -> Iterable[tuple[int, Par
                 irange,
                 sweep.parameter,
                 role,
-                pulse.id if pulse is not None else None,
+                pulse,
                 channel,
             ),
         )
