@@ -29,7 +29,7 @@ from qibolab._core.serialize import Model
 from qibolab._core.sweeper import ParallelSweepers, Parameter, normalize_sweepers
 
 from . import config
-from .batching import batch_sequences_by_cluster_memory_limits
+from .batching import batch_sequences_by_cluster_memory_limits, restrict_sweepers
 from .config import PortAddress
 from .identifiers import SequencerMap, SlotId
 from .log import Logger
@@ -273,7 +273,7 @@ class Cluster(Controller):
                 assert_channels_exclusion(ps, self._probes)
                 sequences_ = compile(
                     ps,
-                    sweepers_,
+                    restrict_sweepers(sweepers_, ps),
                     options_,
                     self.sampling_rate,
                     merged_vzs=not phase_sweeper_present,

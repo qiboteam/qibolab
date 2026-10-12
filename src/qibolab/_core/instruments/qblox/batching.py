@@ -6,12 +6,18 @@ from qibolab._core.identifier import ChannelId
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import ParallelSweepers
 
+from .sequence.asm import Registers
+from .sequence.sweepers import count_params
 from .utils import per_shot_memory
 from .validate import cluster_memory_limits
 
 
-def _init_batch() -> dict[str, int]:
-    """Helper function to initialise the batch tracking variables."""
+def _init_batch(base_registers: int = 0) -> dict[str, int]:
+    """Helper function to initialise the batch tracking variables.
+
+    ``base_registers`` are the registers that are always allocated, independently of
+    the pulses played.
+    """
     return {
         "acq_memory": 0,
         "acq_number": 0,
@@ -21,12 +27,15 @@ def _init_batch() -> dict[str, int]:
         # the individual numbers may be lower.
         "qcm_lines": 50,
         "qrm_lines": 50,
+        "registers": base_registers,
     }
 
 
-def _raise_error_if_sequence_exceeds_memory_limits(ps_memory: dict[str, int]):
+def _raise_error_if_sequence_exceeds_memory_limits(
+    ps_memory: dict[str, int], base_registers: int
+):
     """Raise error if a single sequence exceeds the cluster memory limits."""
-    base_memory = _init_batch()
+    base_memory = _init_batch(base_registers)
     fits_in_memory = all(
         base_memory[key] + ps_memory[key] <= limit
         for key, limit in cluster_memory_limits.items()
@@ -63,8 +72,12 @@ def _split_sequences_by_memory_limits(
 
     Returns a list of batches, where each batch is a list of sequences.
     """
+    # registers are allocated for the loop counters, and for each swept parameter
+    swept = count_params(sweepers)
+    base_registers = Registers.first_available() + len(sweepers) + swept.get(None, 0)
+
     batch: list[PulseSequence] = []
-    batch_memory = _init_batch()
+    batch_memory = _init_batch(base_registers)
     batches: list[list[PulseSequence]] = []
     for ps in sequences:
         ps_memory = {
@@ -81,9 +94,12 @@ def _split_sequences_by_memory_limits(
             "qrm_lines": sum(
                 1.6 for channelid, _pulse in ps if channelid in qrm_channels
             ),
+            # the Q1 sequencer has a limited number of registers, and each swept
+            # pulse requires its own
+            "registers": sum(swept.get(pulse.id, 0) for _channelid, pulse in ps),
         }
 
-        _raise_error_if_sequence_exceeds_memory_limits(ps_memory)
+        _raise_error_if_sequence_exceeds_memory_limits(ps_memory, base_registers)
 
         # TODO: track instruction memory usage per module instead of summing across
         # all modules.
@@ -93,7 +109,7 @@ def _split_sequences_by_memory_limits(
         )
         if not fits_in_memory:
             batches.append(batch)
-            batch_memory = _init_batch()
+            batch_memory = _init_batch(base_registers)
             batch = []
 
         for key, mem in ps_memory.items():
@@ -142,3 +158,28 @@ def batch_sequences_by_cluster_memory_limits(
         sequences, sweepers, options, qcm_channels, qrm_channels
     )
     return _merge_batch_sequences(batches, options)
+
+
+def restrict_sweepers(
+    sweepers: list[ParallelSweepers], sequence: PulseSequence
+) -> list[ParallelSweepers]:
+    """Drop from the sweepers the pulses that are not part of the sequence.
+
+    Registers are allocated for every swept pulse, so, once the sequences have been
+    split in batches, each batch should only account for its own pulses. The sweepers
+    themselves are kept, since they define the loops (and thus the results' shape).
+    """
+    ids = {pulse.id for _channel, pulse in sequence}
+    return [
+        [
+            (
+                sweeper.model_copy(
+                    update={"pulses": [p for p in sweeper.pulses if p.id in ids]}
+                )
+                if sweeper.pulses is not None
+                else sweeper
+            )
+            for sweeper in parsweep
+        ]
+        for parsweep in sweepers
+    ]

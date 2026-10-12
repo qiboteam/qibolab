@@ -264,6 +264,23 @@ def _unravel_sweeps(sweepers: list[ParallelSweepers]) -> Iterable[tuple[int, Par
     )
 
 
+def count_params(sweepers: list[ParallelSweepers]) -> dict[PulseId | None, int]:
+    """Number of registers required by sweep parameters, as allocated by :func:`params`.
+
+    Keys are the swept pulses' identifiers, while ``None`` collects the parameters
+    that are not associated to a pulse (i.e. channel ones).
+    """
+    counts: dict[PulseId | None, int] = {}
+    for parsweep in sweepers:
+        for sweep in parsweep:
+            nchannels = len(sweep.channels) if sweep.channels is not None else 1
+            nregs = len(_registers(sweep)) * nchannels
+            for pulse in sweep.pulses if sweep.pulses is not None else [None]:
+                key = pulse.id if pulse is not None else None
+                counts[key] = counts.get(key, 0) + nregs
+    return counts
+
+
 def params(sweepers: list[ParallelSweepers], allocated: int) -> list[Param]:
     """Initialize parameters' registers.
 

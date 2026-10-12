@@ -29,6 +29,12 @@ https://docs.qblox.com/en/v0.16.0/cluster/q1_sequence_processor.html#instruction
 """
 
 
+SEQUENCER_REGISTERS = 64
+"""Number of registers available in the Q1 sequencer.
+
+https://docs.qblox.com/en/v2026.08.0/products/architecture/sequencers/sequencer.html#registers
+"""
+
 WEIGHT_MEMORY = 2**14
 """Maximum waveform memory available.
 
@@ -67,6 +73,7 @@ cluster_memory_limits = {
     "acq_number": ACQUISITION_NUMBER,
     "qcm_lines": QCM_INSTRUCTION_MEMORY,
     "qrm_lines": QRM_INSTRUCTION_MEMORY,
+    "registers": SEQUENCER_REGISTERS,
 }
 
 

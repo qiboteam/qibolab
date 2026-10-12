@@ -72,3 +72,36 @@ def test_batch_sequences_by_cluster_memory_limits_oversize_sequence_error_raise(
             qcm_channels={"0/drive"},
             qrm_channels={"0/acquisition"},
         )
+
+
+def test_batch_sequences_by_register_limit():
+    from qibolab._core.pulses import Pulse, Rectangular
+    from qibolab._core.sweeper import Parameter, Sweeper
+
+    pulses = [
+        Pulse(duration=20, amplitude=0.1, envelope=Rectangular()) for _ in range(30)
+    ]
+    sequences = [PulseSequence([("0/drive", p)]) for p in pulses]
+    sweeper = Sweeper(parameter=Parameter.amplitude, range=(0, 1, 0.1), pulses=pulses)
+
+    batches = batching._split_sequences_by_memory_limits(
+        sequences,
+        [[sweeper]],
+        ExecutionParameters(nshots=10, relaxation_time=100),
+        qcm_channels={"0/drive"},
+        qrm_channels=set(),
+    )
+
+    # 6 fixed registers + 1 loop counter leave 57 registers for the swept pulses
+    assert sum(len(b) for b in batches) == 30
+    assert [len(b) for b in batches] == [30]
+
+    many = sequences * 3
+    batches = batching._split_sequences_by_memory_limits(
+        many,
+        [[sweeper]],
+        ExecutionParameters(nshots=10, relaxation_time=100),
+        qcm_channels={"0/drive"},
+        qrm_channels=set(),
+    )
+    assert [len(b) for b in batches] == [57, 33]
