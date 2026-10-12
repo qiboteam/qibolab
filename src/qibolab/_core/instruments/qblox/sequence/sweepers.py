@@ -1,4 +1,4 @@
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Container, Iterable
 from enum import Enum, auto
 from itertools import groupby
 
@@ -281,15 +281,31 @@ def count_params(sweepers: list[ParallelSweepers]) -> dict[PulseId | None, int]:
     return counts
 
 
-def params(sweepers: list[ParallelSweepers], allocated: int) -> list[Param]:
+def params(
+    sweepers: list[ParallelSweepers],
+    allocated: int,
+    pulses: Container[PulseId] | None = None,
+    channels: Container[ChannelId] | None = None,
+) -> list[Param]:
     """Initialize parameters' registers.
 
     `allocated` is the number of already allocated registers for loop counters, as
     initialized by :func:`loops`.
+
+    If `pulses` and `channels` are passed, only the parameters acting on them are
+    kept, and registers are allocated just for those. Since each sequencer runs its
+    own program, this spares the registers of parameters belonging to other
+    sequencers.
     """
     return [
         p.model_copy(update={"reg": Register(number=i + allocated + 1), "loop": j})
-        for i, (j, p) in enumerate(_unravel_sweeps(sweepers))
+        for i, (j, p) in enumerate(
+            (j, p)
+            for j, p in _unravel_sweeps(sweepers)
+            if (pulses is None and channels is None)
+            or p.pulse in (pulses or ())
+            or p.channel in (channels or ())
+        )
     ]
 
 

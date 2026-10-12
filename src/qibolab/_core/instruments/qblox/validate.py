@@ -73,7 +73,6 @@ cluster_memory_limits = {
     "acq_number": ACQUISITION_NUMBER,
     "qcm_lines": QCM_INSTRUCTION_MEMORY,
     "qrm_lines": QRM_INSTRUCTION_MEMORY,
-    "registers": SEQUENCER_REGISTERS,
 }
 
 

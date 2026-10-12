@@ -105,3 +105,26 @@ def test_batch_sequences_by_register_limit():
         qrm_channels=set(),
     )
     assert [len(b) for b in batches] == [57, 33]
+
+
+def test_batch_registers_are_counted_per_channel():
+    from qibolab._core.pulses import Pulse, Rectangular
+    from qibolab._core.sweeper import Parameter, Sweeper
+
+    channels = ["0/drive", "1/drive"]
+    pulses = [
+        Pulse(duration=20, amplitude=0.1, envelope=Rectangular()) for _ in range(100)
+    ]
+    sequences = [PulseSequence([(channels[i % 2], p)]) for i, p in enumerate(pulses)]
+    sweeper = Sweeper(parameter=Parameter.amplitude, range=(0, 1, 0.1), pulses=pulses)
+
+    batches = batching._split_sequences_by_memory_limits(
+        sequences,
+        [[sweeper]],
+        ExecutionParameters(nshots=10, relaxation_time=100),
+        qcm_channels=set(channels),
+        qrm_channels=set(),
+    )
+
+    # 7 fixed registers leave 57 per sequencer: 100 pulses fit once spread on 2 channels
+    assert [len(b) for b in batches] == [100]
