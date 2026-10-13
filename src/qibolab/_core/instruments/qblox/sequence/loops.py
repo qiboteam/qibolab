@@ -4,7 +4,7 @@ from qibolab._core.identifier import ChannelId
 from qibolab._core.instruments.qblox.sequence.asm import label
 from qibolab._core.pulses.pulse import PulseId
 from qibolab._core.serialize import Model
-from qibolab._core.sweeper import ParallelSweepers, iteration_length
+from qibolab._core.sweeper import ParallelSweepers, Parameter, iteration_length
 
 from ..q1asm.ast_ import (
     Add,
@@ -16,13 +16,14 @@ from ..q1asm.ast_ import (
     Line,
     Loop,
     Move,
+    Nop,
     Reference,
     Register,
     ResetPh,
     Sub,
     Wait,
 )
-from .asm import Registers
+from .asm import MAX_PARAM, Registers
 from .sweepers import IndexedParams, Param, update_instructions
 
 __all__ = []
@@ -134,6 +135,27 @@ https://github.com/qiboteam/qibolab/discussions/1119
 """
 
 
+def _phase_wrap(p: Param) -> tuple[Line, ...]:
+    """Keep a phase register within one turn after a shift.
+
+    ``set_ph_delta`` only accepts values in ``[0, MAX_PARAM[Parameter.phase]]``, but
+    the phase step is converted modulo a turn, so accumulating it (e.g. for a
+    descending sweep) would leave the register out of range.
+    """
+    if p.role.kind not in (Parameter.phase, Parameter.relative_phase):
+        return ()
+    turn = int(MAX_PARAM[Parameter.phase])
+    skip = f"phase_wrap_r{p.reg.number}"
+    return (
+        Line(
+            instruction=Jlt(a=p.reg, b=turn, address=Reference(label=skip)),
+            comment=f"wrap {p.description} within a turn",
+        ),
+        Line(instruction=Sub(a=p.reg, b=turn, destination=p.reg)),
+        Line(instruction=Nop(), label=skip),
+    )
+
+
 def _sweep_update(p: Param, channel: set[ChannelId], pulses: set[PulseId]) -> Block:
     """Sweeper update for a single parameter.
 
@@ -151,6 +173,7 @@ def _sweep_update(p: Param, channel: set[ChannelId], pulses: set[PulseId]) -> Bl
                     ),
                     comment=f"shift {p.description}",
                 ),
+                *_phase_wrap(p),
             )
             if p.channel in channel or p.pulse in pulses
             else ()

@@ -163,3 +163,19 @@ def test_readout_probe_is_not_synthesized_through_offsets():
     q1seq = _compile([("ch1", readout)])["ch1"]
     assert len(q1seq.waveforms) == 2
     assert any(isinstance(i, Play) for i in _instructions(q1seq))
+
+
+def test_descending_phase_sweep_wraps_register_within_a_turn():
+    """Negative phase steps are converted modulo a turn, so the accumulated register
+    must be wrapped to stay in the range accepted by ``set_ph_delta``."""
+    from qibolab._core.pulses import VirtualZ
+
+    vz = VirtualZ(phase=0)
+    pulse = Pulse(duration=40, amplitude=0.5, envelope=Gaussian(rel_sigma=0.2))
+    sweeper = Sweeper(parameter=Parameter.phase, range=(0, -6, -0.2), pulses=[vz])
+    q1seq = _compile(
+        [("ch1", pulse), ("ch1", vz), ("ch1", pulse)], [[sweeper]], merged_vzs=False
+    )["ch1"]
+    asm = " ".join(q1seq.program.asm().split())
+    assert "jlt R7,1000000000,@phase_wrap_r7" in asm
+    assert "sub R7,1000000000,R7" in asm

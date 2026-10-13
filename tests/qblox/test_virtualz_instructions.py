@@ -43,7 +43,8 @@ def test_virtualz_with_phase_sweeper():
     for index, line in enumerate(line_instrs):
         if isinstance(line.instruction, Arithmetic):
             assert isinstance(line_instrs[index + 1].instruction, Nop)
-        if isinstance(line.instruction, Nop):
+        # a labelled nop is just a branch target, not a register-latency nop
+        if isinstance(line.instruction, Nop) and line.label is None:
             assert index > 0
             assert isinstance(line_instrs[index - 1].instruction, Arithmetic)
 
