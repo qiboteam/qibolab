@@ -13,7 +13,7 @@
 
   languages.python = {
     enable = true;
-    libraries = with pkgs; [ zlib ];
+    venv.enable = true;
     version = "3.12";
     uv = {
       enable = true;
