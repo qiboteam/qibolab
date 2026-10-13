@@ -777,6 +777,11 @@ BlockList = list[Lineable]
 BlockIter = Iterable[Lineable]
 
 
+def block_to_lines(block: Block) -> list[Line]:
+    """Wrap each instruction into a complete line."""
+    return [el if isinstance(el, Line) else Line.instr(el) for el in block]
+
+
 class Program(Model):
     elements: list[Element]
 
@@ -785,7 +790,7 @@ class Program(Model):
         return [e for e in self.elements if isinstance(e, Line)]
 
     @classmethod
-    def from_elements(cls, elements: list[Element]):
+    def from_elements(cls, elements: Sequence[Element]) -> "Program":
         comments = []
         elements_ = []
 
