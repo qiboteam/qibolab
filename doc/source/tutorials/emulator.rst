@@ -1,217 +1,206 @@
-.. admonition:: Work in progress
+.. _tutorials_emulator:
 
-    This page is only partially updated from a previous version of Qibolab.
+Running an emulated experiment
+==============================
 
-    In case of doubts, contact the `Qibo developers
-    <https://github.com/qiboteam/qibo#contacts>`_.
+The built-in dummy platform is useful for checking an application's execution
+path, but cannot tell us whether a pulse excites a qubit. In this tutorial we
+instead load a supplied numerical platform and compare a readout with and without
+a preceding native rotation. The same sequence construction and acquisition
+handling can later be used with a calibrated laboratory platform.
 
-How to emulate a QPU using Qibolab?
-===================================
+The examples in this page require optional dependencies and a platform
+repository. They are ordinary Python code blocks rather than unconditional
+documentation tests: execution performs numerical simulation, and a configured
+platform must be supplied separately. No simulation-driver construction or
+configuration is needed in this workflow.
 
-We will use a platform which is also available at
-https://github.com/qiboteam/qibocal/tree/main/platforms/qubit, but here it will be
-completely reproduced.
+Install and locate a platform
+-----------------------------
 
-In this section we are going to explain how to setup a platform for pulse emulation
-and how to use it in Qibolab. To setup a platform we first recommend to have a look at
-:ref:`tutorial_platform`.
+For pulse experiments, install ``qibolab[emulator]``. If you also want to run the
+final circuit example, install both the emulator and backend extras:
 
-We are now going to explain a few distinctive features of an emulation
-platform. All parameters related to the Hamiltonian to be simulated are coded directly in the JSON file under
-the section ``configs``. Here is an example
+.. code-block:: console
 
+    pip install "qibolab[backend,emulator]"
 
-.. admonition:: Parameters dictionary
-    :collapsible: closed
+Use a configured numerical platform supplied by your platform repository. For
+this example, suppose its directory is named ``my_emulated_platform`` and it
+provides at least one qubit with native ``RX`` and ``MZ`` sequences. Point
+``QIBOLAB_PLATFORMS`` at the parent directory before starting Python:
 
-    .. testcode::  python
+.. code-block:: console
 
-        parameters = {
-            "settings": {"nshots": 1024, "relaxation_time": 0},
-            "configs": {
-                "hamiltonian": {
-                    "transmon_levels": 2,
-                    "qubits": {
-                        "0": {
-                            "frequency": 5e9,
-                            "sweetspot": 0.02,
-                            "anharmonicity": -200e6,
-                            "asymmetry": 0.0,
-                            "t1": {"0-1": 1000},
-                            "t2": {"0-1": 1900},
-                        }
-                    },
-                    "kind": "hamiltonian",
-                },
-                "0/drive": {
-                    "kind": "drive-emulator",
-                    "frequency": 5e9,
-                    "rabi_frequency": 159154900.0,
-                },
-                "0/drive12": {
-                    "kind": "drive-emulator",
-                    "frequency": 4.8e9,
-                    "rabi_frequency": 159154900.0,
-                },
-                "0/flux": {"kind": "flux-emulator", "offset": 0.02},
-                "0/probe": {"kind": "iq", "frequency": 5200000000.0},
-                "0/acquisition": {
-                    "kind": "acquisition",
-                    "delay": 0.0,
-                    "smearing": 0.0,
-                    "threshold": 0.0,
-                    "iq_angle": 0.0,
-                    "kernel": None,
-                },
-            },
-            "native_gates": {
-                "single_qubit": {
-                    "0": {
-                        "RX": [
-                            [
-                                "0/drive",
-                                {
-                                    "duration": 40,
-                                    "amplitude": 0.1594,
-                                    "envelope": {"kind": "gaussian", "rel_sigma": 0.2},
-                                    "relative_phase": 0.0,
-                                    "kind": "pulse",
-                                },
-                            ]
-                        ],
-                        "RX90": [
-                            [
-                                "0/drive",
-                                {
-                                    "duration": 40,
-                                    "amplitude": 0.07975,
-                                    "envelope": {"kind": "gaussian", "rel_sigma": 0.2},
-                                    "relative_phase": 0.0,
-                                    "kind": "pulse",
-                                },
-                            ]
-                        ],
-                        "MZ": [
-                            [
-                                "0/acquisition",
-                                {
-                                    "kind": "readout",
-                                    "acquisition": {"kind": "acquisition", "duration": 100.0},
-                                    "probe": {
-                                        "duration": 100.0,
-                                        "amplitude": 0.1,
-                                        "envelope": {"kind": "gaussian", "rel_sigma": 0.2},
-                                        "relative_phase": 0.0,
-                                        "kind": "pulse",
-                                    },
-                                },
-                            ]
-                        ],
-                        "CP": None,
-                    }
-                }
-            },
-        }
+    export QIBOLAB_PLATFORMS="/path/to/your/platforms"
 
-We are defining an Hamiltonian with a transmon with two-levels, with a frequency of :math:`\omega_q / 2 \pi = 5 \ \text{GHz}` and
-anharmoncity :math:`\alpha/2 \pi = - 200 \ \text{MHz}`,
-with :math:`T_1 = 1 \  \mu s` and :math:`T_2 = 1.9 \ \mu s`.
-Currently the transmon is flux-tunable since we provided both the sweetspot and the asymmetry parameters in the qubit section and we have also introduce
-a flux channel. By removing them the simulation can be performed with a fixed-frequency transmon.
-Everything else follows the usual Qibolab conventions. Keep in mind that you still need to define also a readout pulse even if all
-parameters ignored in the current emulator except when the readout pulse is played.
+Then load the configured platform by its directory name:
 
-We are now going to give an example on how to setup the `platform.py` file.
+.. code-block:: python
 
+    from qibolab import create_platform
 
-.. testcode::  python
+    platform = create_platform("my_emulated_platform")
+    assert platform.nqubits >= 1
 
-    from qibolab import (
-        AcquisitionChannel,
-        ConfigKinds,
-        DcChannel,
-        Hardware,
-        IqChannel,
-        Platform,
-        Qubit,
-    )
-    from qibolab.instruments.emulator import (
-        DriveEmulatorConfig,
-        EmulatorController,
-        FluxEmulatorConfig,
-        HamiltonianConfig,
-    )
+Replace both the path and ``my_emulated_platform`` with your actual repository
+and platform name. The name is not a built-in alias, and installing the emulator
+extra does not create that directory. Other than ``dummy``, platform names are
+resolved from the configured search paths.
 
-    ConfigKinds.extend([HamiltonianConfig, DriveEmulatorConfig, FluxEmulatorConfig])
+``create_platform("dummy")`` can be substituted to check sequence construction
+and result handling without a numerical platform. It cannot validate the
+physical conclusions of the experiment: its acquisitions are random test data.
+For a runnable dummy circuit walkthrough, see :ref:`tutorials_circuits`.
 
+Construct the two experiments
+-----------------------------
 
-    def create() -> Hardware:
-        """Create emulator platform with flux-tunable qubit."""
-        qubits = {}
-        channels = {}
+Take the selected physical qubit's native gates from the loaded platform. Build
+a baseline readout and then a fresh sequence containing a native RX followed by
+readout. The concatenation operator ``|`` places the second sequence after the
+first. Fresh readouts are important when submitting several sequences together,
+because their acquisition identifiers must be unique.
 
-        for q in range(1):
-            qubits[q] = qubit = Qubit.default(q)
-            channels |= {
-                qubit.probe: IqChannel(mixer=None, lo=None),
-                qubit.acquisition: AcquisitionChannel(probe=qubit.probe),
-                qubit.drive: IqChannel(mixer=None, lo=None),
-                qubit.flux: DcChannel(),
-            }
+.. code-block:: python
 
-        # register the instruments
-        instruments = {
-            "emulator": EmulatorController(address="0.0.0.0", channels=channels),
-        }
+    physical_qubit = next(iter(platform.qubits))
+    natives = platform.natives.single_qubit[physical_qubit]
+    assert natives.RX is not None
+    assert natives.MZ is not None
 
-        return Hardware(instruments=instruments, qubits=qubits)
+    baseline = natives.MZ()
+    rotated = natives.RX() | natives.MZ()
+    sequences = [baseline, rotated]
+    acquisitions = [next(iter(sequence.acquisitions))[1] for sequence in sequences]
+    assert acquisitions[0].id != acquisitions[1].id
 
-.. note::
+The baseline asks how the model classifies its initial state. The second
+experiment asks how the configured native rotation changes that readout.
+These are two independent experiments, not two measurements within one
+evolution. Their physical meaning depends on the initial state and native
+calibrations provided by your numerical platform.
 
-    Split the following, sourcing from an external file - to avoid duplication with
-    :doc:`../getting-started/experiment`.
+.. figure:: figures/emulated-experiments.svg
+    :alt: A baseline sequence contains only MZ, while an independent rotated sequence contains RX then MZ. Their distinct acquisition identifiers select separate arrays of 1000 classified shots; each mean estimates its own outcome-one fraction.
+    :width: 100%
 
-.. testcode:: python
+    Compare two independent preparations, not two readouts of one evolution.
+    Native widths are schematic. The physical model and calibration determine
+    the fractions; no ideal population or mid-sequence collapse is assumed.
 
-    from qibolab import Parameters, Platform
+Acquire and interpret the shots
+-------------------------------
 
-    params = Parameters.model_validate(parameters)
-    platform = Platform(name="my_platform", parameters=params, **vars(create()))
+Use discrimination and single-shot averaging to obtain binary data. As with
+hardware pulse experiments, connect explicitly and guarantee disconnection.
 
-.. testcode:: python
+.. code-block:: python
 
-    import matplotlib.pyplot as plt
+    from qibolab import AcquisitionType, AveragingMode
 
-    from qibolab import AcquisitionType
-
-    # access the native gates
-    gates = platform.natives.single_qubit[0]
-
-    results = []
-    # iterate over pulse sequences
-    for sequence in [gates.MZ(), gates.RX() | gates.MZ()]:
-        # perform the experiment using specific options
-        signal = platform.execute(
-            [sequence],
-            nshots=1000,
-            acquisition_type=AcquisitionType.INTEGRATION,
+    nshots = 1000
+    platform.connect()
+    try:
+        readout = platform.execute(
+            sequences,
+            nshots=nshots,
+            acquisition_type=AcquisitionType.DISCRIMINATION,
+            averaging_mode=AveragingMode.SINGLESHOT,
         )
-        _, acq = next(iter(sequence.acquisitions))
+    finally:
+        platform.disconnect()
 
-        # collect the results
-        sig = signal[acq.id]
-        results.append([sig[..., 0], sig[..., 1]])
+    baseline_shots = readout[acquisitions[0].id]
+    rotated_shots = readout[acquisitions[1].id]
+    assert baseline_shots.shape == rotated_shots.shape == (nshots,)
+    print("Baseline excited fraction:", baseline_shots.mean())
+    print("After RX excited fraction:", rotated_shots.mean())
 
-    plt.title("Single shot classification")
-    plt.xlabel("In-phase [a.u.]")
-    plt.ylabel("Quadrature [a.u.]")
-    plt.xlim(-0.2, 1.2)
-    plt.ylim(-0.7, 0.7)
+Look up each result with its acquisition identifier, not with the qubit index
+or the sequence's list position. The means estimate the fraction of shots
+classified as outcome 1. If the supplied platform models ground-state
+initialization and a calibrated bit-flip rotation, the baseline should be near
+outcome 0 and the native RX should substantially increase the excited fraction.
+Do not require exact ideal counts: native calibration, the physical model and
+finite-shot sampling determine the result. For a multilevel model, check what
+its binary classification includes before identifying outcome 1 with one
+particular excited level.
 
-    plt.scatter(*results[0], label="0")
-    plt.scatter(*results[1], label="1")
-    plt.legend()
+If this were the ``dummy`` platform, changing the pulse program would not cause
+a corresponding change in its random acquisitions. The physical dependence is
+the reason to use emulation for this experiment.
 
+Request another acquisition representation
+------------------------------------------
 
-.. image:: emulator-single-shot.svg
-    :align: center
+If your supplied platform supports integration with cyclic averaging, a second
+execution can request that representation. For each acquisition the usual
+result shape is ``(2,)``, representing I and Q.
+
+.. code-block:: python
+
+    platform.connect()
+    try:
+        integrated = platform.execute(
+            sequences,
+            nshots=nshots,
+            acquisition_type=AcquisitionType.INTEGRATION,
+            averaging_mode=AveragingMode.CYCLIC,
+        )
+    finally:
+        platform.disconnect()
+
+    for name, acquisition in zip(("baseline", "RX"), acquisitions):
+        iq = integrated[acquisition.id]
+        assert iq.shape == (2,)
+        print(name, "averaged I/Q:", iq)
+
+The shape is an interface convention, not a guarantee that a readout chain or
+resonator trajectory was simulated. A numerical platform may use I/Q arrays to
+represent population proxies, with a zero quadrature component, or supply other
+synthetic signals. Consult the interpretation supplied with your platform; do
+not automatically treat these pairs as voltages or physical I/Q clusters.
+
+Execute a native circuit on the same platform
+---------------------------------------------
+
+With ``qibolab[backend,emulator]`` installed, the platform can also be passed
+to Qibo's backend constructor. The backend supplies compilation and manages
+the connection lifecycle. A final measurement remains necessary to obtain a
+circuit result.
+
+.. code-block:: python
+
+    from qibo import Circuit, construct_backend, gates
+
+    backend = construct_backend("qibolab", platform=platform)
+    circuit = Circuit(1, wire_names=[physical_qubit])
+    circuit.add(gates.GPI2(0, phi=0.0))
+    circuit.add(gates.M(0))
+
+    try:
+        outcome = backend.execute_circuit(circuit, nshots=nshots)
+    finally:
+        platform.disconnect()
+
+    assert outcome.samples().shape == (nshots, 1)
+    frequencies = outcome.frequencies()
+    print("Measured excited fraction:", frequencies.get("1", 0) / nshots)
+
+``GPI2`` requests a :math:`\pi/2` rotation, so this is a different preparation
+from the native RX pulse experiment. Its frequency estimate comes from acquired
+shots, not an exact state-vector probability. For larger circuits, first satisfy
+the native-gate and mapping requirements in :ref:`main_doc_compiler`.
+
+Keep measurements at the end
+----------------------------
+
+These examples use one final acquisition per experiment. Inserting intermediate
+readouts is a different physical experiment: it requires a numerical platform
+that supports measurement-induced collapse and subsequent conditioned evolution.
+Do not infer that capability from the ability to return classified shots.
+On several qubits, confirm that the platform samples the joint distribution
+before studying correlations. Likewise, verify support before introducing sweeps
+that change acquisition timing. See :ref:`main_doc_emulator` for the result
+conventions and model capabilities to consider before extending this experiment.

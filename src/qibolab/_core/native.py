@@ -68,6 +68,7 @@ class MissingNative(RuntimeError):
 
 class NativeContainer(Model):
     def ensure(self, name: str) -> Native:
+        """Retrieve a named native template, raising MissingNative if undefined."""
         value = getattr(self, name)
         if value is None:
             raise MissingNative(name)
