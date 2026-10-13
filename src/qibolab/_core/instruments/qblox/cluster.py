@@ -22,7 +22,6 @@ from qibolab._core.components import (
 )
 from qibolab._core.execution_parameters import (
     AcquisitionType,
-    AveragingMode,
     ExecutionParameters,
 )
 from qibolab._core.identifier import ChannelId, Result
@@ -47,6 +46,7 @@ from .utils import (
 )
 from .validate import (
     assert_channels_exclusion,
+    validate_raw_averaging_mode,
     validate_sequence,
 )
 
@@ -124,35 +124,6 @@ def _batch_sequences(
         else sequences
     )
     return [_add_time_of_flight(b, configs).align_to_delays() for b in batched_seqs]
-
-
-def _validate_raw_acquisitions(sequences: dict[ChannelId, Q1Sequence]) -> None:
-    """Ensure each sequencer performs at most one RAW acquisition per run.
-
-    A run may perform multiple scope acquisitions when they are assigned to
-    different sequencers. A single sequencer cannot acquire more than once in
-    the same run, so RAW sequences are not batched: batching could combine
-    acquisitions onto one sequencer and violate this constraint.
-    """
-    for channel, sequence in sequences.items():
-        if len(sequence.acquisitions) > 1:
-            raise ValueError(
-                "RAW acquisition supports at most one acquisition pulse per "
-                f"sequencer; channel {channel!r} has {len(sequence.acquisitions)}."
-            )
-
-
-def _validate_raw_averaging_mode(options: ExecutionParameters) -> None:
-    """Reject RAW averaging modes that exceed Qblox scope-memory limits."""
-    if (
-        options.acquisition_type is AcquisitionType.RAW
-        and options.averaging_mode is not AveragingMode.CYCLIC
-    ):
-        # Qblox scope memory cannot retain a separate RAW trace for every shot.
-        raise NotImplementedError(
-            "Qblox RAW acquisition requires AveragingMode.CYCLIC because of "
-            "scope acquisition memory limits."
-        )
 
 
 def _merge_phases_if_no_phase_sweeper(
@@ -261,7 +232,7 @@ class Cluster(Controller):
     ) -> dict[PulseId, Result]:
         """Execute the given experiment."""
 
-        _validate_raw_averaging_mode(options)
+        validate_raw_averaging_mode(options)
         self.reset()
 
         processed_sequences, phase_sweeper_present = _merge_phases_if_no_phase_sweeper(
@@ -314,14 +285,14 @@ class Cluster(Controller):
                     self.sampling_rate,
                     merged_vzs=not phase_sweeper_present,
                 )
-                if options_.acquisition_type is AcquisitionType.RAW:
-                    # This check is required for RAW acquisition; see the
-                    # _validate_raw_acquisitions docstring for further details.
-                    _validate_raw_acquisitions(sequences_)
 
                 for channelid, seq in sequences_.items():
                     slot = PortAddress.from_path(self.channels[channelid].path).slot
-                    validate_sequence(seq, self._modules[slot].is_qrm_type)
+                    validate_sequence(
+                        sequence=seq,
+                        is_qrm=self._modules[slot].is_qrm_type,
+                        acquisition_type=options_.acquisition_type,
+                    )
 
                 log.sequences(sequences_)
 
