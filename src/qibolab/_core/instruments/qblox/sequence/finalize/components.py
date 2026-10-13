@@ -18,10 +18,14 @@ BlockMap: TypeAlias = Callable[[list[Line], State], tuple[Block, State]]
 class LineRule(Model, Generic[State]):
     """Line-matching transformation.
 
-    This rule applies to a single line. But both the matching condition and the
-    transformation can be affected by a carried-on state.
+    ``init_state`` creates fresh state for each traversal. For every input line,
+    ``match`` returns whether to apply ``map`` and the updated state. Both callbacks'
+    state updates are carried to the next line, even when ``match`` returns false.
+    The replacement is not matched again during the same step.
     """
 
+    init_state: Callable[[], State]
+    """Create independent state for each traversal."""
     match: Match[State]
     """Matching condition."""
     map: LineMap[State]
@@ -44,34 +48,40 @@ class LineRule(Model, Generic[State]):
 class BlockRule(Model, Generic[State]):
     """Block-matching transformation.
 
-    This rule applies to an entire block, which is identified by matching a certain
-    opening condition on a single line, and a similar closing condition.
+    ``init_state`` creates fresh state for each traversal. Outside a block, ``start``
+    is tested on each line; a matching line becomes the first line of the block.
+    While collecting a block, only ``end`` is tested on subsequent lines. A matching
+    end line is excluded from the block passed to ``map``.
 
-    However, both of them also depend on a state, which they can also modify. In this
-    way, each condition can become effectively multi-line.
-    The state itself is only depending on previously-processed ones. But, opening it
-    early and closing late, it is still possible to make as general as needed, at the
-    price of shadowing other similar blocks in the same step. In the extreme case, the
-    block can open at the first instruction seen, and close at the last one, getting the
-    whole program as input.
+    That end line is also tested with ``start``, before mapping the completed block:
+    it either starts the next block or passes through unchanged. State returned by
+    every condition and by ``map`` is retained, including when a condition does not
+    match. At end of input, any open block is mapped as well. Replacement lines are
+    not matched again in this step.
+
+    For example, consecutive waits can be collected by starting on an immediate wait
+    and ending before a non-wait or a labeled line. A labeled wait then starts a new
+    block, preserving its role as a jump target.
     """
 
-    initial: Match[State]
-    """Opening condition."""
-    final: Match[State]
-    """Closing condition."""
+    init_state: Callable[[], State]
+    """Create independent state for each traversal."""
+    start: Match[State]
+    """Start a block, including the matching line."""
+    end: Match[State]
+    """End a block before the matching line."""
     map: BlockMap[State]
     "The transformation applied."
 
 
-Step: TypeAlias = tuple[LineRule, ...] | BlockRule
+Step: TypeAlias = tuple[LineRule, ...] | LineRule | BlockRule
 """Transformation step.
 
 It is supposed to iterate through the entire set of instructions exactly once.
 
 It can be composed of:
 
-- a set of alternatives line transformations
+- a single line transformation or a tuple of alternative line transformations
 - a single block-matching transformation
 
 Semantics
@@ -82,16 +92,12 @@ instructions. Keeping the intuition straightforward is explicitly favored over e
 
 If multiple line-oriented transformations are specified, they are tested first-to-last
 against each instruction line. The first one which matches, applies the transformation,
-otherwise, a trivial transformation is applied, and the line is output into its own
-block (1-element list).
+otherwise, the line passes through unchanged. Replacements are concatenated into a
+flat list of lines.
 
-Instead, having block-matching transformations, which essentially consist in an opening
-guard and a look-ahead, it is creating potential ambiguity for overlapping blocks, and
-internal matching lines.
-This ambiguity is not completely eliminated by the current choice, since overlapping
-blocks may exist for the same rule. In which case, only the block starting first is
-considered, and the initial matching for new blocks is disabled until the current block
-is closed.
+A block-oriented step uses exactly one rule. Only the first matching block is
+collected: new starts within it are not tested until its end condition matches.
+This avoids ambiguity between overlapping blocks or competing block rules.
 
 .. note::
     It would be possible to combine multiple block-matching rules and even line-matching
@@ -139,8 +145,6 @@ The main purposes are intended to be:
     In general, comments provide free space for optimization hints. Both at line and
     block level.
 
-.. todo::
-    A potential option is to apply each step either to a single block, or to a list of
-    them, concatenating the result. This second input would allow to segment the program
-    in a preparation step, to be easier to process in a subsequent one.
+Each step consumes and returns a flat block. Steps run once in the specified order;
+the pipeline does not repeat until a fixed point is reached.
 """

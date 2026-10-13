@@ -117,25 +117,17 @@ def program(
     singleshot = options.averaging_mode is AveragingMode.SINGLESHOT
     pulses = {p[0].id for p in sweepseq}
 
-    return Program.from_elements(
-        transform(
-            [
-                el
-                for block in [
-                    setup(loops_, params_, channel, pulses),
-                    loop(
-                        experiment_,
-                        loops_,
-                        indexed_params,
-                        options.relaxation_time,
-                        singleshot,
-                        channel,
-                        pulses,
-                    ),
-                    finalization(),
-                ]
-                for el in block
-            ],
-            DEFAULT_PIPELINE,
-        )
-    )
+    block: Block = [
+        *setup(loops_, params_, channel, pulses),
+        *loop(
+            experiment_,
+            loops_,
+            indexed_params,
+            options.relaxation_time,
+            singleshot,
+            channel,
+            pulses,
+        ),
+        *finalization(),
+    ]
+    return Program.from_elements(transform(block, DEFAULT_PIPELINE))

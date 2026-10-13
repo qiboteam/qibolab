@@ -12,7 +12,7 @@ __all__ = [
     "wait",
 ]
 
-DEFAULT_PIPELINE = (
+DEFAULT_PIPELINE: Pipeline = (
     wait.merge_wait,
     (wait.long_wait, move.negative_immediate),
     # register.update_nop,

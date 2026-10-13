@@ -14,4 +14,6 @@ def _map_update_nop(line: Line, state: None) -> tuple[Block, None]:
     return [line], state
 
 
-update_nop = LineRule[None](match=_match_update_nop, map=_map_update_nop)
+update_nop = LineRule(
+    init_state=lambda: None, match=_match_update_nop, map=_map_update_nop
+)

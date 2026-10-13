@@ -1,103 +1,71 @@
 from functools import reduce
-from typing import get_args
 
-from pydantic import BaseModel
-from typing_extensions import TypeIs
-
-from ...q1asm.ast_ import Block, Line, Lineable, block_to_lines
+from ...q1asm.ast_ import Block, BlockList, Line, block_to_lines
 from .components import BlockRule, LineRule, Pipeline, State, Step
-
-
-def _is_block(instructions: Block | list[Block]) -> TypeIs[Block]:
-    if len(instructions) == 0:
-        return True
-    return isinstance(instructions[0], Lineable)
-
-
-def _to_lines(instructions: Block | list[Block]) -> list[Line]:
-    """Normalize a mixed Block or list[Block] into a flat list of Lines."""
-    if _is_block(instructions):
-        instructions = [instructions]
-    flat = [el for block in instructions for el in block]
-    return block_to_lines(flat)
-
-
-def _init_state(rule: LineRule[State] | BlockRule[State]) -> State:
-    map_type = type(rule).model_fields["map"].annotation
-    return_type = get_args(map_type)[1]
-    state_type = get_args(return_type)[1]
-    if state_type is type(None) or state_type is None:
-        return None
-    if isinstance(state_type, type) and issubclass(state_type, BaseModel):
-        return state_type()
-    raise TypeError(f"Unsupported state type: {state_type!r}")
 
 
 def _line_traverse(
     lines: list[Line], rules: tuple[LineRule, ...] | LineRule
-) -> list[Block]:
+) -> list[Line]:
     if isinstance(rules, LineRule):
         rules = (rules,)
-    states = [_init_state(rule) for rule in rules]
-    next_states = []
-    result = []
+    states = [rule.init_state() for rule in rules]
+    result: BlockList = []
 
     for line in lines:
-        states = next_states + states[len(next_states) :]
-        next_states = []
-        for state, rule in zip(states, rules):
-            match, state = rule.match(line, state)
-            next_states.append(state)
+        for index, rule in enumerate(rules):
+            match, state = rule.match(line, states[index])
+            states[index] = state
             if match:
                 mapped, state = rule.map_annotate(line, state)
-                next_states[-1] = state
-                result.append(mapped)
+                states[index] = state
+                result.extend(mapped)
                 break
         else:
-            result.append([line])
+            result.append(line)
 
-    return result
+    return block_to_lines(result)
 
 
-def _block_traverse(lines: list[Line], rule: BlockRule) -> list[Block]:
-    state = _init_state(rule)
-    result = []
+def _block_traverse(lines: list[Line], rule: BlockRule[State]) -> list[Line]:
+    state = rule.init_state()
+    result: BlockList = []
 
     # current block
-    block = []
+    block: list[Line] = []
 
     for line in lines:
         if len(block) == 0:
-            match, state = rule.initial(line, state)
+            match, state = rule.start(line, state)
             if match:
                 block.append(line)
             else:
-                result.append([line])
+                result.append(line)
         else:
-            match, state = rule.final(line, state)
-            if match and rule.initial(line, state)[0]:
-                # the line both closes the current block and opens a new one
+            match, state = rule.end(line, state)
+            if match:
+                starts_next, state = rule.start(line, state)
                 mapped, state = rule.map(block, state)
-                result.append(mapped)
-                block = [line]
-            elif match:
-                # the line closes the block and does not open a new one
-                mapped, state = rule.map(block, state)
-                result.append(mapped + [line])
-                block = []
+                result.extend(mapped)
+                if starts_next:
+                    block = [line]
+                else:
+                    result.append(line)
+                    block = []
             else:
                 block.append(line)
 
     # flush the block left open at the end of the program
     if len(block) > 0:
         mapped, state = rule.map(block, state)
-        result.append(mapped)
+        result.extend(mapped)
 
-    return result
+    return block_to_lines(result)
 
 
-def traverse(instructions: Block | list[Block], step: Step) -> list[Block]:
-    lines = _to_lines(instructions)
+def traverse(instructions: Block, step: Step) -> list[Line]:
+    """Apply one step, with fresh rule state, and return a flat list of lines."""
+    lines = block_to_lines(instructions)
     return (
         _block_traverse(lines, step)
         if isinstance(step, BlockRule)
@@ -107,4 +75,4 @@ def traverse(instructions: Block | list[Block], step: Step) -> list[Block]:
 
 def transform(block: Block, pipeline: Pipeline) -> list[Line]:
     """Apply the pipeline in order and return a flat list of annotated lines."""
-    return _to_lines(reduce(traverse, pipeline, block))
+    return reduce(traverse, pipeline, block_to_lines(block))

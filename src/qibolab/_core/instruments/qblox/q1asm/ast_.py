@@ -790,7 +790,7 @@ class Program(Model):
         return [e for e in self.elements if isinstance(e, Line)]
 
     @classmethod
-    def from_elements(cls, elements: list[Element]):
+    def from_elements(cls, elements: Sequence[Element]) -> "Program":
         comments = []
         elements_ = []
 

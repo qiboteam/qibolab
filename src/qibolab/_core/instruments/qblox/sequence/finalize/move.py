@@ -25,8 +25,10 @@ def _map_negative_immediate(line: Line, state: None) -> tuple[Block, None]:
     ], None
 
 
-negative_immediate = LineRule[None](
-    match=_match_negative_immediate, map=_map_negative_immediate
+negative_immediate = LineRule(
+    init_state=lambda: None,
+    match=_match_negative_immediate,
+    map=_map_negative_immediate,
 )
 """Compile negative value sets.
 

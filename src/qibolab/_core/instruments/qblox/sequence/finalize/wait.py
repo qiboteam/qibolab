@@ -48,7 +48,7 @@ def _map_long_wait(line: Line, state: LongWaits) -> tuple[Block, LongWaits]:
     return block, LongWaits(n=state.n + 1)
 
 
-long_wait = LineRule[LongWaits](match=_match_long_wait, map=_map_long_wait)
+long_wait = LineRule(init_state=LongWaits, match=_match_long_wait, map=_map_long_wait)
 """Split a long immediate wait.
 
 It accounts for the wait instruction limit, defined by :const:`MAX_WAIT`.
@@ -100,6 +100,9 @@ def _merge_wait(lines: list[Line], state: None) -> tuple[Block, None]:
     return merged, None
 
 
-merge_wait = BlockRule[None](
-    initial=_start_merge_wait, final=_end_merge_wait, map=_merge_wait
+merge_wait = BlockRule(
+    init_state=lambda: None,
+    start=_start_merge_wait,
+    end=_end_merge_wait,
+    map=_merge_wait,
 )
