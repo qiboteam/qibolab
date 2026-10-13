@@ -1,8 +1,8 @@
 from qibolab._core.serialize import Model
 
-from ...q1asm.ast_ import Block, Line, Loop, Move, Reference, Wait
-from ..asm import Registers
-from .components import BlockRule, LineRule
+from ....q1asm.ast_ import Block, Line, Loop, Move, Reference, Wait
+from ...asm import Registers
+from ..components import BlockRule, LineRule
 
 __all__ = [
     "LongWaits",

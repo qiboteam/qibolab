@@ -1,7 +1,7 @@
 from typing import cast
 
-from ...q1asm.ast_ import Block, Line, Move, Sub
-from .components import LineRule
+from ....q1asm.ast_ import Block, Line, Move, Sub
+from ..components import LineRule
 
 __all__ = ["negative_immediate"]
 

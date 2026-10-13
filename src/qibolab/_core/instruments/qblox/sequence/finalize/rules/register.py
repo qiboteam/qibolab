@@ -1,5 +1,5 @@
-from ...q1asm.ast_ import Block, Line
-from .components import LineRule
+from ....q1asm.ast_ import Block, Line
+from ..components import LineRule
 
 __all__ = ["update_nop"]
 

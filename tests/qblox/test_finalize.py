@@ -13,15 +13,14 @@ from qibolab._core.instruments.qblox.q1asm.ast_ import (
 from qibolab._core.instruments.qblox.sequence.asm import Registers
 from qibolab._core.instruments.qblox.sequence.finalize import (
     DEFAULT_PIPELINE,
-    move,
     transform,
     traverse,
-    wait,
 )
 from qibolab._core.instruments.qblox.sequence.finalize.components import (
     BlockRule,
     LineRule,
 )
+from qibolab._core.instruments.qblox.sequence.finalize.rules import move, wait
 
 
 def test_merge_wait_consecutive():

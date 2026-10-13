@@ -1,6 +1,6 @@
-from . import move, register, wait
 from .components import Pipeline
-from .process import transform, traverse
+from .rules import move, register, wait
+from .transform import transform, traverse
 
 __all__ = [
     "DEFAULT_PIPELINE",
