@@ -18,12 +18,8 @@ from qibolab._core.pulses import (
     Rectangular,
     VirtualZ,
 )
-from qibolab._core.execution_parameters import (
-    AcquisitionType,
-    AveragingMode,
-    ExecutionParameters,
-)
-from qibolab._core.instruments.qblox import cluster
+from qibolab._core.execution_parameters import AcquisitionType
+from qibolab._core.instruments.qblox import cluster, validate
 from qibolab._core.instruments.qblox.sequence.acquisition import (
     Acquisition as Q1Acquisition,
 )
@@ -112,16 +108,12 @@ def test_raw_acquisition_allows_at_most_one_pulse_per_sequencer():
         update={"acquisitions": {uuid4(): acquisition, uuid4(): acquisition}}
     )
 
-    cluster._validate_raw_acquisitions({"0/acquisition": one_acquisition})
-    # The limit applies independently to each sequencer, not across the module.
-    cluster._validate_raw_acquisitions(
-        {
-            "0/acquisition": one_acquisition,
-            "1/acquisition": one_acquisition,
-        }
-    )
+    # The limit applies per sequencer, i.e. per compiled sequence.
+    validate.validate_raw_acquisitions(one_acquisition, AcquisitionType.RAW)
+    # The limit only applies to RAW acquisitions.
+    validate.validate_raw_acquisitions(two_acquisitions, AcquisitionType.INTEGRATION)
     with pytest.raises(ValueError, match="at most one acquisition pulse per sequencer"):
-        cluster._validate_raw_acquisitions({"0/acquisition": two_acquisitions})
+        validate.validate_raw_acquisitions(two_acquisitions, AcquisitionType.RAW)
 
 
 def test_batch_sequences_by_cluster_memory_limits_oversize_sequence_error_raise(

@@ -4,8 +4,8 @@
 import numpy as np
 import pytest
 
-from qibolab._core.execution_parameters import ExecutionParameters
 from qibolab._core.instruments.qblox.limits import WAVEFORM_MEMORY
+from qibolab._core.execution_parameters import AcquisitionType, ExecutionParameters
 from qibolab._core.instruments.qblox.q1asm.ast_ import (
     Instr,
     Play,
@@ -86,7 +86,7 @@ def test_long_rectangular_pulse_fits_waveform_memory():
     result = _compile([("ch1", pulse)])
     q1seq = result["ch1"]
     assert len(q1seq.waveforms) == 0
-    validate_sequence(q1seq, is_qrm=False)
+    validate_sequence(q1seq, is_qrm=False, acquisition_type=AcquisitionType.INTEGRATION)
 
 
 def test_rectangular_amplitude_sweeper():
