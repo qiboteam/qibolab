@@ -18,6 +18,7 @@ from pydantic import (
 from pydantic_core import core_schema
 
 from ....serialize import Model
+from ..validate import SEQUENCER_REGISTERS
 
 __all__ = ["Program"]
 
@@ -39,7 +40,7 @@ class Register(Model):
         else:
             raise ValueError(f"Register not recognized '{data}'")  # noqa: TRY004
 
-        assert 0 <= num < 64
+        assert 0 <= num < SEQUENCER_REGISTERS
         return {"number": num}
 
     @model_serializer

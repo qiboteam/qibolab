@@ -190,7 +190,7 @@ def batch_sequences_by_cluster_memory_limits(
     return _merge_batch_sequences(batches, options)
 
 
-def restrict_sweepers(
+def drop_sweeper_pulses_outside_sequence(
     sweepers: list[ParallelSweepers], sequence: PulseSequence
 ) -> list[ParallelSweepers]:
     """Drop from the sweepers the pulses that are not part of the sequence.

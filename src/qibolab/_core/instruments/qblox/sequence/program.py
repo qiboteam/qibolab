@@ -1,4 +1,4 @@
-from collections.abc import Iterable, Sequence
+from collections.abc import Sequence
 
 from qibolab._core.execution_parameters import AveragingMode, ExecutionParameters
 from qibolab._core.identifier import ChannelId
@@ -84,7 +84,7 @@ def finalization() -> list[Instruction]:
 
 
 def program(
-    sequence: Iterable[PulseLike],
+    sequence: Sequence[PulseLike],
     pulse_realization: PulseRealization,
     acquisitions: dict[MeasureId, AcquisitionSpec],
     options: ExecutionParameters,
@@ -101,7 +101,6 @@ def program(
         options.nshots,
         inner_shots=options.averaging_mode is AveragingMode.SEQUENTIAL,
     )
-    sequence = list(sequence)
     params_ = params(
         sweepers,
         allocated=max(lp.reg.number for lp in loops_),
