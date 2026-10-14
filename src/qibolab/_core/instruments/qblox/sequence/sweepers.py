@@ -301,10 +301,9 @@ def params(
     `allocated` is the number of already allocated registers for loop counters, as
     initialized by :func:`loops`.
 
-    If `pulses` and `channels` are passed, only the parameters acting on them are
-    kept, and registers are allocated just for those. Since each sequencer runs its
-    own program, this spares the registers of parameters belonging to other
-    sequencers.
+    If `pulses` and `channels` are passed, only the parameters acting on them are kept,
+    and registers are allocated just for those. Since each sequencer runs its own
+    program, this spares the registers of parameters belonging to other sequencers.
     """
     return [
         p.model_copy(update={"reg": Register(number=i + allocated + 1), "loop": j})
@@ -312,8 +311,10 @@ def params(
             (j, p)
             for j, p in _unravel_sweeps(sweepers)
             if (pulses is None and channels is None)
-            or p.pulse in (pulses or ())
-            or p.channel in (channels or ())
+            or (p.pulse is not None and pulses is not None and p.pulse in pulses)
+            or (
+                p.channel is not None and channels is not None and p.channel in channels
+            )
         )
     ]
 

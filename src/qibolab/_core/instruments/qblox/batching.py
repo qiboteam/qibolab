@@ -58,7 +58,7 @@ def _base_registers_per_channel(
 
 def _raise_error_if_sequence_exceeds_registers(
     registers: dict[ChannelId, int], base_registers: dict[ChannelId, int]
-):
+) -> None:
     """Raise error if a single sequence exceeds the sequencer registers."""
     for channelid, number in registers.items():
         requested = base_registers[channelid] + number
@@ -70,7 +70,7 @@ def _raise_error_if_sequence_exceeds_registers(
             )
 
 
-def _raise_error_if_sequence_exceeds_memory_limits(ps_memory: dict[str, int]):
+def _raise_error_if_sequence_exceeds_memory_limits(ps_memory: dict[str, int]) -> None:
     """Raise error if a single sequence exceeds the cluster memory limits."""
     base_memory = _init_batch()
     fits_in_memory = all(

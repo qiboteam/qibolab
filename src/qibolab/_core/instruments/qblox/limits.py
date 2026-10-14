@@ -1,7 +1,5 @@
 import qblox_instruments
 
-__all__ = []
-
 WAVEFORM_MEMORY = 2**14
 """Maximum waveform memory available.
 
