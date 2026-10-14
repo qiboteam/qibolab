@@ -1,4 +1,4 @@
-from collections.abc import Collection
+from collections.abc import Collection, Sequence
 from enum import Enum, auto
 from functools import cache
 from typing import Any
@@ -84,7 +84,7 @@ class Sweeper(Model):
     To sweep over the array ``np.arange(start, stop, step)``.
     Can be provided instead of ``values`` for more efficient sweeps on some instruments.
     """
-    pulses: list[PulseLike] | None = None
+    pulses: Sequence[PulseLike] | None = None
     """List of `qibolab.Pulse` to be swept."""
     channels: list[ChannelId] | None = None
     """List of channel names for which the parameter should be swept."""
@@ -92,7 +92,6 @@ class Sweeper(Model):
     @model_validator(mode="after")
     def check_values(self):
         _alternative_fields((self.pulses, "pulses"), (self.channels, "channels"))
-
         if self.values is None and self.range is None:
             raise ValueError("Cannot create a sweeper without values or range.")
         if self.pulses is not None and self.parameter in Parameter.channels():

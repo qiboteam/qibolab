@@ -3,8 +3,9 @@ import pytest
 from qibolab._core.execution_parameters import ExecutionParameters
 from qibolab._core.instruments.qblox import batching
 from qibolab._core.instruments.qblox.sequence.sweepers import count_params
-from qibolab._core.pulses import Acquisition, Delay
+from qibolab._core.pulses import Acquisition, Delay, Gaussian, Pulse, Rectangular
 from qibolab._core.sequence import PulseSequence
+from qibolab._core.sweeper import Parameter, Sweeper, normalize_sweepers
 
 
 def _sequence() -> PulseSequence:
@@ -76,9 +77,6 @@ def test_batch_sequences_by_cluster_memory_limits_oversize_sequence_error_raise(
 
 
 def test_batch_sequences_by_register_limit():
-    from qibolab._core.pulses import Pulse, Rectangular
-    from qibolab._core.sweeper import Parameter, Sweeper
-
     pulses = [
         Pulse(duration=20, amplitude=0.1, envelope=Rectangular()) for _ in range(30)
     ]
@@ -109,9 +107,8 @@ def test_batch_sequences_by_register_limit():
 
 
 def test_batch_registers_are_counted_per_channel():
-    from qibolab._core.pulses import Pulse, Rectangular
-    from qibolab._core.sweeper import Parameter, Sweeper
-
+    """Pulse register budget is per sequencer: 100 pulses split across 2 channels fit
+    because each channel gets its own 57-register allowance."""
     channels = ["0/drive", "1/drive"]
     pulses = [
         Pulse(duration=20, amplitude=0.1, envelope=Rectangular()) for _ in range(100)
@@ -132,9 +129,8 @@ def test_batch_registers_are_counted_per_channel():
 
 
 def _channel_sweep_setup(nchannels: int, npulses: int):
-    from qibolab._core.pulses import Pulse, Rectangular
-    from qibolab._core.sweeper import Parameter, Sweeper, normalize_sweepers
-
+    """Build channels, rectangular pulses, and sweepers: one amplitude sweeper on all
+    pulses plus one frequency sweeper per channel."""
     channels = [f"{i}/drive" for i in range(nchannels)]
     pulses = [
         Pulse(duration=20, amplitude=0.1, envelope=Rectangular())
@@ -161,6 +157,8 @@ def _channel_sweep_setup(nchannels: int, npulses: int):
 
 
 def test_batch_registers_ignore_other_channels_sweepers():
+    """Sweeper loop registers are scoped to their own channel: frequency sweepers on
+    24 other channels don't add loop overhead to 0/drive's budget."""
     channels, pulses, sweepers = _channel_sweep_setup(25, 40)
     options = ExecutionParameters(nshots=10, relaxation_time=100)
 
@@ -186,6 +184,7 @@ def test_batch_registers_ignore_other_channels_sweepers():
 
 
 def test_batch_registers_count_own_channel_sweepers():
+    """Sweepers on the same channel do consume its register budget."""
     channels, pulses, sweepers = _channel_sweep_setup(1, 60)
 
     # 8 fixed + 1 own frequency + 60 amplitudes exceeds the 64 registers
@@ -200,9 +199,7 @@ def test_batch_registers_count_own_channel_sweepers():
 
 
 def test_batch_registers_duration_sweeper_mixed_envelopes():
-    from qibolab._core.pulses import Gaussian, Pulse, Rectangular
-    from qibolab._core.sweeper import Parameter, Sweeper, normalize_sweepers
-
+    """Duration sweepers count registers per envelope type (Gaussian=3, Rectangular=1)."""
     pulses = [
         Pulse(duration=20, amplitude=0.1, envelope=Rectangular()) for _ in range(20)
     ]
