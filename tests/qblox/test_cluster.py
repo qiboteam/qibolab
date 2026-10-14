@@ -7,7 +7,8 @@ from qibolab._core.execution_parameters import (
     AveragingMode,
     ExecutionParameters,
 )
-from qibolab._core.instruments.qblox import cluster
+from qibolab._core.instruments.qblox import validate
+from qibolab._core.instruments.qblox.config import hardware
 
 
 def test_enable_raw_acquisition_scope_averaging(monkeypatch):
@@ -25,9 +26,9 @@ def test_enable_raw_acquisition_scope_averaging(monkeypatch):
         def scope_acq_sequencer_select(self, index):
             selected.append(index)
 
-    monkeypatch.setattr(cluster.config, "ModuleConfig", ModuleConfig)
+    monkeypatch.setattr(hardware.mo, "ModuleConfig", ModuleConfig)
 
-    cluster.Cluster._enable_raw_acquisition(
+    hardware._enable_raw_acquisition(
         SimpleNamespace(_modules={1: ReadoutModule()}),
         acq_sequencers={1: [0]},
     )
@@ -52,7 +53,7 @@ def test_raw_acquisition_rejects_non_cyclic_averaging(averaging_mode):
     )
 
     with pytest.raises(NotImplementedError, match="AveragingMode.CYCLIC"):
-        cluster._validate_raw_averaging_mode(options)
+        validate.validate_raw_averaging_mode(options)
 
 
 def test_raw_acquisition_accepts_cyclic_averaging():
@@ -61,7 +62,7 @@ def test_raw_acquisition_accepts_cyclic_averaging():
         averaging_mode=AveragingMode.CYCLIC,
     )
 
-    cluster._validate_raw_averaging_mode(options)
+    validate.validate_raw_averaging_mode(options)
 
 
 def test_non_raw_acquisition_allows_single_shot_averaging():
@@ -70,4 +71,4 @@ def test_non_raw_acquisition_allows_single_shot_averaging():
         averaging_mode=AveragingMode.SINGLESHOT,
     )
 
-    cluster._validate_raw_averaging_mode(options)
+    validate.validate_raw_averaging_mode(options)
