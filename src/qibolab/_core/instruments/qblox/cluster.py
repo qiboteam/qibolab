@@ -266,7 +266,7 @@ class Cluster(Controller):
         )
 
         # configure the modules
-        _module_configs = self._configure_modules_static(configs)
+        _module_configs = config.configure_modules_static(cluster=self, configs=configs)
 
         # Execute each batch sequentially, and concatenate results
         log = Logger(configs)
@@ -299,7 +299,8 @@ class Cluster(Controller):
                 # then configure sequencers (including sequences upload)
                 self._disconnect_and_desync_sequencers()
                 # configure the hardware for the current sequence batch
-                sequencers = self._configure_hardware_per_sequence(
+                sequencers = config.configure_hardware_per_sequence(
+                    cluster=self,
                     configs=configs,
                     acquisition=options_.acquisition_type,
                     sequences=sequences_,
@@ -353,180 +354,6 @@ class Cluster(Controller):
                 # used a sequencer that is not used in the current one, it can cause
                 # an indefinite wait during `wait_sync`.
                 seq.sync_en(False)
-
-    def _configure_modules_static(
-        self, configs: Configs
-    ) -> dict[SlotId, config.ModuleConfig]:
-        """Configure module settings (e.g. LOs, Mixers).
-
-        Returns a dictionary mapping slots to their respective ModuleConfig.
-        """
-        modcfgs = {}
-        for slot, chs in self._channels_by_module.items():
-            module = self._modules[slot]
-            ids = {id for id, _ in chs}
-            channels = {id: ch for id, ch in self.channels.items() if id in ids}
-            los = config.module.los(self._los, configs, ids)
-            mixers = config.module.mixers(self._mixers, configs, ids)
-            modcfg = modcfgs[slot] = config.ModuleConfig.build(
-                channels,
-                configs,
-                los,
-                mixers,
-                is_qcm_non_rf_type=module.is_qcm_type and not module.is_rf_type,
-            )
-            # We can disconnect the module only when initializing it for the first time (for static configurations).
-            modcfg.disconnect_module(module)
-            modcfg.update_module(module)
-        return modcfgs
-
-    def _enable_raw_acquisition(
-        self,
-        acq_sequencers: dict[SlotId, list[int]],
-    ) -> None:
-        """Configure scope acquisition settings on each module.
-
-        For every module (identified by its slot), this method builds a
-        ``ModuleConfig`` that enables scope acquisition averaging on both
-        paths. RAW acquisition is restricted to cyclic averaging because of
-        scope acquisition memory limits. Each acquisition sequencer listed in
-        ``acq_sequencers`` is individually selected on the module so that the
-        scope acquisition mode is applied per-sequencer.
-        """
-        for slot, seq_indices in acq_sequencers.items():
-            config_updates = config.ModuleConfig(
-                ports={},
-                scope_acq_avg_mode_en_path0=True,
-                scope_acq_avg_mode_en_path1=True,
-            )
-            readout_module = self._modules[slot]
-
-            for idx in seq_indices:
-                readout_module.scope_acq_sequencer_select(idx)
-
-            config_updates.update_module(readout_module)
-
-    def _configure_hardware_per_sequence(
-        self,
-        configs: Configs,
-        acquisition: AcquisitionType,
-        sequences: dict[ChannelId, Q1Sequence] | None = None,
-    ) -> SequencerMap:
-        """Configure the hardware for a specific sequence.
-
-        This method orchestrates the full hardware configuration pipeline for
-        a given acquisition sequence. It delegates sequencer configuration to
-        :meth:`_configure_sequencers` and, depending on the acquisition type,
-        applies additional module-level settings.
-
-        For ``AcquisitionType.RAW`` acquisitions, the method additionally calls
-        :meth:`_enable_raw_acquisition` to dynamically reconfigure the relevant
-        readout modules so that each acquisition sequencer is individually
-        selected for scope acquisition mode. For other acquisition types
-        (e.g. ``INTEGRATION``), only the standard sequencer configuration is
-        applied.
-        """
-
-        sequencers, _, acquisition_sequencers = self._configure_sequencers(
-            configs=configs,
-            acquisition=acquisition,
-            sequences=sequences,
-        )
-
-        # at the time being we only dynamically change the modules for RAW acquisition
-        # but in the future it can be expanded
-        if acquisition is AcquisitionType.RAW:
-            self._enable_raw_acquisition(acq_sequencers=acquisition_sequencers)
-
-        return sequencers
-
-    def _configure_sequencers(
-        self,
-        configs: Configs,
-        acquisition: AcquisitionType = AcquisitionType.INTEGRATION,
-        sequences: dict[ChannelId, Q1Sequence] | None = None,
-    ) -> tuple[
-        SequencerMap,
-        dict[SlotId, dict[int, config.SequencerConfig]],
-        dict[SlotId, list[int]],
-    ]:
-        """Configure sequencers.
-
-        The return value consists of the association map from channels to sequencers,
-        for each module. And the sequencer configurations.
-
-        For configuration testing purpose, it is possible to also configure sequencers
-        with no sequence provided. In which case, it will attempt to assign sequencers
-        to all available channels (as opposed to just those involved in the experiment,
-        and thus in the sequences). For the sake of simplifying the usage of this
-        function, a default acquisition type is provided
-        (:attr:`AcquisitionType.INTEGRATION`). The only true alternative to this value
-        is :attr:`AcquisitionType.RAW`, since further configurations are required to
-        operate in scope mode.
-        """
-        sequencers = defaultdict(dict)
-        acquisition_sequencers = defaultdict(list)
-        exec_mode = sequences is not None
-        sequences_ = defaultdict(lambda: None, sequences if exec_mode else {})
-
-        seqcfgs = {}
-        for slot, chs in self._channels_by_module.items():
-            module = self._modules[slot]
-
-            # each channel is going to be assigned to its own sequencer, thus they can
-            # not be outnumbered
-            assert len(module.sequencers) >= len(chs)
-
-            # configure all sequencers, and store association to channels
-            seqcfgs[slot] = {}
-            for idx, ((ch, address), sequencer) in enumerate(
-                zip(chs, module.sequencers)
-            ):
-                # Only configure and register sequencer for active channels. For passive
-                # channels the sequencer operations are not relevant, e.g. a flux
-                # channel with no registered pulse will still set an offset, but this
-                # will happen at port level, and it is consumed in the `ModuleConfig` if
-                # not in execution mode, configure all channels, to test the
-                # configuration itself.
-                if exec_mode and ch not in sequences:
-                    continue
-
-                seqcfg = seqcfgs[slot][idx] = config.SequencerConfig.build(
-                    address,
-                    ch,
-                    self.channels,
-                    configs,
-                    acquisition,
-                    module.is_rf_type,
-                    sequence=sequences_[ch],
-                )
-                seqcfg.apply(sequencer)
-
-                # Only RAW input sequencers set this flag to False; output
-                # sequencers leave it as None and cannot trigger scope capture.
-                if seqcfg.demod_en_acq is False:
-                    acquisition_sequencers[slot].append(idx)
-                # populate channel-to-sequencer mapping
-                sequencers[slot][ch] = idx
-
-        return sequencers, seqcfgs, acquisition_sequencers
-
-    def configure(
-        self,
-        configs: Configs,
-        acquisition: AcquisitionType = AcquisitionType.INTEGRATION,
-        sequences: dict[ChannelId, Q1Sequence] | None = None,
-    ) -> tuple[SequencerMap, ClusterConfigs]:
-        """
-        .. deprecated:: 0.2.16
-            Use `configure_sequencers` and/or `_configure_modules_static` instead.
-        """
-        modules_configs = self._configure_modules_static(configs)
-        sequencers, seqcfgs, acquisition_sequencers = self._configure_sequencers(
-            configs, acquisition, sequences
-        )
-        _ = self._enable_raw_acquisition(acquisition_sequencers)
-        return sequencers, ClusterConfigs(modules=modules_configs, sequencers=seqcfgs)
 
     def _execute(
         self,
