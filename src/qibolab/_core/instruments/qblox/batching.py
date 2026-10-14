@@ -10,11 +10,24 @@ from qibolab._core.pulses import PulseId
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import ParallelSweepers
 
-from .limits import SEQUENCER_REGISTERS, cluster_memory_limits
+from .limits import (
+    ACQUISITION_MEMORY,
+    ACQUISITION_NUMBER,
+    QCM_INSTRUCTION_MEMORY,
+    QRM_INSTRUCTION_MEMORY,
+    SEQUENCER_REGISTERS,
+)
 from .sequence.asm import Registers
 from .sequence.sequence import _effective_channels
 from .sequence.sweepers import _registers
 from .utils import per_shot_memory
+
+cluster_memory_limits = {
+    "acq_memory": ACQUISITION_MEMORY,
+    "acq_number": ACQUISITION_NUMBER,
+    "qcm_lines": QCM_INSTRUCTION_MEMORY,
+    "qrm_lines": QRM_INSTRUCTION_MEMORY,
+}
 
 
 def _pulse_sweep_register_counts(
