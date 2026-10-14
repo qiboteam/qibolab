@@ -198,6 +198,47 @@ def test_batch_registers_count_own_channel_sweepers():
         )
 
 
+@pytest.mark.parametrize("nparameters", [1, 57, 58])
+def test_batch_registers_count_sweeper_only_channels(nparameters):
+    sequence = PulseSequence([("0/drive", Delay(duration=4))])
+    sweepers = normalize_sweepers(
+        [
+            [
+                Sweeper(
+                    parameter=Parameter.frequency,
+                    range=(1e6, 2e6, 1e5),
+                    channels=["1/drive"],
+                )
+                for _ in range(nparameters)
+            ]
+        ]
+    )
+    options = ExecutionParameters(nshots=1, relaxation_time=100)
+
+    # Six fixed registers and one loop leave 57 channel-parameter registers.
+    if nparameters > 57:
+        with pytest.raises(
+            ValueError,
+            match="channel 1/drive: requested=65, limit=64",
+        ):
+            batching._split_sequences_by_memory_limits(
+                [sequence],
+                sweepers,
+                options,
+                qcm_channels={"0/drive", "1/drive"},
+                qrm_channels=set(),
+            )
+    else:
+        batches = batching._split_sequences_by_memory_limits(
+            [sequence, sequence],
+            sweepers,
+            options,
+            qcm_channels={"0/drive", "1/drive"},
+            qrm_channels=set(),
+        )
+        assert [len(batch) for batch in batches] == [2]
+
+
 def test_batch_registers_duration_sweeper_mixed_envelopes():
     """Duration sweepers count registers per envelope type (Gaussian=3, Rectangular=1)."""
     pulses = [

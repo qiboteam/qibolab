@@ -5,7 +5,7 @@ from qibolab._core.execution_parameters import ExecutionParameters
 from qibolab._core.identifier import ChannelId
 from qibolab._core.pulses import PulseId
 from qibolab._core.sequence import PulseSequence
-from qibolab._core.sweeper import ParallelSweepers
+from qibolab._core.sweeper import ParallelSweepers, swept_channels
 
 from .limits import SEQUENCER_REGISTERS, cluster_memory_limits
 from .sequence.asm import Registers
@@ -29,30 +29,40 @@ def _init_batch() -> dict[str, int]:
 
 
 def _registers_per_channel(
-    ps: PulseSequence, swept: dict[PulseId | None, int]
+    ps: PulseSequence,
+    swept: dict[PulseId | None, int],
+    sweeper_channels: set[ChannelId],
 ) -> dict[ChannelId, int]:
     """Registers required by swept pulses, for the sequencer of each channel.
 
     Each channel runs its own program, so registers are not shared among channels.
     """
-    registers: dict[ChannelId, int] = {}
+    registers = dict.fromkeys(ps.by_channel.keys() | sweeper_channels, 0)
     for channelid, pulse in ps:
         registers[channelid] = registers.get(channelid, 0) + swept.get(pulse.id, 0)
     return registers
 
 
 def _base_registers_per_channel(
-    ps: PulseSequence, fixed: int, channel_swept: dict[ChannelId, int]
+    ps: PulseSequence,
+    fixed: int,
+    channel_swept: dict[ChannelId, int],
+    sweeper_channels: set[ChannelId],
 ) -> dict[ChannelId, int]:
     """Registers required on each channel's sequencer regardless of the swept pulses.
 
     Besides the `fixed` ones, those are the registers of the parameters swept on the
     channels the sequencer is associated to (including the *probe* alias of acquisition
-    channels).
+    channels). Channels without pulses still need registers when they are swept.
     """
+    by_channel = ps.by_channel
     return {
-        ch: fixed + sum(channel_swept.get(c, 0) for c in _effective_channels(ch, seq))
-        for ch, seq in ps.by_channel.items()
+        ch: fixed
+        + sum(
+            channel_swept.get(c, 0)
+            for c in _effective_channels(ch, by_channel.get(ch, []))
+        )
+        for ch in by_channel.keys() | sweeper_channels
     }
 
 
@@ -112,6 +122,7 @@ def _split_sequences_by_memory_limits(
     # registers are allocated for the loop counters, and for each swept parameter
     swept = count_params(sweepers)
     channel_swept = count_channel_params(sweepers)
+    sweeper_channels = swept_channels(sweepers)
     fixed_registers = Registers.first_available() + len(sweepers)
 
     batch: list[PulseSequence] = []
@@ -137,10 +148,12 @@ def _split_sequences_by_memory_limits(
         }
         # the Q1 sequencer has a limited number of registers, and each swept pulse
         # requires its own on the sequencer playing it
-        ps_registers = _registers_per_channel(ps, swept)
+        ps_registers = _registers_per_channel(ps, swept, sweeper_channels)
 
         _raise_error_if_sequence_exceeds_memory_limits(ps_memory)
-        base_registers = _base_registers_per_channel(ps, fixed_registers, channel_swept)
+        base_registers = _base_registers_per_channel(
+            ps, fixed_registers, channel_swept, sweeper_channels
+        )
         _raise_error_if_sequence_exceeds_registers(ps_registers, base_registers)
 
         # TODO: track instruction memory usage per module instead of summing across
