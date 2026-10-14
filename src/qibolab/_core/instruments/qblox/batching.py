@@ -9,7 +9,8 @@ from qibolab._core.sweeper import ParallelSweepers
 
 from .limits import SEQUENCER_REGISTERS, cluster_memory_limits
 from .sequence.asm import Registers
-from .sequence.sweepers import count_params
+from .sequence.sequence import _effective_channels
+from .sequence.sweepers import count_channel_params, count_params
 from .utils import per_shot_memory
 
 
@@ -40,15 +41,31 @@ def _registers_per_channel(
     return registers
 
 
+def _base_registers_per_channel(
+    ps: PulseSequence, fixed: int, channel_swept: dict[ChannelId, int]
+) -> dict[ChannelId, int]:
+    """Registers required on each channel's sequencer regardless of the swept pulses.
+
+    Besides the `fixed` ones, those are the registers of the parameters swept on the
+    channels the sequencer is associated to (including the *probe* alias of acquisition
+    channels).
+    """
+    return {
+        ch: fixed + sum(channel_swept.get(c, 0) for c in _effective_channels(ch, seq))
+        for ch, seq in ps.by_channel.items()
+    }
+
+
 def _raise_error_if_sequence_exceeds_registers(
-    registers: dict[ChannelId, int], base_registers: int
+    registers: dict[ChannelId, int], base_registers: dict[ChannelId, int]
 ):
     """Raise error if a single sequence exceeds the sequencer registers."""
     for channelid, number in registers.items():
-        if base_registers + number > SEQUENCER_REGISTERS:
+        requested = base_registers[channelid] + number
+        if requested > SEQUENCER_REGISTERS:
             raise ValueError(
                 "An individual sequence exceeds the Q1 sequencer registers on channel "
-                f"{channelid}: requested={base_registers + number}, "
+                f"{channelid}: requested={requested}, "
                 f"limit={SEQUENCER_REGISTERS}."
             )
 
@@ -94,11 +111,13 @@ def _split_sequences_by_memory_limits(
     """
     # registers are allocated for the loop counters, and for each swept parameter
     swept = count_params(sweepers)
-    base_registers = Registers.first_available() + len(sweepers) + swept.get(None, 0)
+    channel_swept = count_channel_params(sweepers)
+    fixed_registers = Registers.first_available() + len(sweepers)
 
     batch: list[PulseSequence] = []
     batch_memory = _init_batch()
     batch_registers: dict[ChannelId, int] = {}
+    batch_base_registers: dict[ChannelId, int] = {}
     batches: list[list[PulseSequence]] = []
     for ps in sequences:
         ps_memory = {
@@ -121,6 +140,7 @@ def _split_sequences_by_memory_limits(
         ps_registers = _registers_per_channel(ps, swept)
 
         _raise_error_if_sequence_exceeds_memory_limits(ps_memory)
+        base_registers = _base_registers_per_channel(ps, fixed_registers, channel_swept)
         _raise_error_if_sequence_exceeds_registers(ps_registers, base_registers)
 
         # TODO: track instruction memory usage per module instead of summing across
@@ -130,17 +150,24 @@ def _split_sequences_by_memory_limits(
             for key, limit in cluster_memory_limits.items()
         )
         fits_in_registers = all(
-            base_registers + batch_registers.get(ch, 0) + n <= SEQUENCER_REGISTERS
+            max(batch_base_registers.get(ch, 0), base_registers[ch])
+            + batch_registers.get(ch, 0)
+            + n
+            <= SEQUENCER_REGISTERS
             for ch, n in ps_registers.items()
         )
         if not (fits_in_memory and fits_in_registers):
             batches.append(batch)
             batch_memory = _init_batch()
             batch_registers = {}
+            batch_base_registers = {}
             batch = []
 
         for ch, n in ps_registers.items():
             batch_registers[ch] = batch_registers.get(ch, 0) + n
+            batch_base_registers[ch] = max(
+                batch_base_registers.get(ch, 0), base_registers[ch]
+            )
 
         for key, mem in ps_memory.items():
             batch_memory[key] += mem

@@ -128,3 +128,71 @@ def test_batch_registers_are_counted_per_channel():
 
     # 7 fixed registers leave 57 per sequencer: 100 pulses fit once spread on 2 channels
     assert [len(b) for b in batches] == [100]
+
+
+def _channel_sweep_setup(nchannels: int, npulses: int):
+    from qibolab._core.pulses import Pulse, Rectangular
+    from qibolab._core.sweeper import Parameter, Sweeper, normalize_sweepers
+
+    channels = [f"{i}/drive" for i in range(nchannels)]
+    pulses = [
+        Pulse(duration=20, amplitude=0.1, envelope=Rectangular())
+        for _ in range(npulses)
+    ]
+    sweepers = normalize_sweepers(
+        [
+            [
+                Sweeper(
+                    parameter=Parameter.amplitude, range=(0.1, 1, 0.1), pulses=pulses
+                )
+            ],
+            [
+                Sweeper(
+                    parameter=Parameter.frequency,
+                    range=(1e6, 2e6, 1e5),
+                    channels=[c],
+                )
+                for c in channels
+            ],
+        ]
+    )
+    return channels, pulses, sweepers
+
+
+def test_batch_registers_ignore_other_channels_sweepers():
+    channels, pulses, sweepers = _channel_sweep_setup(25, 40)
+    options = ExecutionParameters(nshots=10, relaxation_time=100)
+
+    # one sequence: 6 fixed + 2 loops + 1 own frequency + 40 amplitudes
+    batches = batching._split_sequences_by_memory_limits(
+        [PulseSequence([("0/drive", p) for p in pulses])],
+        sweepers,
+        options,
+        qcm_channels=set(channels),
+        qrm_channels=set(),
+    )
+    assert [len(b) for b in batches] == [1]
+
+    # frequency sweeps on the other channels do not take registers on 0/drive
+    batches = batching._split_sequences_by_memory_limits(
+        [PulseSequence([("0/drive", p)]) for p in pulses],
+        sweepers,
+        options,
+        qcm_channels=set(channels),
+        qrm_channels=set(),
+    )
+    assert [len(b) for b in batches] == [40]
+
+
+def test_batch_registers_count_own_channel_sweepers():
+    channels, pulses, sweepers = _channel_sweep_setup(1, 60)
+
+    # 8 fixed + 1 own frequency + 60 amplitudes exceeds the 64 registers
+    with pytest.raises(ValueError, match="exceeds the Q1 sequencer registers"):
+        batching._split_sequences_by_memory_limits(
+            [PulseSequence([("0/drive", p) for p in pulses])],
+            sweepers,
+            ExecutionParameters(nshots=10, relaxation_time=100),
+            qcm_channels=set(channels),
+            qrm_channels=set(),
+        )
