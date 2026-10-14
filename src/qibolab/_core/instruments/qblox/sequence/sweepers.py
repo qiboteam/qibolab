@@ -1,4 +1,3 @@
-from collections import Counter
 from collections.abc import Callable, Container, Iterable
 from enum import Enum, auto
 from itertools import groupby
@@ -271,34 +270,6 @@ def _unravel_sweeps(
         if targets
         for irange, role in _registers(sweep)
         for pulse, channel in targets
-    )
-
-
-def pulse_sweep_register_counts(sweepers: list[ParallelSweepers]) -> dict[PulseId, int]:
-    """Number of registers required by pulse sweep parameters, for each pulse."""
-    return dict(
-        Counter(
-            pulse.id
-            for parsweep in sweepers
-            for sweep in parsweep
-            for pulse in sweep.pulses or []
-            for _ in _registers(sweep)
-        )
-    )
-
-
-def channel_sweep_register_counts(
-    sweepers: list[ParallelSweepers],
-) -> dict[ChannelId, int]:
-    """Number of registers required by channel sweep parameters, for each channel."""
-    return dict(
-        Counter(
-            channel
-            for parsweep in sweepers
-            for sweep in parsweep
-            for channel in sweep.channels or []
-            for _ in _registers(sweep)
-        )
     )
 
 

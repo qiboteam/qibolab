@@ -1,5 +1,6 @@
 """Batching utilities for Qblox cluster sequence execution."""
 
+from collections import Counter
 from collections.abc import Set as AbstractSet
 
 from qibolab import Delay
@@ -12,11 +13,42 @@ from qibolab._core.sweeper import ParallelSweepers
 from .limits import SEQUENCER_REGISTERS, cluster_memory_limits
 from .sequence.asm import Registers
 from .sequence.sequence import _effective_channels
-from .sequence.sweepers import (
-    channel_sweep_register_counts,
-    pulse_sweep_register_counts,
-)
+from .sequence.sweepers import _registers
 from .utils import per_shot_memory
+
+
+def _pulse_sweep_register_counts(
+    sweepers: list[ParallelSweepers],
+) -> dict[PulseId, int]:
+    """Number of registers required by pulse sweep parameters, for each pulse.
+
+    Counts follow what is allocated by :func:`.sequence.sweepers.params`, so
+    `sweepers` must be normalized: duration sweeps need a different number of
+    registers depending on the pulse, hence one pulse per sweeper. Channel
+    parameters are counted by :func:`_channel_sweep_register_counts`.
+    """
+    counts: Counter[PulseId] = Counter()
+    for parsweep in sweepers:
+        for sweep in parsweep:
+            if sweep.pulses:
+                nregisters = len(_registers(sweep))
+                for pulse in sweep.pulses:
+                    counts[pulse.id] += nregisters
+    return dict(counts)
+
+
+def _channel_sweep_register_counts(
+    sweepers: list[ParallelSweepers],
+) -> dict[ChannelId, int]:
+    """Number of registers required by channel sweep parameters, for each channel."""
+    counts: Counter[ChannelId] = Counter()
+    for parsweep in sweepers:
+        for sweep in parsweep:
+            if sweep.channels:
+                nregisters = len(_registers(sweep))
+                for channel in sweep.channels:
+                    counts[channel] += nregisters
+    return dict(counts)
 
 
 def _init_batch() -> dict[str, int]:
@@ -127,8 +159,8 @@ def _split_sequences_by_memory_limits(
     Returns a list of batches, where each batch is a list of sequences.
     """
     # registers are allocated for the loop counters, and for each swept parameter
-    register_counts_per_pulse = pulse_sweep_register_counts(sweepers)
-    register_counts_per_channel = channel_sweep_register_counts(sweepers)
+    register_counts_per_pulse = _pulse_sweep_register_counts(sweepers)
+    register_counts_per_channel = _channel_sweep_register_counts(sweepers)
     fixed_register_count = Registers.first_available() + len(sweepers)
 
     batch: list[PulseSequence] = []
