@@ -267,8 +267,10 @@ def _unravel_sweeps(sweepers: list[ParallelSweepers]) -> Iterable[tuple[int, Par
 def count_params(sweepers: list[ParallelSweepers]) -> dict[PulseId, int]:
     """Number of registers required by pulse sweep parameters, for each pulse.
 
-    Counts follow what is allocated by :func:`params`. Channel parameters are counted
-    by :func:`count_channel_params`.
+    Counts follow what is allocated by :func:`params`, so `sweepers` must be
+    normalized: duration sweeps need a different number of registers depending on
+    the pulse, hence one pulse per sweeper. Channel parameters are counted by
+    :func:`count_channel_params`.
     """
     counts: dict[PulseId, int] = {}
     for parsweep in sweepers:

@@ -2,6 +2,7 @@ import pytest
 
 from qibolab._core.execution_parameters import ExecutionParameters
 from qibolab._core.instruments.qblox import batching
+from qibolab._core.instruments.qblox.sequence.sweepers import count_params
 from qibolab._core.pulses import Acquisition, Delay
 from qibolab._core.sequence import PulseSequence
 
@@ -196,3 +197,29 @@ def test_batch_registers_count_own_channel_sweepers():
             qcm_channels=set(channels),
             qrm_channels=set(),
         )
+
+
+def test_batch_registers_duration_sweeper_mixed_envelopes():
+    from qibolab._core.pulses import Gaussian, Pulse, Rectangular
+    from qibolab._core.sweeper import Parameter, Sweeper, normalize_sweepers
+
+    pulses = [
+        Pulse(duration=20, amplitude=0.1, envelope=Rectangular()) for _ in range(20)
+    ]
+    pulses.append(Pulse(duration=20, amplitude=0.1, envelope=Gaussian(rel_sigma=5)))
+    sweepers = normalize_sweepers(
+        [[Sweeper(parameter=Parameter.duration, range=(20, 40, 1), pulses=pulses)]]
+    )
+
+    # only the Gaussian needs 3 registers, the rectangular pulses need 1 each
+    counts = count_params(sweepers)
+    assert sum(counts.values()) == 20 + 3
+
+    batches = batching._split_sequences_by_memory_limits(
+        [PulseSequence([("0/drive", p) for p in pulses])],
+        sweepers,
+        ExecutionParameters(nshots=3, relaxation_time=100),
+        qcm_channels={"0/drive"},
+        qrm_channels=set(),
+    )
+    assert [len(b) for b in batches] == [1]
