@@ -103,7 +103,71 @@ def test_batch_sequences_by_register_limit():
         qcm_channels={"0/drive"},
         qrm_channels=set(),
     )
-    assert [len(b) for b in batches] == [57, 33]
+    assert [len(b) for b in batches] == [90]
+
+
+def test_batch_registers_split_distinct_swept_pulses():
+    pulses = [
+        Pulse(duration=20, amplitude=0.1, envelope=Rectangular()) for _ in range(90)
+    ]
+    sequences = [PulseSequence([("0/drive", p)]) for p in pulses]
+    sweeper = Sweeper(parameter=Parameter.amplitude, range=(0, 1, 0.1), pulses=pulses)
+
+    batches = batching._split_sequences_by_memory_limits(
+        sequences * 2,
+        [[sweeper]],
+        ExecutionParameters(nshots=10, relaxation_time=100),
+        qcm_channels={"0/drive"},
+        qrm_channels=set(),
+    )
+
+    # Splitting resets the pulse ID union; each batch can hold 57 distinct IDs.
+    assert [len(b) for b in batches] == [57, 57, 57, 9]
+
+
+@pytest.mark.parametrize("parameter", [Parameter.amplitude, Parameter.duration])
+@pytest.mark.parametrize("envelope", [Rectangular(), Gaussian(rel_sigma=5)])
+def test_batch_registers_deduplicate_repeated_pulse(parameter, envelope):
+    channel = "0/drive"
+    pulse = Pulse(duration=20, amplitude=0.1, envelope=envelope)
+    sequence = PulseSequence([(channel, pulse)] * 58)
+    sweeper = Sweeper(
+        parameter=parameter,
+        range=(20, 40, 1) if parameter is Parameter.duration else (0, 1, 0.1),
+        pulses=[pulse],
+    )
+
+    batches = batching._split_sequences_by_memory_limits(
+        [sequence, sequence],
+        [[sweeper]],
+        ExecutionParameters(nshots=10, relaxation_time=100),
+        qcm_channels={channel},
+        qrm_channels=set(),
+    )
+
+    assert [len(b) for b in batches] == [2]
+
+
+def test_batch_registers_deduplicate_multiple_parameters():
+    pulses = [
+        Pulse(duration=20, amplitude=0.1, envelope=Gaussian(rel_sigma=5))
+        for _ in range(20)
+    ]
+    sequences = [PulseSequence([("0/drive", p)] * 2) for p in pulses]
+    sweepers = normalize_sweepers(
+        [[Sweeper(parameter=Parameter.duration, range=(20, 40, 1), pulses=pulses)]]
+    )
+
+    batches = batching._split_sequences_by_memory_limits(
+        sequences * 2,
+        sweepers,
+        ExecutionParameters(nshots=10, relaxation_time=100),
+        qcm_channels={"0/drive"},
+        qrm_channels=set(),
+    )
+
+    # Each unique Gaussian pulse ID needs three duration-sweep registers.
+    assert [len(b) for b in batches] == [19, 19, 2]
 
 
 def test_batch_registers_are_counted_per_channel():
