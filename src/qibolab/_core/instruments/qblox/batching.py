@@ -215,28 +215,3 @@ def batch_sequences_by_cluster_memory_limits(
         sequences, sweepers, options, qcm_channels, qrm_channels
     )
     return _merge_batch_sequences(batches, options)
-
-
-def drop_sweeper_pulses_outside_sequence(
-    sweepers: list[ParallelSweepers], sequence: PulseSequence
-) -> list[ParallelSweepers]:
-    """Drop from the sweepers the pulses that are not part of the sequence.
-
-    Registers are allocated for every swept pulse, so, once the sequences have been
-    split in batches, each batch should only account for its own pulses. The sweepers
-    themselves are kept, since they define the loops (and thus the results' shape).
-    """
-    ids = {pulse.id for _channel, pulse in sequence}
-    return [
-        [
-            (
-                sweeper.model_copy(
-                    update={"pulses": [p for p in sweeper.pulses if p.id in ids]}
-                )
-                if sweeper.pulses is not None
-                else sweeper
-            )
-            for sweeper in parsweep
-        ]
-        for parsweep in sweepers
-    ]
