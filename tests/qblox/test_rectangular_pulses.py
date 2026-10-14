@@ -5,6 +5,7 @@ import numpy as np
 import pytest
 
 from qibolab._core.execution_parameters import ExecutionParameters
+from qibolab._core.instruments.qblox.limits import WAVEFORM_MEMORY
 from qibolab._core.instruments.qblox.q1asm.ast_ import (
     Instr,
     Play,
@@ -15,7 +16,7 @@ from qibolab._core.instruments.qblox.q1asm.ast_ import (
     Wait,
 )
 from qibolab._core.instruments.qblox.sequence.sequence import Q1Sequence, compile
-from qibolab._core.instruments.qblox.validate import WAVEFORM_MEMORY, validate_sequence
+from qibolab._core.instruments.qblox.validate import validate_sequence
 from qibolab._core.pulses import (
     Acquisition,
     Gaussian,

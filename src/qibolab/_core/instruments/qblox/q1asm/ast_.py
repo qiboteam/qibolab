@@ -18,7 +18,7 @@ from pydantic import (
 from pydantic_core import core_schema
 
 from ....serialize import Model
-from ..validate import SEQUENCER_REGISTERS
+from ..limits import SEQUENCER_REGISTERS
 
 __all__ = ["Program"]
 

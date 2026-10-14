@@ -10,7 +10,7 @@ from qibolab._core.pulses import Acquisition, Readout
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import ParallelSweepers
 
-from .validate import ACQUISITION_MEMORY
+from .limits import ACQUISITION_MEMORY
 
 
 def per_shot_memory(

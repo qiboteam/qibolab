@@ -7,10 +7,10 @@ from qibolab._core.pulses import PulseId
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import ParallelSweepers
 
+from .limits import SEQUENCER_REGISTERS, cluster_memory_limits
 from .sequence.asm import Registers
 from .sequence.sweepers import count_params
 from .utils import per_shot_memory
-from .validate import SEQUENCER_REGISTERS, cluster_memory_limits
 
 
 def _init_batch() -> dict[str, int]:
