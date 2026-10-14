@@ -2,7 +2,14 @@ import pytest
 
 from qibolab._core.execution_parameters import ExecutionParameters
 from qibolab._core.instruments.qblox import batching
-from qibolab._core.pulses import Acquisition, Delay, Gaussian, Pulse, Rectangular
+from qibolab._core.pulses import (
+    Acquisition,
+    Delay,
+    Gaussian,
+    Pulse,
+    PulseLike,
+    Rectangular,
+)
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import Parameter, Sweeper, normalize_sweepers
 
@@ -76,7 +83,7 @@ def test_batch_sequences_by_cluster_memory_limits_oversize_sequence_error_raise(
 
 
 def test_batch_sequences_by_register_limit():
-    pulses = [
+    pulses: list[PulseLike] = [
         Pulse(duration=20, amplitude=0.1, envelope=Rectangular()) for _ in range(30)
     ]
     sequences = [PulseSequence([("0/drive", p)]) for p in pulses]
@@ -106,7 +113,7 @@ def test_batch_sequences_by_register_limit():
 
 
 def test_batch_registers_split_distinct_swept_pulses():
-    pulses = [
+    pulses: list[PulseLike] = [
         Pulse(duration=20, amplitude=0.1, envelope=Rectangular()) for _ in range(90)
     ]
     sequences = [PulseSequence([("0/drive", p)]) for p in pulses]
@@ -148,7 +155,7 @@ def test_batch_registers_deduplicate_repeated_pulse(parameter, envelope):
 
 
 def test_batch_registers_deduplicate_multiple_parameters():
-    pulses = [
+    pulses: list[PulseLike] = [
         Pulse(duration=20, amplitude=0.1, envelope=Gaussian(rel_sigma=5))
         for _ in range(20)
     ]
@@ -173,7 +180,7 @@ def test_batch_registers_are_counted_per_channel():
     """Pulse register budget is per sequencer: 100 pulses split across 2 channels fit
     because each channel gets its own 57-register allowance."""
     channels = ["0/drive", "1/drive"]
-    pulses = [
+    pulses: list[PulseLike] = [
         Pulse(duration=20, amplitude=0.1, envelope=Rectangular()) for _ in range(100)
     ]
     sequences = [PulseSequence([(channels[i % 2], p)]) for i, p in enumerate(pulses)]
@@ -195,7 +202,7 @@ def _channel_sweep_setup(nchannels: int, npulses: int):
     """Build channels, rectangular pulses, and sweepers: one amplitude sweeper on all
     pulses plus one frequency sweeper per channel."""
     channels = [f"{i}/drive" for i in range(nchannels)]
-    pulses = [
+    pulses: list[PulseLike] = [
         Pulse(duration=20, amplitude=0.1, envelope=Rectangular())
         for _ in range(npulses)
     ]
@@ -304,7 +311,7 @@ def test_batch_registers_count_sweeper_only_channels(nparameters):
 
 def test_batch_registers_duration_sweeper_mixed_envelopes():
     """Duration sweepers count registers per envelope type (Gaussian=3, Rectangular=1)."""
-    pulses = [
+    pulses: list[PulseLike] = [
         Pulse(duration=20, amplitude=0.1, envelope=Rectangular()) for _ in range(20)
     ]
     pulses.append(Pulse(duration=20, amplitude=0.1, envelope=Gaussian(rel_sigma=5)))
