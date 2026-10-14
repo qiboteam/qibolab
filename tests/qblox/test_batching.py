@@ -2,7 +2,9 @@ import pytest
 
 from qibolab._core.execution_parameters import ExecutionParameters
 from qibolab._core.instruments.qblox import batching
-from qibolab._core.instruments.qblox.sequence.sweepers import count_params
+from qibolab._core.instruments.qblox.sequence.sweepers import (
+    pulse_sweep_register_counts,
+)
 from qibolab._core.pulses import Acquisition, Delay, Gaussian, Pulse, Rectangular
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import Parameter, Sweeper, normalize_sweepers
@@ -314,7 +316,7 @@ def test_batch_registers_duration_sweeper_mixed_envelopes():
     )
 
     # only the Gaussian needs 3 registers, the rectangular pulses need 1 each
-    counts = count_params(sweepers)
+    counts = pulse_sweep_register_counts(sweepers)
     assert sum(counts.values()) == 20 + 3
 
     batches = batching._split_sequences_by_memory_limits(

@@ -12,7 +12,10 @@ from qibolab._core.sweeper import ParallelSweepers
 from .limits import SEQUENCER_REGISTERS, cluster_memory_limits
 from .sequence.asm import Registers
 from .sequence.sequence import _effective_channels
-from .sequence.sweepers import count_channel_params, count_params
+from .sequence.sweepers import (
+    channel_sweep_register_counts,
+    pulse_sweep_register_counts,
+)
 from .utils import per_shot_memory
 
 
@@ -32,7 +35,7 @@ def _init_batch() -> dict[str, int]:
 
 def _swept_pulse_ids_per_channel(
     ps: PulseSequence,
-    swept: AbstractSet[PulseId],
+    swept_pulse_ids: AbstractSet[PulseId],
     sweeper_channels: AbstractSet[ChannelId],
 ) -> dict[ChannelId, set[PulseId]]:
     """Unique swept pulse IDs for the sequencer of each channel.
@@ -41,30 +44,32 @@ def _swept_pulse_ids_per_channel(
     """
     by_channel = ps.by_channel
     return {
-        ch: {pulse.id for pulse in by_channel.get(ch, []) if pulse.id in swept}
+        ch: {
+            pulse.id for pulse in by_channel.get(ch, []) if pulse.id in swept_pulse_ids
+        }
         for ch in by_channel.keys() | sweeper_channels
     }
 
 
 def _base_registers_per_channel(
     ps: PulseSequence,
-    fixed: int,
-    channel_swept: dict[ChannelId, int],
+    fixed_register_count: int,
+    register_counts_per_channel: dict[ChannelId, int],
 ) -> dict[ChannelId, int]:
     """Registers required on each channel's sequencer regardless of the swept pulses.
 
-    Besides the `fixed` ones, those are the registers of the parameters swept on the
-    channels the sequencer is associated to (including the *probe* alias of acquisition
-    channels). Channels without pulses still need registers when they are swept.
+    Besides the fixed registers, those are the registers of the parameters swept on
+    the channels the sequencer is associated to (including the *probe* alias of
+    acquisition channels). Channels without pulses still need registers when swept.
     """
     by_channel = ps.by_channel
     return {
-        ch: fixed
+        ch: fixed_register_count
         + sum(
-            channel_swept.get(c, 0)
+            register_counts_per_channel.get(c, 0)
             for c in _effective_channels(ch, by_channel.get(ch, []))
         )
-        for ch in by_channel.keys() | channel_swept.keys()
+        for ch in by_channel.keys() | register_counts_per_channel.keys()
     }
 
 
@@ -122,9 +127,9 @@ def _split_sequences_by_memory_limits(
     Returns a list of batches, where each batch is a list of sequences.
     """
     # registers are allocated for the loop counters, and for each swept parameter
-    swept = count_params(sweepers)
-    channel_swept = count_channel_params(sweepers)
-    fixed_registers = Registers.first_available() + len(sweepers)
+    register_counts_per_pulse = pulse_sweep_register_counts(sweepers)
+    register_counts_per_channel = channel_sweep_register_counts(sweepers)
+    fixed_register_count = Registers.first_available() + len(sweepers)
 
     batch: list[PulseSequence] = []
     batch_memory = _init_batch()
@@ -149,15 +154,17 @@ def _split_sequences_by_memory_limits(
         }
         # Repeated pulse IDs share parameter registers within and across sequences.
         ps_swept_pulse_ids = _swept_pulse_ids_per_channel(
-            ps, swept.keys(), channel_swept.keys()
+            ps, register_counts_per_pulse.keys(), register_counts_per_channel.keys()
         )
         ps_registers = {
-            ch: sum(swept[pid] for pid in pulse_ids)
+            ch: sum(register_counts_per_pulse[pid] for pid in pulse_ids)
             for ch, pulse_ids in ps_swept_pulse_ids.items()
         }
 
         _raise_error_if_sequence_exceeds_memory_limits(ps_memory)
-        base_registers = _base_registers_per_channel(ps, fixed_registers, channel_swept)
+        base_registers = _base_registers_per_channel(
+            ps, fixed_register_count, register_counts_per_channel
+        )
         _raise_error_if_sequence_exceeds_registers(ps_registers, base_registers)
 
         # TODO: track instruction memory usage per module instead of summing across
@@ -169,7 +176,8 @@ def _split_sequences_by_memory_limits(
         fits_in_registers = all(
             max(batch_base_registers.get(ch, 0), base_registers[ch])
             + sum(
-                swept[pid] for pid in batch_swept_pulse_ids.get(ch, set()) | pulse_ids
+                register_counts_per_pulse[pid]
+                for pid in batch_swept_pulse_ids.get(ch, set()) | pulse_ids
             )
             <= SEQUENCER_REGISTERS
             for ch, pulse_ids in ps_swept_pulse_ids.items()

@@ -1,3 +1,4 @@
+from collections import Counter
 from collections.abc import Callable, Container, Iterable
 from enum import Enum, auto
 from itertools import groupby
@@ -273,30 +274,32 @@ def _unravel_sweeps(
     )
 
 
-def count_params(sweepers: list[ParallelSweepers]) -> dict[PulseId, int]:
-    """Number of registers required by pulse sweep parameters, for each pulse.
-
-    Counts follow what is allocated by :func:`params`, so `sweepers` must be
-    normalized: duration sweeps need a different number of registers depending on
-    the pulse, hence one pulse per sweeper. Channel parameters are counted by
-    :func:`count_channel_params`.
-    """
-    counts: dict[PulseId, int] = {}
-    for parsweep in sweepers:
-        for sweep in parsweep:
-            for pulse in sweep.pulses if sweep.pulses is not None else []:
-                counts[pulse.id] = counts.get(pulse.id, 0) + len(_registers(sweep))
-    return counts
+def pulse_sweep_register_counts(sweepers: list[ParallelSweepers]) -> dict[PulseId, int]:
+    """Number of registers required by pulse sweep parameters, for each pulse."""
+    return dict(
+        Counter(
+            pulse.id
+            for parsweep in sweepers
+            for sweep in parsweep
+            for pulse in sweep.pulses or []
+            for _ in _registers(sweep)
+        )
+    )
 
 
-def count_channel_params(sweepers: list[ParallelSweepers]) -> dict[ChannelId, int]:
+def channel_sweep_register_counts(
+    sweepers: list[ParallelSweepers],
+) -> dict[ChannelId, int]:
     """Number of registers required by channel sweep parameters, for each channel."""
-    counts: dict[ChannelId, int] = {}
-    for parsweep in sweepers:
-        for sweep in parsweep:
-            for channel in sweep.channels if sweep.channels is not None else []:
-                counts[channel] = counts.get(channel, 0) + len(_registers(sweep))
-    return counts
+    return dict(
+        Counter(
+            channel
+            for parsweep in sweepers
+            for sweep in parsweep
+            for channel in sweep.channels or []
+            for _ in _registers(sweep)
+        )
+    )
 
 
 def params(
