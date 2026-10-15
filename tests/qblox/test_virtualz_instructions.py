@@ -12,7 +12,7 @@ from qibolab._core.instruments.qblox.q1asm.ast_ import (
 )
 from qibolab._core.instruments.qblox.sequence.asm import Registers
 from qibolab._core.instruments.qblox.sequence.sequence import compile
-from qibolab._core.pulses import VirtualZ
+from qibolab._core.pulses import Gaussian, Pulse, VirtualZ
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import Parameter, Sweeper
 
@@ -60,3 +60,19 @@ def test_virtualz_without_phase_sweeper():
     assert any(isinstance(i.instruction, SetPhDelta) for i in line_instrs), (
         "Expected at least one 'SetPhDelta' instruction for static phase."
     )
+
+
+def test_descending_phase_sweep_wraps_register_within_a_period():
+    """Negative phase steps are converted modulo a period, so the accumulated register
+    must be wrapped to stay in the range accepted by ``set_ph_delta``."""
+    vz = VirtualZ(phase=0)
+    pulse = Pulse(duration=40, amplitude=0.5, envelope=Gaussian(rel_sigma=0.2))
+    sweeper = Sweeper(parameter=Parameter.phase, range=(0, -6, -0.2), pulses=[vz])
+    seq = PulseSequence([("ch1", pulse), ("ch1", vz), ("ch1", pulse)])
+    options = ExecutionParameters(nshots=1, relaxation_time=100)
+    q1seq = compile(seq, [[sweeper]], options, sampling_rate=1.0, merged_vzs=False)[
+        "ch1"
+    ]
+    asm = " ".join(q1seq.program.asm().split())
+    assert "jlt R7,1000000000,@phase_wrap_r7" in asm
+    assert "sub R7,1000000000,R7" in asm
