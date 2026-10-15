@@ -136,11 +136,11 @@ https://github.com/qiboteam/qibolab/discussions/1119
 
 
 def _phase_wrap(p: Param) -> tuple[Line, ...]:
-    """Keep a phase register within one period after a shift.
+    """Wrap a phase register back into ``[0, MAX_PARAM[Parameter.phase]]``.
 
-    ``set_ph_delta`` only accepts values in ``[0, MAX_PARAM[Parameter.phase]]``, but
-    the phase step is converted modulo a period, so accumulating it (e.g. for a
-    descending sweep) would leave the register out of range.
+    A single step is already modulo a period, but accumulating steps (e.g. a
+    descending sweep) can push the register past the range accepted by
+    ``set_ph_delta``.
     """
     if p.role.kind not in (Parameter.phase, Parameter.relative_phase):
         return ()
