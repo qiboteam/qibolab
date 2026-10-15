@@ -97,8 +97,7 @@ def _experiment_end(relaxation_time: int) -> list[Line]:
     """Wrap up experiment.
 
     - relax
-    - reset phase, including the accumulated phase delta register, which ``reset_ph``
-      does not clear
+    - reset phase in the latched register and the accumulated phase delta register
     - increment bin where the result is saved
 
     The bin increment is possibly reset later on, in order to save on the same bin, and
