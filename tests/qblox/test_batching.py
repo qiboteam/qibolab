@@ -35,6 +35,7 @@ def _sequence() -> PulseSequence:
 
 
 def test_batch_sequences_by_cluster_memory_limits(monkeypatch):
+    """Sequences are merged into batches respecting QCM line limits."""
     # the starting number of lines is 50 and each sequence adds 1.6 lines so with
     # the qcm_lines limit of 54, only 2 sequences can be merged together.
     monkeypatch.setattr(batching, "per_shot_memory", lambda *_args, **_kwargs: 1)
@@ -65,6 +66,7 @@ def test_batch_sequences_by_cluster_memory_limits(monkeypatch):
 def test_batch_sequences_by_cluster_memory_limits_oversize_sequence_error_raise(
     monkeypatch,
 ):
+    """Raises ValueError when a single sequence exceeds cluster memory limits."""
     # with the acq_memory limit of 5 and each sequence having a memory of 6, the
     # individual sequence already exceeds the cluster memory limit, so a ValueError
     # should be raised.
@@ -94,6 +96,7 @@ def test_batch_sequences_by_cluster_memory_limits_oversize_sequence_error_raise(
 
 
 def test_batch_sequences_by_register_limit():
+    """Swept pulses are batched to fit within the sequencer register limit."""
     pulses: list[PulseLike] = [
         Pulse(duration=20, amplitude=0.1, envelope=Rectangular()) for _ in range(30)
     ]
@@ -124,6 +127,7 @@ def test_batch_sequences_by_register_limit():
 
 
 def test_batch_registers_split_distinct_swept_pulses():
+    """Distinct swept pulses each consume a register; batches split at the limit."""
     pulses: list[PulseLike] = [
         Pulse(duration=20, amplitude=0.1, envelope=Rectangular()) for _ in range(90)
     ]
@@ -145,6 +149,7 @@ def test_batch_registers_split_distinct_swept_pulses():
 @pytest.mark.parametrize("parameter", [Parameter.amplitude, Parameter.duration])
 @pytest.mark.parametrize("envelope", [Rectangular(), Gaussian(rel_sigma=5)])
 def test_batch_registers_deduplicate_repeated_pulse(parameter, envelope):
+    """Repeated identical pulses share a single register across sequences."""
     channel = "0/drive"
     pulse = Pulse(duration=20, amplitude=0.1, envelope=envelope)
     sequence = PulseSequence([(channel, pulse)] * 58)
@@ -166,6 +171,7 @@ def test_batch_registers_deduplicate_repeated_pulse(parameter, envelope):
 
 
 def test_batch_registers_deduplicate_multiple_parameters():
+    """Gaussian pulses under a duration sweep each need 3 registers."""
     pulses: list[PulseLike] = [
         Pulse(duration=20, amplitude=0.1, envelope=Gaussian(rel_sigma=5))
         for _ in range(20)
@@ -281,6 +287,7 @@ def test_batch_registers_count_own_channel_sweepers():
 
 @pytest.mark.parametrize("nparameters", [1, 57, 58])
 def test_batch_registers_count_sweeper_only_channels(nparameters):
+    """Channel-parameter sweepers on a channel with no pulses still count registers."""
     sequence = PulseSequence([("0/drive", Delay(duration=4))])
     sweepers = normalize_sweepers(
         [
@@ -349,6 +356,7 @@ def _assert_register_budget_matches_compiler(
     sweepers: list[ParallelSweepers],
     options: ExecutionParameters,
 ) -> dict[ChannelId, int]:
+    """Assert batching's predicted register counts match the compiler's allocation."""
     sequence = sequence.align_to_delays()
     pulse_counts = batching._pulse_sweep_register_counts(sweepers)
     channel_counts = batching._channel_sweep_register_counts(sweepers)

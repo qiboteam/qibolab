@@ -171,10 +171,10 @@ def _split_sequences_by_memory_limits(
 
     Returns a list of batches, where each batch is a list of sequences.
     """
-    # registers are allocated for the loop counters, and for each swept parameter
     register_counts_per_pulse = _pulse_sweep_register_counts(sweepers)
     register_counts_per_channel = _channel_sweep_register_counts(sweepers)
-    fixed_register_count = Registers.first_available() + len(sweepers)
+    loop_register_count = len(sweepers)
+    fixed_register_count = Registers.first_available() + loop_register_count
 
     batch: list[PulseSequence] = []
     batch_memory = _init_batch()

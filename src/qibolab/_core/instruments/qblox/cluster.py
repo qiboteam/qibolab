@@ -244,7 +244,6 @@ class Cluster(Controller):
             if PortAddress.from_path(channelobj.path).slot in qrm_slots
         }
         qcm_channels = set(self.channels) - qrm_channels
-        # registers are allocated per normalized sweeper, so batching needs those
         sweepers_ = normalize_sweepers(
             sweepers,
             lo_configs(self._los, configs),
