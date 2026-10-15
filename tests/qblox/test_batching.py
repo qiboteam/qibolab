@@ -54,6 +54,8 @@ def test_batch_sequences_by_cluster_memory_limits(monkeypatch):
 
 
 def test_raw_acquisition_sequences_are_not_batched(monkeypatch):
+    """Keep RAW sequences separate to avoid repeated captures on one sequencer."""
+    # Time-of-flight padding is independent of the batching decision under test.
     monkeypatch.setattr(
         cluster,
         "_add_time_of_flight",
@@ -82,6 +84,7 @@ def test_raw_acquisition_sequences_are_not_batched(monkeypatch):
 
 
 def test_raw_acquisition_allows_at_most_one_pulse_per_sequencer():
+    """Reject repeated RAW captures while allowing multiple integrated acquisitions."""
     acquisition = Q1Acquisition(num_bins=1, index=0)
     one_acquisition = Q1Sequence.empty().model_copy(
         update={"acquisitions": {uuid4(): acquisition}}
