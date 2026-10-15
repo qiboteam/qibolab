@@ -1,5 +1,10 @@
 import qblox_instruments
 
+from qibolab._core.execution_parameters import (
+    AcquisitionType,
+    AveragingMode,
+    ExecutionParameters,
+)
 from qibolab._core.identifier import ChannelId
 from qibolab._core.sequence import PulseSequence
 
@@ -111,9 +116,45 @@ def assert_instruction_memory(lines: list[Line], is_qrm: bool) -> None:
     assert len(lines) <= mem
 
 
-def validate_sequence(sequence: Q1Sequence, is_qrm: bool) -> None:
-    """Validate sequence elements."""
+def validate_raw_acquisitions(
+    sequence: Q1Sequence,
+    acquisition_type: AcquisitionType,
+) -> None:
+    """Ensure each sequencer performs no more than one RAW acquisition per run.
+
+    A run may perform multiple scope acquisitions if they are assigned to
+    different sequencers. Because a sequencer cannot acquire more than once per
+    run, RAW sequences are not batched; batching could place multiple
+    acquisitions on the same sequencer and violate this constraint.
+    """
+    if acquisition_type is AcquisitionType.RAW and len(sequence.acquisitions) > 1:
+        raise ValueError(
+            "RAW acquisition supports at most one acquisition pulse per "
+            f"sequencer: {len(sequence.acquisitions)}."
+        )
+
+
+def validate_sequence(
+    sequence: Q1Sequence,
+    is_qrm: bool,
+    acquisition_type: AcquisitionType,
+) -> None:
+    """Validate sequence memory limits and RAW acquisition constraints."""
     assert_instruction_memory(sequence.program.lines, is_qrm)
     assert_acquisition_memory(list(sequence.acquisitions.values()))
     assert_waveform_memory(list(sequence.waveforms.values()))
     assert_weight_memory(list(sequence.weights.values()))
+    validate_raw_acquisitions(sequence, acquisition_type)
+
+
+def validate_raw_averaging_mode(options: ExecutionParameters) -> None:
+    """Reject RAW averaging modes that exceed Qblox scope-memory limits."""
+    if (
+        options.acquisition_type is AcquisitionType.RAW
+        and options.averaging_mode is not AveragingMode.CYCLIC
+    ):
+        # Qblox scope memory cannot retain a separate RAW trace for every shot.
+        raise NotImplementedError(
+            "Qblox RAW acquisition requires AveragingMode.CYCLIC because of "
+            "scope acquisition memory limits."
+        )
