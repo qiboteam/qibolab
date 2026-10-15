@@ -165,8 +165,8 @@ def test_readout_probe_is_not_synthesized_through_offsets():
     assert any(isinstance(i, Play) for i in _instructions(q1seq))
 
 
-def test_descending_phase_sweep_wraps_register_within_a_turn():
-    """Negative phase steps are converted modulo a turn, so the accumulated register
+def test_descending_phase_sweep_wraps_register_within_a_period():
+    """Negative phase steps are converted modulo a period, so the accumulated register
     must be wrapped to stay in the range accepted by ``set_ph_delta``."""
     from qibolab._core.pulses import VirtualZ
 
