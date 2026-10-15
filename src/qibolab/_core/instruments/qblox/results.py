@@ -95,10 +95,12 @@ def _integration(data: Integration, length: int) -> Result:
     return np.moveaxis(res, 0, -1) / length
 
 
-def _scope(data: ScopeData, frequency: float, sampling_rate: float) -> Result:
+def _scope(data: ScopeData, frequency: float | None, sampling_rate: float) -> Result:
     res = np.array([data["path0"]["data"], data["path1"]["data"]])
-    # demodulate the scope data to baseband before returning
-    return np.moveaxis(demodulate(res, frequency, sampling_rate), 0, -1)
+    # Demodulate scope data to baseband when a frequency is provided.
+    if frequency is not None:
+        res = demodulate(res, frequency, sampling_rate)
+    return np.moveaxis(res, 0, -1)
 
 
 def _classification(data: Thresholded) -> Result:
@@ -126,7 +128,7 @@ def extract(
             if acquisition is AcquisitionType.DISCRIMINATION
             else _scope(
                 idata["acquisition"]["scope"],
-                frequencies.get(channel, 0.0),
+                frequencies.get(channel, None),
                 sampling_rate,
             )
             if acquisition is AcquisitionType.RAW

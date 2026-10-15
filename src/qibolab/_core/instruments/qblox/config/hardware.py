@@ -129,17 +129,14 @@ def _enable_raw_acquisition(
     scope acquisition memory limits.
     """
     for slot, seq_indices in acq_sequencers.items():
-        config_updates = mo.ModuleConfig(
-            ports={},
-            scope_acq_avg_mode_en_path0=True,
-            scope_acq_avg_mode_en_path1=True,
-        )
         readout_module = cluster._modules[slot]
 
+        # TODO: only the last sequencer is activated
         for idx in seq_indices:
             readout_module.scope_acq_sequencer_select(idx)
 
-        config_updates.update_module(readout_module)
+        readout_module.parameters["scope_acq_avg_mode_en_path0"].set(True)
+        readout_module.parameters["scope_acq_avg_mode_en_path1"].set(True)
 
 
 def configure_hardware_per_sequence(
