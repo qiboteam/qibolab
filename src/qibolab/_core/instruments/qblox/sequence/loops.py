@@ -4,7 +4,7 @@ from qibolab._core.identifier import ChannelId
 from qibolab._core.instruments.qblox.sequence.asm import label
 from qibolab._core.pulses.pulse import PulseId
 from qibolab._core.serialize import Model
-from qibolab._core.sweeper import ParallelSweepers, iteration_length
+from qibolab._core.sweeper import ParallelSweepers, Parameter, iteration_length
 
 from ..q1asm.ast_ import (
     Add,
@@ -16,13 +16,14 @@ from ..q1asm.ast_ import (
     Line,
     Loop,
     Move,
+    Nop,
     Reference,
     Register,
     ResetPh,
     Sub,
     Wait,
 )
-from .asm import Registers
+from .asm import MAX_PARAM, Registers
 from .sweepers import IndexedParams, Param, update_instructions
 
 __all__ = []
@@ -134,6 +135,26 @@ https://github.com/qiboteam/qibolab/discussions/1119
 """
 
 
+def _phase_wrap(p: Param) -> tuple[Line, ...]:
+    """Wrap a phase register back into ``[0, MAX_PARAM[Parameter.phase]]``.
+
+    A single step is already modulo a period, but accumulating steps can push the
+    register past the range accepted by ``set_ph_delta``.
+    """
+    if p.role.kind not in (Parameter.phase, Parameter.relative_phase):
+        return ()
+    period = int(MAX_PARAM[Parameter.phase])
+    skip = f"phase_wrap_r{p.reg.number}"
+    return (
+        Line(
+            instruction=Jlt(a=p.reg, b=period, address=Reference(label=skip)),
+            comment=f"wrap {p.description} within a period",
+        ),
+        Line(instruction=Sub(a=p.reg, b=period, destination=p.reg)),
+        Line(instruction=Nop(), label=skip),
+    )
+
+
 def _sweep_update(p: Param, channel: set[ChannelId], pulses: set[PulseId]) -> Block:
     """Sweeper update for a single parameter.
 
@@ -151,6 +172,7 @@ def _sweep_update(p: Param, channel: set[ChannelId], pulses: set[PulseId]) -> Bl
                     ),
                     comment=f"shift {p.description}",
                 ),
+                *_phase_wrap(p),
             )
             if p.channel in channel or p.pulse in pulses
             else ()
