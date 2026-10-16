@@ -83,7 +83,12 @@ def _swept_pulse_ids_per_channel(
     swept_pulse_ids: AbstractSet[PulseId],
     sweeper_channels: AbstractSet[ChannelId],
 ) -> dict[ChannelId, set[PulseId]]:
-    """Unique swept pulse IDs for the sequencer of each channel.
+    """Swept pulse IDs for the sequencer of each channel.
+
+    The keys are all channels in this sequence: those with pulses in the sequence
+    (possibly none of them swept, giving an empty set) and those in `sweeper_channels`,
+    i.e. swept themselves, even if they have no pulses. The values are the unique IDs of
+    the swept pulses played on each channel.
 
     Each channel runs its own program, so registers are not shared among channels.
     """
@@ -160,6 +165,34 @@ def _raise_error_if_sequence_exceeds_memory_limits(ps_memory: dict[str, int]) ->
     )
 
 
+def _fits_in_registers(
+    batch_base_registers: dict[ChannelId, int],
+    batch_swept_pulse_ids: dict[ChannelId, set[PulseId]],
+    base_registers: dict[ChannelId, int],
+    ps_swept_pulse_ids: dict[ChannelId, set[PulseId]],
+    register_counts_per_pulse: dict[PulseId, int],
+) -> bool:
+    """Check whether a sequence can be added to a batch without exceeding registers.
+
+    For each channel, the registers needed are the larger of the batch and sequence base
+    registers, plus those of the union of swept pulse IDs of the batch and of the
+    sequence (repeated IDs share registers).
+    """
+    return all(
+        # Base registers may differ between sequences on acquisition channels: one with
+        # a Readout counts the sweeps of both the channel and its probe alias, while
+        # one without (not common in practice) counts only the channel's. The latter is a
+        # subset of the former, so max equals the size of the union.
+        max(batch_base_registers.get(ch, 0), base_registers[ch])
+        + sum(
+            register_counts_per_pulse[pid]
+            for pid in batch_swept_pulse_ids.get(ch, set()) | pulse_ids
+        )
+        <= SEQUENCER_REGISTERS
+        for ch, pulse_ids in ps_swept_pulse_ids.items()
+    )
+
+
 def _split_sequences_by_memory_limits(
     sequences: list[PulseSequence],
     sweepers: list[ParallelSweepers],
@@ -218,14 +251,12 @@ def _split_sequences_by_memory_limits(
             batch_memory[key] + ps_memory[key] <= limit
             for key, limit in cluster_memory_limits.items()
         )
-        fits_in_registers = all(
-            max(batch_base_registers.get(ch, 0), base_registers[ch])
-            + sum(
-                register_counts_per_pulse[pid]
-                for pid in batch_swept_pulse_ids.get(ch, set()) | pulse_ids
-            )
-            <= SEQUENCER_REGISTERS
-            for ch, pulse_ids in ps_swept_pulse_ids.items()
+        fits_in_registers = _fits_in_registers(
+            batch_base_registers,
+            batch_swept_pulse_ids,
+            base_registers,
+            ps_swept_pulse_ids,
+            register_counts_per_pulse,
         )
         if not (fits_in_memory and fits_in_registers):
             batches.append(batch)
@@ -234,14 +265,18 @@ def _split_sequences_by_memory_limits(
             batch_base_registers = {}
             batch = []
 
+        # Track per channel the swept pulse IDs (shared registers) and the base
+        # registers of the current batch.
         for ch, pulse_ids in ps_swept_pulse_ids.items():
             batch_swept_pulse_ids.setdefault(ch, set()).update(pulse_ids)
             batch_base_registers[ch] = max(
                 batch_base_registers.get(ch, 0), base_registers[ch]
             )
 
+        # Accumulate the memory usage of the sequence into the current batch.
         for key, mem in ps_memory.items():
             batch_memory[key] += mem
+
         batch.append(ps)
 
     # If the the loop over sequences ended with a non-empty batch, add it to the

@@ -267,7 +267,6 @@ def _unravel_sweeps(
             if sweep.pulses is not None
             else [(None, ch) for ch in (sweep.channels or []) if ch in channels]
         ]
-        if targets
         for irange, role in _registers(sweep)
         for pulse, channel in targets
     )
