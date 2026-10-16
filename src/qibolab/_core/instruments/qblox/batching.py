@@ -1,5 +1,6 @@
 """Batching utilities for Qblox cluster sequence execution."""
 
+import math
 from collections import Counter
 from collections.abc import Set as AbstractSet
 from dataclasses import dataclass, field
@@ -257,11 +258,11 @@ def _split_sequences_by_memory_limits(
             # WARNING: it was determined by combining QRM and QRC instructions, but the
             # the two types of instructions may have a different factor.
             # TODO: use the number of post-compilation lines
-            "qcm_lines": sum(
-                1.6 for channelid, _pulse in ps if channelid in qcm_channels
+            "qcm_lines": math.ceil(
+                sum(1.6 for channelid, _pulse in ps if channelid in qcm_channels)
             ),
-            "qrm_lines": sum(
-                1.6 for channelid, _pulse in ps if channelid in qrm_channels
+            "qrm_lines": math.ceil(
+                sum(1.6 for channelid, _pulse in ps if channelid in qrm_channels)
             ),
         }
         # Repeated pulse IDs share parameter registers within and across sequences.
