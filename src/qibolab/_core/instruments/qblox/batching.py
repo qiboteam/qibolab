@@ -2,6 +2,7 @@
 
 from collections import Counter
 from collections.abc import Set as AbstractSet
+from dataclasses import dataclass, field
 
 from qibolab import Delay
 from qibolab._core.execution_parameters import ExecutionParameters
@@ -76,6 +77,42 @@ def _init_batch() -> dict[str, int]:
         "qcm_lines": 50,
         "qrm_lines": 50,
     }
+
+
+@dataclass
+class _CurrentBatch:
+    """State tracked for the batch currently being filled."""
+
+    sequences: list[PulseSequence] = field(default_factory=list)
+    memory: dict[str, int] = field(default_factory=_init_batch)
+    # swept pulse IDs per channel, shared across the sequences of the batch
+    swept_pulse_ids: dict[ChannelId, set[PulseId]] = field(default_factory=dict)
+    # running maximum of the base registers per channel
+    base_registers: dict[ChannelId, int] = field(default_factory=dict)
+
+    def reset(self) -> None:
+        """Reinitialize the batch to an empty one."""
+        self.sequences = []
+        self.memory = _init_batch()
+        self.swept_pulse_ids = {}
+        self.base_registers = {}
+
+    def add(
+        self,
+        ps: PulseSequence,
+        ps_memory: dict[str, int],
+        ps_swept_pulse_ids: dict[ChannelId, set[PulseId]],
+        base_registers: dict[ChannelId, int],
+    ) -> None:
+        """Add a sequence, accumulating its memory and register usage."""
+        for ch, pulse_ids in ps_swept_pulse_ids.items():
+            self.swept_pulse_ids.setdefault(ch, set()).update(pulse_ids)
+            self.base_registers[ch] = max(
+                self.base_registers.get(ch, 0), base_registers[ch]
+            )
+        for key, mem in ps_memory.items():
+            self.memory[key] += mem
+        self.sequences.append(ps)
 
 
 def _swept_pulse_ids_per_channel(
@@ -181,8 +218,8 @@ def _fits_in_registers(
     return all(
         # Base registers may differ between sequences on acquisition channels: one with
         # a Readout counts the sweeps of both the channel and its probe alias, while
-        # one without (not common in practice) counts only the channel's. The latter is a
-        # subset of the former, so max equals the size of the union.
+        # one without (not common in practice) counts only the channel's. The latter is
+        # a subset of the former, so max equals the size of the union.
         max(batch_base_registers.get(ch, 0), base_registers[ch])
         + sum(
             register_counts_per_pulse[pid]
@@ -209,10 +246,7 @@ def _split_sequences_by_memory_limits(
     loop_register_count = len(sweepers)
     fixed_register_count = Registers.first_available() + loop_register_count
 
-    batch: list[PulseSequence] = []
-    batch_memory = _init_batch()
-    batch_swept_pulse_ids: dict[ChannelId, set[PulseId]] = {}
-    batch_base_registers: dict[ChannelId, int] = {}
+    batch = _CurrentBatch()
     batches: list[list[PulseSequence]] = []
     for ps in sequences:
         ps_memory = {
@@ -248,41 +282,26 @@ def _split_sequences_by_memory_limits(
         # TODO: track instruction memory usage per module instead of summing across
         # all modules.
         fits_in_memory = all(
-            batch_memory[key] + ps_memory[key] <= limit
+            batch.memory[key] + ps_memory[key] <= limit
             for key, limit in cluster_memory_limits.items()
         )
         fits_in_registers = _fits_in_registers(
-            batch_base_registers,
-            batch_swept_pulse_ids,
+            batch.base_registers,
+            batch.swept_pulse_ids,
             base_registers,
             ps_swept_pulse_ids,
             register_counts_per_pulse,
         )
         if not (fits_in_memory and fits_in_registers):
-            batches.append(batch)
-            batch_memory = _init_batch()
-            batch_swept_pulse_ids = {}
-            batch_base_registers = {}
-            batch = []
+            batches.append(batch.sequences)
+            batch.reset()
 
-        # Track per channel the swept pulse IDs (shared registers) and the base
-        # registers of the current batch.
-        for ch, pulse_ids in ps_swept_pulse_ids.items():
-            batch_swept_pulse_ids.setdefault(ch, set()).update(pulse_ids)
-            batch_base_registers[ch] = max(
-                batch_base_registers.get(ch, 0), base_registers[ch]
-            )
-
-        # Accumulate the memory usage of the sequence into the current batch.
-        for key, mem in ps_memory.items():
-            batch_memory[key] += mem
-
-        batch.append(ps)
+        batch.add(ps, ps_memory, ps_swept_pulse_ids, base_registers)
 
     # If the the loop over sequences ended with a non-empty batch, add it to the
     # list of batches.
-    if batch:
-        batches.append(batch)
+    if batch.sequences:
+        batches.append(batch.sequences)
 
     return batches
 
