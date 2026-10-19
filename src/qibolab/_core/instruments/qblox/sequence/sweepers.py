@@ -1,4 +1,4 @@
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Container, Iterable
 from enum import Enum, auto
 from itertools import groupby
 
@@ -241,8 +241,12 @@ def _duration_shift(role: ParamRole, pulse: PulseLike | None) -> int:
     return 4 if role is ParamRole.DURATION and isinstance(pulse, Pulse) else 0
 
 
-def _unravel_sweeps(sweepers: list[ParallelSweepers]) -> Iterable[tuple[int, Param]]:
-    """Turn sweepers into suitable ranges with unique targets."""
+def _unravel_sweeps(
+    sweepers: list[ParallelSweepers],
+    pulses: Container[PulseId],
+    channels: Container[ChannelId],
+) -> Iterable[tuple[int, Param]]:
+    """Turn sweepers into ranges, selecting this sequencer's targets once per sweep."""
     return (
         (
             j,
@@ -258,21 +262,35 @@ def _unravel_sweeps(sweepers: list[ParallelSweepers]) -> Iterable[tuple[int, Par
         # enumeration
         for j, parsweep in enumerate(sweepers[::-1])
         for sweep in parsweep
+        for targets in [
+            [(p, None) for p in sweep.pulses if p.id in pulses]
+            if sweep.pulses is not None
+            else [(None, ch) for ch in (sweep.channels or []) if ch in channels]
+        ]
         for irange, role in _registers(sweep)
-        for pulse in (sweep.pulses if sweep.pulses is not None else [None])
-        for channel in (sweep.channels if sweep.channels is not None else [None])
+        for pulse, channel in targets
     )
 
 
-def params(sweepers: list[ParallelSweepers], allocated: int) -> list[Param]:
+def params(
+    sweepers: list[ParallelSweepers],
+    allocated: int,
+    pulses: Container[PulseId],
+    channels: Container[ChannelId],
+) -> list[Param]:
     """Initialize parameters' registers.
 
     `allocated` is the number of already allocated registers for loop counters, as
     initialized by :func:`loops`.
+
+    Targets outside `pulses` and `channels` are excluded before constructing their
+    parameters, and registers are allocated just for the retained ones. Since each
+    sequencer runs its own program, this spares the registers of parameters belonging
+    to other sequencers.
     """
     return [
         p.model_copy(update={"reg": Register(number=i + allocated + 1), "loop": j})
-        for i, (j, p) in enumerate(_unravel_sweeps(sweepers))
+        for i, (j, p) in enumerate(_unravel_sweeps(sweepers, pulses, channels))
     ]
 
 

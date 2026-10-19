@@ -1,4 +1,4 @@
-from collections.abc import Iterable, Sequence
+from collections.abc import Sequence
 
 from qibolab._core.execution_parameters import AveragingMode, ExecutionParameters
 from qibolab._core.identifier import ChannelId
@@ -18,7 +18,14 @@ from .acquisition import AcquisitionSpec, MeasureId
 from .experiment import experiment
 from .finalize import DEFAULT_PIPELINE, transform
 from .loops import LoopSpec, Registers, loop, loops
-from .sweepers import Param, params, params_reshape, sweep_sequence, update_instructions
+from .sweepers import (
+    LoopParams,
+    Param,
+    params,
+    params_reshape,
+    sweep_sequence,
+    update_instructions,
+)
 from .waveforms import PulseRealization
 
 __all__ = ["Program"]
@@ -77,7 +84,7 @@ def finalization() -> list[Instruction]:
 
 
 def program(
-    sequence: Iterable[PulseLike],
+    sequence: Sequence[PulseLike],
     pulse_realization: PulseRealization,
     acquisitions: dict[MeasureId, AcquisitionSpec],
     options: ExecutionParameters,
@@ -94,8 +101,16 @@ def program(
         options.nshots,
         inner_shots=options.averaging_mode is AveragingMode.SEQUENTIAL,
     )
-    params_ = params(sweepers, allocated=max(lp.reg.number for lp in loops_))
-    indexed_params = params_reshape(params_)
+    params_ = params(
+        sweepers,
+        allocated=max(lp.reg.number for lp in loops_),
+        pulses={p.id for p in sequence},
+        channels=channel,
+    )
+    # sequencers with no parameter in a loop still need an (empty) entry for it
+    indexed_params = {
+        lp.id: LoopParams(channel=[], pulse=[]) for lp in loops_ if lp.id is not None
+    } | params_reshape(params_)
     sweepseq = sweep_sequence(
         sequence, [p for v in indexed_params.values() for p in v.pulse]
     )

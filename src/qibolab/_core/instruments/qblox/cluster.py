@@ -244,10 +244,6 @@ class Cluster(Controller):
             if PortAddress.from_path(channelobj.path).slot in qrm_slots
         }
         qcm_channels = set(self.channels) - qrm_channels
-        batched_seqs = _batch_sequences(
-            processed_sequences, sweepers, options, qcm_channels, qrm_channels, configs
-        )
-
         sweepers_ = normalize_sweepers(
             sweepers,
             lo_configs(self._los, configs),
@@ -258,6 +254,10 @@ class Cluster(Controller):
             },
         )
 
+        batched_seqs = _batch_sequences(
+            processed_sequences, sweepers_, options, qcm_channels, qrm_channels, configs
+        )
+
         # configure the modules
         _module_configs = self._configure_modules(configs)
 
@@ -266,7 +266,7 @@ class Cluster(Controller):
         results = {}
         for ps in batched_seqs:
             psres = []
-            for shots in batch_shots(ps, sweepers, options):
+            for shots in batch_shots(ps, sweepers_, options):
                 options_ = options.model_copy(update={"nshots": shots})
 
                 # first compile pulses and sweepers into Qblox sequences
