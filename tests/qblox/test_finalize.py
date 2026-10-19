@@ -7,6 +7,7 @@ from qibolab._core.instruments.qblox.q1asm.ast_ import (
     Asl,
     Asr,
     Block,
+    Jlt,
     Line,
     Loop,
     Move,
@@ -102,6 +103,34 @@ def test_default_pipeline_negative_move_nops():
     assert result[0].label == line.label
     assert result[0].comment == line.comment
     assert all(line.label is None for line in result[1:])
+
+
+def test_wrap_phase_delta_opt_in():
+    reg = Registers.phase_delta.value
+    add = Add(a=reg, b=5, destination=reg)
+    assert [line.instruction for line in transform([add], DEFAULT_PIPELINE)] == [
+        add,
+        Nop(),
+    ]
+
+    pipeline = ((register.wrap_phase_delta,), (register.update_nop,))
+    result = transform([add, add], pipeline)
+    assert [line.instruction for line in result] == [
+        instr
+        for n in range(2)
+        for instr in (
+            add,
+            Nop(),
+            Jlt(a=reg, b=10**9, address=Reference(label=f"phase_wrap_r4_{n}")),
+            Sub(a=reg, b=10**9, destination=reg),
+            Nop(),
+            Nop(),
+        )
+    ]
+    assert [line.label for line in result if line.label is not None] == [
+        "phase_wrap_r4_0",
+        "phase_wrap_r4_1",
+    ]
 
 
 def test_merge_wait_consecutive():

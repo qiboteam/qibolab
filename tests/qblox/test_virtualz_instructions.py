@@ -76,4 +76,3 @@ def test_descending_phase_sweep_wraps_register_within_a_period():
     asm = " ".join(q1seq.program.asm().split())
     assert "jlt R7,1000000000,@phase_wrap_r7" in asm
     assert "sub R7,1000000000,R7" in asm
-    assert "sub R4,1000000000,R4" in asm

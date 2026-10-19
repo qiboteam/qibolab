@@ -62,6 +62,15 @@ The register collects the previous undo value, virtual Zs and the relative phase
 next pulse. Each addend is within a period, so one conditional subtraction is enough to
 keep it in the range accepted by ``set_ph_delta`` and away from 32-bit overflow.
 
-Apply before :data:`update_nop`, which takes care of the register propagation after
+This rule is not part of the default pipeline, because it adds four instructions
+(``jlt``, ``sub``, the propagation ``nop`` and the labelled ``nop``) for every addition
+to the phase delta register. In long sequences with many virtual Zs and relative phases
+(e.g. randomized benchmarking) this can significantly increase the program size, which
+is bounded by the sequencer instruction memory.
+
+It may be used when the accumulated phase delta can exceed one period before being
+passed to ``set_ph_delta``, where values above the period are undefined behaviour, and
+the program comfortably fits the instruction memory. In that case, add it to a custom
+pipeline before :data:`update_nop`, which takes care of the register propagation after
 the addition and the subtraction. Labels are numbered per traversal.
 """
