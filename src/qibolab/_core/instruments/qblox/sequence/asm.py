@@ -126,7 +126,7 @@ def _convert_amplitude(amplitude: float) -> float:
 
 
 def _validate_phase(phase: float) -> None:
-    """Validate phase before wrapping it to a single turn."""
+    """Validate phase before wrapping it to a single period."""
     if not np.isfinite(phase):
         raise ValueError(f"Phase must be finite. Received: {phase}")
 
