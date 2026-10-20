@@ -142,3 +142,22 @@ class SequencerConfig(Model):
             value = getattr(self, name)
             if value is not None:
                 seq.parameters[name].set(value)
+
+    def apply_changed(self, seq: Sequencer, old: "SequencerConfig"):
+        """Apply the parameters that differ from ``old`` (and always the sequence).
+
+        The sequencer is assumed to already be connected to the same address, so no
+        reconnection is performed. The uploaded sequence is always re-applied, since it
+        is the payload that drives the execution (its shot count changes per batch) and
+        must not rely on persisting on the hardware. The other, unchanged parameters are
+        skipped, avoiding their per-command round-trips when the channel map is stable
+        across executions.
+        """
+        for name in self.model_fields:
+            if name == "address":
+                continue
+            value = getattr(self, name)
+            if value is None:
+                continue
+            if name == "sequence" or value != getattr(old, name, None):
+                seq.parameters[name].set(value)

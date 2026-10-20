@@ -156,6 +156,13 @@ class Cluster(Controller):
     https://docs.qblox.com/en/main/getting_started/setup.html#connecting-to-multiple-instruments
     """
     _cluster: qblox.Cluster | None = None
+    # Cache of the last applied sequencer configuration per (slot, sequencer index),
+    # and the active sequencer indices per slot. Used to skip the redundant
+    # disconnect/reconnect and re-setting of unchanged parameters across executions
+    # that share the same channel map (e.g. the shot batches of a single acquisition).
+    # Invalidated on connect/reset/disconnect.
+    _applied_seqcfg: dict | None = None
+    _active_seqs: dict | None = None
 
     @property
     def cluster(self) -> qblox.Cluster:
@@ -180,6 +187,10 @@ class Cluster(Controller):
         """Reset cluster parameters."""
         assert self._cluster is not None
         self._cluster.reset()
+        # The hardware reset clears all sequencer connections and settings, so the
+        # cached applied state is no longer valid.
+        self._applied_seqcfg = {}
+        self._active_seqs = {}
 
     def connect(self) -> None:
         """Connect and initialize the instrument."""
@@ -189,6 +200,8 @@ class Cluster(Controller):
         self._cluster = find_or_create_instrument(
             qblox.Cluster, recreate=True, name=self.name, identifier=self.address
         )
+        self._applied_seqcfg = {}
+        self._active_seqs = {}
 
     def disconnect(self) -> None:
         """Disconnect and reset the instrument."""
@@ -202,6 +215,8 @@ class Cluster(Controller):
             module.stop_sequencer()
         self._cluster.close()
         self._cluster = None
+        self._applied_seqcfg = None
+        self._active_seqs = None
 
     def _set_dc_offsets_to_0(self) -> None:
         flux_slot_to_ports: dict[SlotId, set[int]] = defaultdict(set)
@@ -285,8 +300,10 @@ class Cluster(Controller):
 
                 log.sequences(sequences_)
 
-                # then configure sequencers (including sequences upload)
-                self._disconnect_and_desync_sequencers()
+                # then configure sequencers (including sequences upload). Modules whose
+                # channel map is unchanged since the previous execution are not
+                # disconnected/reconnected; only the changed parameters are re-uploaded.
+                # See `_configure_sequencers`.
                 sequencers, _sequencer_configs = self._configure_sequencers(
                     configs=configs,
                     acquisition=options_.acquisition_type,
@@ -303,7 +320,9 @@ class Cluster(Controller):
                 log.data(data)
 
                 # process raw results to adhere to standard format
+                t0 = time.perf_counter()
                 lengths = integration_lengths(sequences_, sequencers, self._modules)
+                logger.info(f"integration_lengths: {time.perf_counter() - t0:.3f} s")
                 psres.append(
                     extract(
                         data,
@@ -319,9 +338,16 @@ class Cluster(Controller):
 
     def _disconnect_and_desync_sequencers(self) -> None:
         """Clear the relevant module settings before applying a new sequence."""
-        # see FAQ in docs for disconnect_outputs() and disconnect_inputs()
-        # https://docs.qblox.com/en/v2025.12.0/products/qblox_instruments/faq.html
-        for module in self._modules.values():
+        self._disconnect_slots(set(self._modules))
+
+    def _disconnect_slots(self, slots: set[SlotId]) -> None:
+        """Disconnect outputs/inputs and desync the sequencers of the given slots.
+
+        see FAQ in docs for disconnect_outputs() and disconnect_inputs()
+        https://docs.qblox.com/en/v2025.12.0/products/qblox_instruments/faq.html
+        """
+        for slot in slots:
+            module = self._modules[slot]
             # Disconnect outputs because `SequencerConfig.apply` creates new connections
             # between the indexed sequencer and various inputs/outputs. Existing
             # connections would otherwise cause the operation to fail.
@@ -377,12 +403,23 @@ class Cluster(Controller):
         (:attr:`AcquisitionType.INTEGRATION`). The only true alternative to this value
         is :attr:`AcquisitionType.RAW`, since further configurations are required to
         operate in scope mode.
+
+        When the channel map (the association of sequencers to inputs/outputs) is
+        unchanged since the previous call, the existing connections are reused: the
+        affected modules are not disconnected/reconnected and only the changed
+        parameters (typically just the uploaded sequence) are re-applied. This avoids
+        the per-command round-trips of a full reconfiguration for executions that share
+        the same channel map (e.g. the shot batches of a single acquisition).
         """
         sequencers = defaultdict(dict)
         exec_mode = sequences is not None
         sequences_ = defaultdict(lambda: None, sequences if exec_mode else {})
 
         seqcfgs = {}
+        # Build all sequencer configurations first, tracking the active sequencers per
+        # slot, so that the required disconnects can be determined before applying.
+        new_cfgs = {}
+        cur_active: dict[SlotId, set[int]] = defaultdict(set)
         for slot, chs in self._channels_by_module.items():
             module = self._modules[slot]
 
@@ -413,9 +450,51 @@ class Cluster(Controller):
                     module.is_rf_type,
                     sequence=sequences_[ch],
                 )
+                new_cfgs[(slot, idx)] = (seqcfg, sequencer, ch)
+                cur_active[slot].add(idx)
+
+        # Determine which modules need a full disconnect+desync before (re)applying.
+        # A module only needs it when its active sequencer set or a sequencer's
+        # connection address changed since the last configure (or on first use), or
+        # when it was active before but is not now (stale connections/sync state).
+        applied = self._applied_seqcfg
+        prev_active = self._active_seqs
+        slots_to_disconnect: set[SlotId] = set()
+        for slot, idxs in cur_active.items():
+            prev_idxs = (
+                prev_active.get(slot, set()) if prev_active is not None else set()
+            )
+            if idxs != prev_idxs:
+                slots_to_disconnect.add(slot)
+                continue
+            for idx in idxs:
+                old = applied.get((slot, idx)) if applied is not None else None
+                if old is None or old.address != new_cfgs[(slot, idx)][0].address:
+                    slots_to_disconnect.add(slot)
+                    break
+        if prev_active is not None:
+            for slot in prev_active:
+                if slot not in cur_active:
+                    slots_to_disconnect.add(slot)
+
+        if slots_to_disconnect:
+            self._disconnect_slots(slots_to_disconnect)
+
+        # Apply the configurations: a full (re)connect when the address changed (or on
+        # first use), otherwise only the changed parameters (and the sequence).
+        for (slot, idx), (seqcfg, sequencer, ch) in new_cfgs.items():
+            old = applied.get((slot, idx)) if applied is not None else None
+            if old is None or old.address != seqcfg.address:
                 seqcfg.apply(sequencer)
-                # populate channel-to-sequencer mapping
-                sequencers[slot][ch] = idx
+            else:
+                seqcfg.apply_changed(sequencer, old)
+            # populate channel-to-sequencer mapping
+            sequencers[slot][ch] = idx
+            if self._applied_seqcfg is not None:
+                self._applied_seqcfg[(slot, idx)] = seqcfg
+
+        if self._active_seqs is not None:
+            self._active_seqs = dict(cur_active)
 
         return sequencers, seqcfgs
 
@@ -486,10 +565,13 @@ class Cluster(Controller):
 
         return acquisitions
 
-    @property
+    @cached_property
     def _modules(self) -> dict[SlotId, Module]:
         """Retrieve slot to module object mapping."""
-        return {mod.slot_idx: mod for mod in self.cluster.modules if mod.present()}
+        t0 = time.perf_counter()
+        aa = {mod.slot_idx: mod for mod in self.cluster.modules if mod.present()}
+        logger.info(f"_modules: {time.perf_counter() - t0:.3f} s")
+        return aa
 
     @cached_property
     def _probes(self) -> set[ChannelId]:
