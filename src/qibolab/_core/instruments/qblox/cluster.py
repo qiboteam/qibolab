@@ -200,6 +200,7 @@ class Cluster(Controller):
         self._cluster = find_or_create_instrument(
             qblox.Cluster, recreate=True, name=self.name, identifier=self.address
         )
+        self._invalidate_modules()
         self._applied_seqcfg = {}
         self._active_seqs = {}
 
@@ -215,6 +216,7 @@ class Cluster(Controller):
             module.stop_sequencer()
         self._cluster.close()
         self._cluster = None
+        self._invalidate_modules()
         self._applied_seqcfg = None
         self._active_seqs = None
 
@@ -581,6 +583,11 @@ class Cluster(Controller):
     def _modules(self) -> dict[SlotId, Module]:
         """Retrieve slot to module object mapping."""
         return {mod.slot_idx: mod for mod in self.cluster.modules if mod.present()}
+
+    def _invalidate_modules(self) -> None:
+        """Drop the cached `_modules`."""
+        if "_modules" in self.__dict__:
+            delattr(self, "_modules")
 
     @cached_property
     def _probes(self) -> set[ChannelId]:
