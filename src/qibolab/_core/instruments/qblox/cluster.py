@@ -305,8 +305,7 @@ class Cluster(Controller):
                 # then configure sequencers (including sequences upload). Modules whose
                 # channel map is unchanged since the previous execution are not
                 # disconnected/reconnected; only the changed parameters are re-uploaded.
-                # See `_configure_sequencers`.
-                sequencers, sequencer_configs = self._configure_sequencers(
+                sequencers, _sequencer_configs = self._configure_sequencers(
                     configs=configs,
                     acquisition=options_.acquisition_type,
                     sequences=sequences_,
@@ -323,9 +322,7 @@ class Cluster(Controller):
 
                 if options_.acquisition_type is AcquisitionType.INTEGRATION:
                     # Process raw results to adhere to the standard format
-                    lengths = integration_lengths(
-                        sequences_, sequencers, self._modules, sequencer_configs
-                    )
+                    lengths = integration_lengths(sequences_, sequencers, self._modules)
                 else:
                     lengths = {}
                 psres.append(

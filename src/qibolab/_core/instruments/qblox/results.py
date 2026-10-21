@@ -10,7 +10,6 @@ from qibolab._core.execution_parameters import AcquisitionType
 from qibolab._core.identifier import ChannelId, Result
 from qibolab._core.pulses.pulse import PulseId
 
-from .config.sequencer import SequencerConfig
 from .identifiers import SequencerId, SequencerMap, SlotId
 from .sequence import Q1Sequence, acquisition
 
@@ -31,41 +30,24 @@ def integration_lengths(
     sequences: dict[ChannelId, Q1Sequence],
     sequencers: SequencerMap,
     modules: dict[SlotId, Module],
-    sequencer_configs: dict[SlotId, dict[SequencerId, SequencerConfig]] | None = None,
 ) -> dict[acquisition.MeasureId, int]:
-    """Resolve the integration length for each acquisition.
-
-    Weighted acquisitions carry their length in the compiled sequence.
-    Unweighted ones are read from the applied sequencer config, falling
-    back to a hardware query if unavailable.
-    """
     channels_to_sequencer = {
         ch: (mod, seq) for mod, chs in sequencers.items() for ch, seq in chs.items()
     }
-    weighted = reduce(or_, (seq.integration_lengths for seq in sequences.values()), {})
-    locations = {
-        acq: channels_to_sequencer[ch]
-        for ch, seq in sequences.items()
-        for acq in seq.acquisitions
-    }
-
-    defaults: dict[tuple[SlotId, SequencerId], int] = {}
-    unresolved = {locations[acq] for acq, length in weighted.items() if length is None}
-    for slot, idx in unresolved:
-        seqcfg = (
-            sequencer_configs.get(slot, {}).get(idx)
-            if sequencer_configs is not None
-            else None
-        )
-        length = seqcfg.integration_length_acq if seqcfg is not None else None
-        if length is None:
-            sequencer = modules[slot].sequencers[idx]
-            if hasattr(sequencer, "integration_length_acq"):
-                length = sequencer.integration_length_acq()
-        if length is not None:
-            defaults[(slot, idx)] = length
-
-    return _fill_empty_lenghts(weighted, defaults, locations)
+    return _fill_empty_lenghts(
+        reduce(or_, (seq.integration_lengths for seq in sequences.values())),
+        {
+            (mod_id, i): seq.integration_length_acq()
+            for mod_id, mod in modules.items()
+            for i, seq in enumerate(mod.sequencers)
+            if hasattr(seq, "integration_length_acq")
+        },
+        {
+            acq: channels_to_sequencer[ch]
+            for ch, seq in sequences.items()
+            for acq in seq.acquisitions
+        },
+    )
 
 
 IndividualScope = TypedDict(
