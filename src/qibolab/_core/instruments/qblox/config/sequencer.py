@@ -153,7 +153,7 @@ class SequencerConfig(Model):
         skipped, avoiding their per-command round-trips when the channel map is stable
         across executions.
         """
-        for name in self.model_fields:
+        for name in type(self).model_fields:
             if name == "address":
                 continue
             value = getattr(self, name)
