@@ -338,10 +338,6 @@ class Cluster(Controller):
             results |= concat_shots(psres, options)
         return results
 
-    def _disconnect_and_desync_sequencers(self) -> None:
-        """Clear the relevant module settings before applying a new sequence."""
-        self._disconnect_slots(set(self._modules))
-
     def _disconnect_slots(self, slots: set[SlotId]) -> None:
         """Disconnect outputs/inputs and desync the sequencers of the given slots.
 
