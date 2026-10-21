@@ -453,8 +453,10 @@ class Cluster(Controller):
 
         # Determine which modules need a full disconnect+desync before (re)applying.
         # A module only needs it when its active sequencer set or a sequencer's
-        # connection address changed since the last configure (or on first use), or
-        # when it was active before but is not now (stale connections/sync state).
+        # connection address changed since the last configure (or on first use), when
+        # a previously set parameter is now None (apply_changed cannot clear it, so the
+        # stale value would persist on the hardware), or when it was active before but
+        # is not now (stale connections/sync state).
         applied = self._applied_seqcfg
         prev_active = self._active_seqs
         slots_to_disconnect: set[SlotId] = set()
@@ -467,7 +469,21 @@ class Cluster(Controller):
                 continue
             for idx in idxs:
                 old = applied.get((slot, idx)) if applied is not None else None
-                if old is None or old.address != new_cfgs[(slot, idx)][0].address:
+                new = new_cfgs[(slot, idx)][0]
+                # A full disconnect is needed when the sequencer is new, its
+                # connection address changed, or a previously set parameter is now
+                # None (apply_changed cannot clear it, so the stale value would
+                # persist on the hardware).
+                needs_disconnect = (
+                    old is None
+                    or old.address != new.address
+                    or any(
+                        getattr(old, name) is not None and getattr(new, name) is None
+                        for name in type(new).model_fields
+                        if name != "address"
+                    )
+                )
+                if needs_disconnect:
                     slots_to_disconnect.add(slot)
                     break
         if prev_active is not None:
