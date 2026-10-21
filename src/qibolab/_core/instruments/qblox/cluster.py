@@ -580,10 +580,7 @@ class Cluster(Controller):
     @cached_property
     def _modules(self) -> dict[SlotId, Module]:
         """Retrieve slot to module object mapping."""
-        t0 = time.perf_counter()
-        aa = {mod.slot_idx: mod for mod in self.cluster.modules if mod.present()}
-        logger.info(f"_modules: {time.perf_counter() - t0:.3f} s")
-        return aa
+        return {mod.slot_idx: mod for mod in self.cluster.modules if mod.present()}
 
     @cached_property
     def _probes(self) -> set[ChannelId]:
