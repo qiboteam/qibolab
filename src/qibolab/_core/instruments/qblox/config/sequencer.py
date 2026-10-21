@@ -131,31 +131,20 @@ class SequencerConfig(Model):
 
         return cfg
 
-    def apply(self, seq: Sequencer):
-        """Configure sequencer-wide settings."""
-        if self.address is not None:
+    def apply(self, seq: Sequencer, old: "SequencerConfig | None" = None):
+        """Configure sequencer-wide settings.
+
+        If ``old`` (the currently applied config) is given, skip connecting and only
+        set changed parameters. The sequence is always uploaded.
+        """
+        if old is None and self.address is not None:
             seq.connect_sequencer(self.address)
 
         # values already applied
         applied = {"address"}
         for name in self.model_fields_set - applied:
             value = getattr(self, name)
-            if value is not None:
-                seq.parameters[name].set(value)
-
-    def apply_changed_parameters(self, seq: Sequencer, old: "SequencerConfig"):
-        """Apply only parameters that differ from ``old`` and always re-upload the
-        sequence.
-        """
-        for name in type(self).model_fields:
-            # address is handled by connect_sequencer in `apply`, not a parameter
-            if name == "address":
-                continue
-            value = getattr(self, name)
-            # None means "not set", so skip to avoid overwriting hardware state
-            if value is None:
-                continue
-            # sequence is always re-uploaded; other params only when they differ from
-            # the previously applied config
-            if name == "sequence" or value != getattr(old, name, None):
+            if value is not None and (
+                old is None or name == "sequence" or value != getattr(old, name)
+            ):
                 seq.parameters[name].set(value)
