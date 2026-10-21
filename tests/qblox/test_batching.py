@@ -3,11 +3,18 @@ from uuid import uuid4
 import pytest
 from pydantic import ValidationError
 
-from qibolab._core.execution_parameters import AveragingMode, ExecutionParameters
+from qibolab._core.execution_parameters import (
+    AcquisitionType,
+    AveragingMode,
+    ExecutionParameters,
+)
 from qibolab._core.identifier import ChannelId
-from qibolab._core.instruments.qblox import batching
+from qibolab._core.instruments.qblox import batching, cluster, validate
 from qibolab._core.instruments.qblox.q1asm.ast_ import Register
-from qibolab._core.instruments.qblox.sequence.sequence import compile
+from qibolab._core.instruments.qblox.sequence.acquisition import (
+    Acquisition as Q1Acquisition,
+)
+from qibolab._core.instruments.qblox.sequence.sequence import Q1Sequence, compile
 from qibolab._core.pulses import (
     Acquisition,
     Delay,
@@ -18,12 +25,6 @@ from qibolab._core.pulses import (
     Rectangular,
     VirtualZ,
 )
-from qibolab._core.execution_parameters import AcquisitionType
-from qibolab._core.instruments.qblox import cluster, validate
-from qibolab._core.instruments.qblox.sequence.acquisition import (
-    Acquisition as Q1Acquisition,
-)
-from qibolab._core.instruments.qblox.sequence.sequence import Q1Sequence
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import (
     ParallelSweepers,
