@@ -143,21 +143,19 @@ class SequencerConfig(Model):
             if value is not None:
                 seq.parameters[name].set(value)
 
-    def apply_changed(self, seq: Sequencer, old: "SequencerConfig"):
-        """Apply the parameters that differ from ``old`` (and always the sequence).
-
-        The sequencer is assumed to already be connected to the same address, so no
-        reconnection is performed. The uploaded sequence is always re-applied, since it
-        is the payload that drives the execution (its shot count changes per batch) and
-        must not rely on persisting on the hardware. The other, unchanged parameters are
-        skipped, avoiding their per-command round-trips when the channel map is stable
-        across executions.
+    def apply_changed_parameters(self, seq: Sequencer, old: "SequencerConfig"):
+        """Apply only parameters that differ from ``old`` and always re-upload the
+        sequence.
         """
         for name in type(self).model_fields:
+            # address is handled by connect_sequencer in `apply`, not a parameter
             if name == "address":
                 continue
             value = getattr(self, name)
+            # None means "not set", so skip to avoid overwriting hardware state
             if value is None:
                 continue
+            # sequence is always re-uploaded; other params only when they differ from
+            # the previously applied config
             if name == "sequence" or value != getattr(old, name, None):
                 seq.parameters[name].set(value)

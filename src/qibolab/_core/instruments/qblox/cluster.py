@@ -519,7 +519,7 @@ class Cluster(Controller):
             ):
                 seqcfg.apply(sequencer)
             else:
-                seqcfg.apply_changed(sequencer, old)
+                seqcfg.apply_changed_parameters(sequencer, old)
             sequencers[slot][ch] = idx
             if self._applied_seqcfg is not None:
                 self._applied_seqcfg[(slot, idx)] = seqcfg
