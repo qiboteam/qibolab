@@ -186,11 +186,11 @@ class Cluster(Controller):
     def reset(self) -> None:
         """Reset cluster parameters."""
         assert self._cluster is not None
-        self._cluster.reset()
-        # The hardware reset clears all sequencer connections and settings, so the
-        # cached applied state is no longer valid.
+        # The hardware reset clears all sequencer connections and settings, so
+        # the cached applied state is no longer valid.
         self._applied_seqcfg = {}
         self._active_seqs = {}
+        self._cluster.reset()
 
     def connect(self) -> None:
         """Connect and initialize the instrument."""
@@ -304,7 +304,7 @@ class Cluster(Controller):
                 # channel map is unchanged since the previous execution are not
                 # disconnected/reconnected; only the changed parameters are re-uploaded.
                 # See `_configure_sequencers`.
-                sequencers, _sequencer_configs = self._configure_sequencers(
+                sequencers, sequencer_configs = self._configure_sequencers(
                     configs=configs,
                     acquisition=options_.acquisition_type,
                     sequences=sequences_,
@@ -319,10 +319,13 @@ class Cluster(Controller):
                 )
                 log.data(data)
 
-                # process raw results to adhere to standard format
-                t0 = time.perf_counter()
-                lengths = integration_lengths(sequences_, sequencers, self._modules)
-                logger.info(f"integration_lengths: {time.perf_counter() - t0:.3f} s")
+                if options_.acquisition_type is AcquisitionType.INTEGRATION:
+                    # Process raw results to adhere to the standard format
+                    lengths = integration_lengths(
+                        sequences_, sequencers, self._modules, sequencer_configs
+                    )
+                else:
+                    lengths = {}
                 psres.append(
                     extract(
                         data,
@@ -477,14 +480,23 @@ class Cluster(Controller):
                 if slot not in cur_active:
                     slots_to_disconnect.add(slot)
 
+        # A disconnect is module-wide: it removes every channel connection and disables
+        # synchronization on every sequencer in the slot. Therefore, after disconnecting
+        # a slot, fully apply all of its active sequencers—not only the one whose address
+        # changed. Applying only changed parameters would leave the other sequencers
+        # disconnected and desynchronized.
         if slots_to_disconnect:
             self._disconnect_slots(slots_to_disconnect)
 
-        # Apply the configurations: a full (re)connect when the address changed (or on
-        # first use), otherwise only the changed parameters (and the sequence).
+        # Apply the configurations: a full (re)connect when the slot was disconnected,
+        # the address changed, or on first use; otherwise only the changed parameters.
         for (slot, idx), (seqcfg, sequencer, ch) in new_cfgs.items():
             old = applied.get((slot, idx)) if applied is not None else None
-            if old is None or old.address != seqcfg.address:
+            if (
+                slot in slots_to_disconnect
+                or old is None
+                or old.address != seqcfg.address
+            ):
                 seqcfg.apply(sequencer)
             else:
                 seqcfg.apply_changed(sequencer, old)
