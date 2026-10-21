@@ -336,7 +336,7 @@ class Cluster(Controller):
             results |= concat_shots(psres, options)
         return results
 
-    def _disconnect_slots(self, slots: set[SlotId]) -> None:
+    def _disconnect_and_desync_sequencers(self, slots: set[SlotId]) -> None:
         """Disconnect outputs/inputs and desync the sequencers of the given slots.
 
         see FAQ in docs for disconnect_outputs() and disconnect_inputs()
@@ -505,7 +505,7 @@ class Cluster(Controller):
         # Disconnect is module-level, so after it all active sequencers in the slot must
         # be fully re-applied.
         slots_to_disconnect = self._slots_to_disconnect(new_cfgs, cur_active)
-        self._disconnect_slots(slots_to_disconnect)
+        self._disconnect_and_desync_sequencers(slots_to_disconnect)
 
         # Apply the configurations: a full (re)connect when the slot was disconnected,
         # the address changed, or on first use; otherwise only the changed parameters.
