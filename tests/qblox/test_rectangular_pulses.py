@@ -4,8 +4,8 @@
 import numpy as np
 import pytest
 
-from qibolab._core.instruments.qblox.limits import WAVEFORM_MEMORY
 from qibolab._core.execution_parameters import AcquisitionType, ExecutionParameters
+from qibolab._core.instruments.qblox.limits import WAVEFORM_MEMORY
 from qibolab._core.instruments.qblox.q1asm.ast_ import (
     Instr,
     Play,

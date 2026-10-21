@@ -6,6 +6,7 @@ from qibolab._core.execution_parameters import (
 from qibolab._core.identifier import ChannelId
 from qibolab._core.sequence import PulseSequence
 
+from .identifiers import SlotId
 from .limits import (
     ACQUISITION_MEMORY,
     ACQUISITION_NUMBER,
@@ -16,7 +17,6 @@ from .limits import (
     WEIGHT_MEMORY,
     WEIGHT_NUMBER,
 )
-from .identifiers import SlotId
 from .q1asm.ast_ import Line
 from .sequence.acquisition import Acquisition, Weight
 from .sequence.sequence import Q1Sequence
