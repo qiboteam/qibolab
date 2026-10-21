@@ -16,6 +16,7 @@ from .limits import (
     WEIGHT_MEMORY,
     WEIGHT_NUMBER,
 )
+from .identifiers import SlotId
 from .q1asm.ast_ import Line
 from .sequence.acquisition import Acquisition, Weight
 from .sequence.sequence import Q1Sequence
@@ -107,3 +108,20 @@ def validate_raw_averaging_mode(options: ExecutionParameters) -> None:
             "Qblox RAW acquisition requires AveragingMode.CYCLIC because of "
             "scope acquisition memory limits."
         )
+
+
+def validate_raw_acquisition_sequencers(
+    acq_sequencers: dict[SlotId, list[int]],
+) -> None:
+    """Ensure at most one RAW acquisition sequencer is opened per module.
+
+    Scope selection is module-wide, so a module can only acquire from one
+    sequencer at a time.
+    """
+    for slot, seq_indices in acq_sequencers.items():
+        if len(seq_indices) > 1:
+            raise ValueError(
+                "RAW acquisition supports only one acquisition sequencer per "
+                f"module, but module in slot {slot} has {len(seq_indices)}: "
+                f"{seq_indices}."
+            )

@@ -12,7 +12,7 @@ from qibolab._core.instruments.qblox import validate
 from qibolab._core.instruments.qblox.config import hardware
 
 
-@pytest.mark.parametrize("acq_sequencers", [{}, {1: [0]}, {1: [0, 2], 2: [1]}])
+@pytest.mark.parametrize("acq_sequencers", [{}, {1: [0]}, {1: [2], 2: [1]}])
 def test_enable_raw_acquisition_scope_averaging(acq_sequencers):
     """Enable averaging once per RAW module without touching inactive modules."""
     modules = {
@@ -31,7 +31,6 @@ def test_enable_raw_acquisition_scope_averaging(acq_sequencers):
     )
 
     for slot, module in modules.items():
-        # Scope selection is module-wide, so the last requested index wins.
         assert module.scope_acq_sequencer_select.call_args_list == [
             call(index) for index in acq_sequencers.get(slot, [])
         ]
@@ -40,6 +39,18 @@ def test_enable_raw_acquisition_scope_averaging(acq_sequencers):
                 parameter.set.assert_called_once_with(True)
             else:
                 parameter.set.assert_not_called()
+
+
+def test_enable_raw_acquisition_rejects_multiple_sequencers_per_module():
+    """Scope selection is module-wide, so only one sequencer may acquire."""
+    modules = {1: Mock()}
+
+    with pytest.raises(ValueError, match="only one acquisition sequencer per module"):
+        hardware._enable_raw_acquisition(
+            SimpleNamespace(_modules=modules), acq_sequencers={1: [0, 2]}
+        )
+
+    modules[1].scope_acq_sequencer_select.assert_not_called()
 
 
 @pytest.mark.parametrize(

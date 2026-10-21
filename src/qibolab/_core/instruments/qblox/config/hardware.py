@@ -10,6 +10,7 @@ from qibolab._core.execution_parameters import (
     AcquisitionType,
 )
 from qibolab._core.identifier import ChannelId
+from qibolab._core.instruments.qblox import validate
 from qibolab._core.instruments.qblox.identifiers import SequencerMap, SlotId
 from qibolab._core.instruments.qblox.sequence import Q1Sequence
 
@@ -128,12 +129,11 @@ def _enable_raw_acquisition(
     acquisition. RAW acquisition is restricted to cyclic averaging because of
     scope acquisition memory limits.
     """
+    validate.validate_raw_acquisition_sequencers(acq_sequencers)
+
     for slot, seq_indices in acq_sequencers.items():
         readout_module = cluster._modules[slot]
-
-        # TODO: only the last sequencer is activated
-        for idx in seq_indices:
-            readout_module.scope_acq_sequencer_select(idx)
+        readout_module.scope_acq_sequencer_select(seq_indices[0])
 
         readout_module.parameters["scope_acq_avg_mode_en_path0"].set(True)
         readout_module.parameters["scope_acq_avg_mode_en_path1"].set(True)
