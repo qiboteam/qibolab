@@ -42,9 +42,7 @@ def configure_modules_static(
             mixers,
             is_qcm_non_rf_type=module.is_qcm_type and not module.is_rf_type,
         )
-        # We can disconnect the module only when initializing it for the first time (for static configurations).
-        modcfg.disconnect_module(module)
-        modcfg.update_module(module)
+        modcfg.apply(module)
     return modcfgs
 
 
@@ -134,9 +132,6 @@ def _enable_raw_acquisition(
     for slot, seq_indices in acq_sequencers.items():
         readout_module = cluster._modules[slot]
         readout_module.scope_acq_sequencer_select(seq_indices[0])
-
-        readout_module.parameters["scope_acq_avg_mode_en_path0"].set(True)
-        readout_module.parameters["scope_acq_avg_mode_en_path1"].set(True)
 
 
 def configure_hardware_per_sequence(
