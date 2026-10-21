@@ -507,18 +507,15 @@ class Cluster(Controller):
         slots_to_disconnect = self._slots_to_disconnect(new_cfgs, cur_active)
         self._disconnect_and_desync_sequencers(slots_to_disconnect)
 
-        # Apply the configurations: a full (re)connect when the slot was disconnected,
-        # the address changed, or on first use; otherwise only the changed parameters.
+        # Apply the configurations: a full (re)connect for slots that were disconnected;
+        # otherwise only the changed parameters.
         applied = self._applied_seqcfg
         for (slot, idx), (seqcfg, sequencer, ch) in new_cfgs.items():
             old = applied.get((slot, idx)) if applied is not None else None
-            if (
-                slot in slots_to_disconnect
-                or old is None
-                or old.address != seqcfg.address
-            ):
+            if slot in slots_to_disconnect:
                 seqcfg.apply(sequencer)
             else:
+                assert old is not None
                 seqcfg.apply_changed_parameters(sequencer, old)
             sequencers[slot][ch] = idx
             if self._applied_seqcfg is not None:
