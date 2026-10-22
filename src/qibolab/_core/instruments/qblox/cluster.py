@@ -43,6 +43,7 @@ from .utils import (
 )
 from .validate import (
     assert_channels_exclusion,
+    validate_raw_averaging_mode,
     validate_sequence,
 )
 
@@ -115,6 +116,7 @@ def _batch_sequences(
             qrm_channels,
         )
         if options.averaging_mode.average
+        and options.acquisition_type is not AcquisitionType.RAW
         else sequences
     )
     return [_add_time_of_flight(b, configs).align_to_delays() for b in batched_seqs]
@@ -226,6 +228,7 @@ class Cluster(Controller):
     ) -> dict[PulseId, Result]:
         """Execute the given experiment."""
 
+        validate_raw_averaging_mode(options)
         self.reset()
 
         processed_sequences, phase_sweeper_present = _merge_phases_if_no_phase_sweeper(
@@ -281,17 +284,25 @@ class Cluster(Controller):
 
                 for channelid, seq in sequences_.items():
                     slot = PortAddress.from_path(self.channels[channelid].path).slot
-                    validate_sequence(seq, self._modules[slot].is_qrm_type)
+                    validate_sequence(
+                        sequence=seq,
+                        is_qrm=self._modules[slot].is_qrm_type,
+                        acquisition_type=options_.acquisition_type,
+                    )
 
                 log.sequences(sequences_)
 
                 # then configure sequencers (including sequences upload)
                 self._disconnect_and_desync_sequencers()
-                sequencers, _sequencer_configs = self._configure_sequencers(
-                    configs=configs,
-                    acquisition=options_.acquisition_type,
-                    sequences=sequences_,
+                sequencers, _sequencer_configs, acquisition_sequencers = (
+                    self._configure_sequencers(
+                        configs=configs,
+                        acquisition=options_.acquisition_type,
+                        sequences=sequences_,
+                    )
                 )
+                if options_.acquisition_type is AcquisitionType.RAW:
+                    self._enable_raw_acquisition(acquisition_sequencers)
                 log.status(self.cluster, sequencers)
 
                 # finally execute the experiment, and fetch results
@@ -363,7 +374,11 @@ class Cluster(Controller):
         configs: Configs,
         acquisition: AcquisitionType = AcquisitionType.INTEGRATION,
         sequences: dict[ChannelId, Q1Sequence] | None = None,
-    ) -> tuple[SequencerMap, dict[SlotId, dict[int, config.SequencerConfig]]]:
+    ) -> tuple[
+        SequencerMap,
+        dict[SlotId, dict[int, config.SequencerConfig]],
+        dict[SlotId, list[int]],
+    ]:
         """Configure sequencers.
 
         The return value consists of the association map from channels to sequencers,
@@ -379,6 +394,7 @@ class Cluster(Controller):
         operate in scope mode.
         """
         sequencers = defaultdict(dict)
+        acquisition_sequencers = defaultdict(list)
         exec_mode = sequences is not None
         sequences_ = defaultdict(lambda: None, sequences if exec_mode else {})
 
@@ -414,10 +430,22 @@ class Cluster(Controller):
                     sequence=sequences_[ch],
                 )
                 seqcfg.apply(sequencer)
+
+                # Only RAW input sequencers set this flag to False; output
+                # sequencers leave it as None and cannot trigger scope capture.
+                if seqcfg.demod_en_acq is False:
+                    acquisition_sequencers[slot].append(idx)
+                    if len(acquisition_sequencers[slot]) > 1:
+                        raise ValueError(
+                            "RAW acquisition supports only one acquisition sequencer per "
+                            f"module, but module in slot {slot} has {len(acquisition_sequencers[slot])}: "
+                            f"{acquisition_sequencers[slot]}."
+                        )
+
                 # populate channel-to-sequencer mapping
                 sequencers[slot][ch] = idx
 
-        return sequencers, seqcfgs
+        return sequencers, seqcfgs, acquisition_sequencers
 
     def configure(
         self,
@@ -430,10 +458,26 @@ class Cluster(Controller):
             Use `configure_sequencers` and/or `_configure_modules` instead.
         """
         modules_configs = self._configure_modules(configs)
-        sequencers, seqcfgs = self._configure_sequencers(
+        sequencers, seqcfgs, acq_sequencers = self._configure_sequencers(
             configs, acquisition, sequences
         )
+        self._enable_raw_acquisition(acq_sequencers)
         return sequencers, ClusterConfigs(modules=modules_configs, sequencers=seqcfgs)
+
+    def _enable_raw_acquisition(self, acq_sequencers: dict[SlotId, list[int]]) -> None:
+        """Select the scope acquisition sequencer on modules with RAW inputs.
+
+        Scope acquisition is module-wide, thus at most one sequencer per module can be
+        selected.
+        Scope averaging is instead enabled on all QRM modules by the
+        :class:`config.ModuleConfig` defaults, such that RAW traces are averaged over
+        shots in hardware. Since the scope memory can not retain a separate trace per
+        shot, RAW acquisition is restricted to cyclic averaging (cf.
+        :func:`validate.validate_raw_averaging_mode`).
+        """
+
+        for slot, seq_indices in acq_sequencers.items():
+            self._modules[slot].scope_acq_sequencer_select(seq_indices[0])
 
     def _execute(
         self,
