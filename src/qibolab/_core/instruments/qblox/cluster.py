@@ -58,29 +58,15 @@ def _compute_duration(
     ps: PulseSequence,
     sweepers: list[ParallelSweepers],
     options: ExecutionParameters,
-    configs: Configs,
 ) -> float:
-    """Compute the total program duration including time of flight and
-    synchronization waiting time.
-    """
-
-    # TODO: include the time of flight calculation at the level of
-    # Platform.execute rather than in the qblox driver. This will require
-    # propagating the changes also to qibocal.
-    time_of_flight = max(
-        [time_of_flights(configs)[ch[0]] for ch in ps if hasattr(ch[1], "acquisition")],
-        default=0.0,
-    )
+    """Compute the total program duration including synchronization waiting time."""
 
     # TODO: wait_sync duration is determined as explained in this comment
     # https://github.com/qiboteam/qibolab/pull/1389#issuecomment-3884129213.
     # It should be checked with Qblox if the sync time can indeed be of the
     # order of 900 ns.
     wait_sync_duration = 900
-    duration = options.estimate_duration(
-        [ps], sweepers, time_of_flight + wait_sync_duration
-    )
-    return duration
+    return options.estimate_duration([ps], sweepers, wait_sync_duration)
 
 
 def _add_time_of_flight(sequence: PulseSequence, configs: Configs) -> PulseSequence:
@@ -290,7 +276,7 @@ class Cluster(Controller):
                 log.status(self.cluster, sequencers)
 
                 # finally execute the experiment, and fetch results
-                duration = _compute_duration(ps, sweepers_, options_, configs)
+                duration = _compute_duration(ps, sweepers_, options_)
                 logger.info(f"Qblox expected execution time: {duration:.3f} s")
                 data = self._execute(
                     sequencers, sequences_, duration, options_.acquisition_type
