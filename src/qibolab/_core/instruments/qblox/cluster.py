@@ -192,8 +192,6 @@ class Cluster(Controller):
         self._cluster = find_or_create_instrument(
             qblox.Cluster, recreate=True, name=self.name, identifier=self.address
         )
-        self.__dict__.pop("_modules", None)
-        self._applied_seqcfgs = None
 
     def disconnect(self) -> None:
         """Disconnect and reset the instrument."""
