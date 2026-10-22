@@ -6,6 +6,7 @@ from qibolab._core.execution_parameters import (
 from qibolab._core.identifier import ChannelId
 from qibolab._core.sequence import PulseSequence
 
+from .identifiers import SlotId
 from .limits import (
     ACQUISITION_MEMORY,
     ACQUISITION_NUMBER,

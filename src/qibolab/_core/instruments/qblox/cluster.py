@@ -143,6 +143,24 @@ def _merge_phases_if_no_phase_sweeper(
     ], phase_sweeper_present
 
 
+def _raw_acquisition_sequencers(
+    seqcfgs: dict[SlotId, dict[int, config.SequencerConfig]],
+) -> dict[SlotId, list[int]]:
+    """Identify RAW acquisition sequencers, grouped by module.
+
+    Only RAW input sequencers disable the acquisition demodulation, while output
+    sequencers leave it unset, and they cannot trigger scope capture.
+    """
+    return {
+        slot: idxs
+        for slot, idxs in (
+            (slot, [idx for idx, cfg in cfgs.items() if cfg.demod_en_acq is False])
+            for slot, cfgs in seqcfgs.items()
+        )
+        if len(idxs) > 0
+    }
+
+
 class ClusterConfigs(Model):
     modules: dict[int, config.ModuleConfig]
     sequencers: dict[int, dict[int, config.SequencerConfig]]
