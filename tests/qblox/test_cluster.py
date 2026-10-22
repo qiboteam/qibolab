@@ -4,14 +4,52 @@ from unittest.mock import MagicMock, call
 
 import pytest
 
+from qibolab._core.components import (
+    AcquisitionChannel,
+    AcquisitionConfig,
+    DcChannel,
+    DcConfig,
+)
 from qibolab._core.execution_parameters import (
     AcquisitionType,
     AveragingMode,
     ExecutionParameters,
 )
-from qibolab._core.instruments.qblox import cluster, validate
+from qibolab._core.instruments.qblox import validate
 from qibolab._core.instruments.qblox.cluster import Cluster
 from qibolab._core.instruments.qblox.config import ModuleConfig
+from qibolab._core.instruments.qblox.sequence import Q1Sequence
+
+
+@pytest.fixture
+def acquisition_cluster():
+    instrument = Cluster(
+        name="cluster",
+        address="0.0.0.0",
+        channels={
+            "0/drive": DcChannel(path="1/o1"),
+            "1/acquisition": AcquisitionChannel(path="1/i1"),
+            "2/acquisition": AcquisitionChannel(path="2/i1"),
+            "3/acquisition": AcquisitionChannel(path="3/i1"),
+        },
+    )
+    instrument._cluster = MagicMock(
+        modules=[
+            MagicMock(
+                slot_idx=slot,
+                is_rf_type=False,
+                sequencers=[MagicMock() for _ in range(3)],
+            )
+            for slot in (1, 2, 3)
+        ]
+    )
+    configs = {
+        channel: AcquisitionConfig(delay=0, smearing=0)
+        if isinstance(config, AcquisitionChannel)
+        else DcConfig(offset=0)
+        for channel, config in instrument.channels.items()
+    }
+    return instrument, configs
 
 
 @pytest.mark.parametrize("acq_sequencers", [{}, {1: [0]}, {1: [2], 2: [1]}])
@@ -31,16 +69,24 @@ def test_enable_raw_acquisition_selects_scope_sequencer(acq_sequencers):
         module.parameters.__getitem__.assert_not_called()
 
 
-def test_enable_raw_acquisition_rejects_multiple_sequencers_per_module():
+@pytest.mark.parametrize("exec_mode", [False, True])
+def test_configure_rejects_multiple_raw_sequencers_per_module(
+    acquisition_cluster, exec_mode
+):
     """Scope selection is module-wide, so only one sequencer may acquire."""
-    modules = {1: MagicMock()}
+    instrument, configs = acquisition_cluster
+    instrument.channels["4/acquisition"] = AcquisitionChannel(path="1/i1")
+    configs["4/acquisition"] = AcquisitionConfig(delay=0, smearing=0)
+    sequences = (
+        {channel: Q1Sequence.empty() for channel in instrument.channels}
+        if exec_mode
+        else None
+    )
 
     with pytest.raises(ValueError, match="only one acquisition sequencer per module"):
-        Cluster._enable_raw_acquisition(
-            SimpleNamespace(_modules=modules), acq_sequencers={1: [0, 2]}
+        instrument._configure_sequencers(
+            configs, acquisition=AcquisitionType.RAW, sequences=sequences
         )
-
-    modules[1].scope_acq_sequencer_select.assert_not_called()
 
 
 @pytest.mark.parametrize("qrm", [True, False])
@@ -58,18 +104,39 @@ def test_module_config_enables_scope_averaging(qrm):
             assert name not in module.parameters
 
 
-def test_raw_acquisition_sequencers():
+@pytest.mark.parametrize("acquisition", list(AcquisitionType))
+@pytest.mark.parametrize("exec_mode", [False, True])
+def test_raw_acquisition_sequencers(acquisition_cluster, acquisition, exec_mode):
     """Only sequencers with disabled acquisition demodulation are selected."""
-    seqcfgs = {
-        1: {
-            0: SimpleNamespace(demod_en_acq=None),
-            2: SimpleNamespace(demod_en_acq=False),
-        },
-        2: {0: SimpleNamespace(demod_en_acq=True)},
-        3: {},
-    }
+    instrument, configs = acquisition_cluster
+    sequences = (
+        {
+            channel: Q1Sequence.empty()
+            for channel in instrument.channels
+            if channel != "3/acquisition"
+        }
+        if exec_mode
+        else None
+    )
 
-    assert cluster._raw_acquisition_sequencers(seqcfgs) == {1: [2]}
+    sequencers, seqcfgs, acquisition_sequencers = instrument._configure_sequencers(
+        configs, acquisition=acquisition, sequences=sequences
+    )
+
+    expected = {1: [1], 2: [0]}
+    if not exec_mode:
+        expected[3] = [0]
+    assert acquisition_sequencers == (
+        expected if acquisition is AcquisitionType.RAW else {}
+    )
+    assert sequencers[1] == {"0/drive": 0, "1/acquisition": 1}
+    assert sequencers[2] == {"2/acquisition": 0}
+    assert seqcfgs[1][0].demod_en_acq is None
+    assert seqcfgs[1][1].demod_en_acq is (acquisition is not AcquisitionType.RAW)
+    if exec_mode:
+        assert 3 not in sequencers
+        assert seqcfgs[3] == {}
+        instrument._modules[3].sequencers[0].connect_sequencer.assert_not_called()
 
 
 def test_play_rejects_raw_non_cyclic_before_execution():
