@@ -66,6 +66,14 @@ def _channel_sweep_register_counts(
     return dict(counts)
 
 
+def _acq_memory(ps, sweepers, options) -> int:
+    """Acquisition memory required by a sequence."""
+    per_shot = per_shot_memory(ps, sweepers, options)
+    assert options.nshots is not None
+    acq_mem = per_shot if options.averaging_mode.average else per_shot * options.nshots
+    return acq_mem
+
+
 def _init_batch() -> dict[str, int]:
     """Helper function to initialise the batch tracking variables."""
     return {
@@ -251,7 +259,14 @@ def _split_sequences_by_memory_limits(
     batches: list[list[PulseSequence]] = []
     for ps in sequences:
         ps_memory = {
-            "acq_memory": per_shot_memory(ps, sweepers, options),
+            # capped, since batch_shots will split the shots of a sequence exceeding the
+            # memory anyway. Without capping a limit-exceeded error would be raised
+            "acq_memory": int(
+                min(
+                    _acq_memory(ps, sweepers, options),
+                    cluster_memory_limits["acq_memory"],
+                )
+            ),
             "acq_number": len(ps.acquisitions),
             # The factor 1.6 is determined heuristically, for large number of gates
             # and iterations the ratio of ps objects to Lines is approx 1.56
