@@ -367,7 +367,7 @@ class Cluster(Controller):
                 is_qcm_non_rf_type=module.is_qcm_type and not module.is_rf_type,
             )
             modcfg.apply(module)
-        # sequencers got disconnected
+        # `ModuleConfig.apply` disconnects all sequencers
         self._applied_seqcfgs = None
         return modcfgs
 
@@ -428,22 +428,26 @@ class Cluster(Controller):
                 # populate channel-to-sequencer mapping
                 sequencers[slot][ch] = idx
 
-        # sequencer indices are fixed per channel, so reconnect a module only if its
-        # active sequencers changed (or the hardware state is unknown)
-        applied = self._applied_seqcfgs
+        # Reconnect a module only if its active sequencers changed or the hardware
+        # state is unknown
+        applied_seqcfgs = self._applied_seqcfgs
         stale = (
             set(self._modules)
-            if applied is None
+            if applied_seqcfgs is None
             else {
                 slot
-                for slot in seqcfgs.keys() | applied.keys()
-                if seqcfgs.get(slot, {}).keys() != applied.get(slot, {}).keys()
+                for slot in seqcfgs.keys() | applied_seqcfgs.keys()
+                if seqcfgs.get(slot, {}).keys() != applied_seqcfgs.get(slot, {}).keys()
             }
         )
         self._disconnect_and_desync_sequencers(stale)
 
         for slot, cfgs in seqcfgs.items():
-            old = {} if applied is None or slot in stale else applied[slot]
+            old = (
+                {}
+                if applied_seqcfgs is None or slot in stale
+                else applied_seqcfgs[slot]
+            )
             module = self._modules[slot]
             for idx, seqcfg in cfgs.items():
                 seqcfg.apply(module.sequencers[idx], old.get(idx))
