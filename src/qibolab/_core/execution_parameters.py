@@ -25,6 +25,7 @@ class AcquisitionType(Enum):
     """Return the demodulated waveform."""
     """Return the waveform, demodulated to baseband where supported (e.g. Qblox)."""
 
+
 class AveragingMode(Enum):
     """Data averaging modes from hardware."""
 
