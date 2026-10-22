@@ -9,9 +9,9 @@ from qibolab._core.execution_parameters import (
     AveragingMode,
     ExecutionParameters,
 )
-from qibolab._core.instruments.qblox import cluster, validate
+from qibolab._core.instruments.qblox import validate
 from qibolab._core.instruments.qblox.cluster import Cluster
-from qibolab._core.instruments.qblox.config import ModuleConfig
+from qibolab._core.instruments.qblox.config import ModuleConfig, hardware
 
 
 @pytest.mark.parametrize("acq_sequencers", [{}, {1: [0]}, {1: [2], 2: [1]}])
@@ -19,7 +19,7 @@ def test_enable_raw_acquisition_selects_scope_sequencer(acq_sequencers):
     """Select the scope sequencer of RAW modules, without touching inactive ones."""
     modules = {slot: MagicMock() for slot in (1, 2)}
 
-    Cluster._enable_raw_acquisition(
+    hardware._enable_raw_acquisition(
         SimpleNamespace(_modules=modules), acq_sequencers=acq_sequencers
     )
 
@@ -36,7 +36,7 @@ def test_enable_raw_acquisition_rejects_multiple_sequencers_per_module():
     modules = {1: MagicMock()}
 
     with pytest.raises(ValueError, match="only one acquisition sequencer per module"):
-        Cluster._enable_raw_acquisition(
+        hardware._enable_raw_acquisition(
             SimpleNamespace(_modules=modules), acq_sequencers={1: [0, 2]}
         )
 
@@ -69,7 +69,7 @@ def test_raw_acquisition_sequencers():
         3: {},
     }
 
-    assert cluster._raw_acquisition_sequencers(seqcfgs) == {1: [2]}
+    assert hardware._raw_acquisition_sequencers(seqcfgs) == {1: [2]}
 
 
 def test_play_rejects_raw_non_cyclic_before_execution():
