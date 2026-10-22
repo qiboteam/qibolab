@@ -40,6 +40,14 @@ def _integration_length(sequence: Q1Sequence) -> int | None:
     )
 
 
+_UNTRACKED_SEQUENCER_ATTRS = {"sequence", "nco_freq"}
+"""Attributes not tracked by the last applied config, thus always set.
+
+The sequence is uploaded on every batch, and ``set_freq`` overwrites ``nco_freq`` at
+runtime.
+"""
+
+
 class SequencerConfig(Model):
     # disable freeze, to be able to construct instance with optional fields, but also
     # static validation
@@ -135,7 +143,7 @@ class SequencerConfig(Model):
         """Configure sequencer-wide settings.
 
         If ``old`` (the currently applied config) is given, skip connecting and only
-        set changed parameters. The sequence is always uploaded.
+        set changed parameters, plus the ones in :data:`_UNTRACKED_SEQUENCER_ATTRS`.
         """
         if old is None and self.address is not None:
             seq.connect_sequencer(self.address)
@@ -145,6 +153,8 @@ class SequencerConfig(Model):
         for name in self.model_fields_set - applied:
             value = getattr(self, name)
             if value is not None and (
-                old is None or name == "sequence" or value != getattr(old, name)
+                old is None
+                or name in _UNTRACKED_SEQUENCER_ATTRS
+                or value != getattr(old, name)
             ):
                 seq.parameters[name].set(value)
