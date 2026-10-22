@@ -226,6 +226,7 @@ class Snz(BaseEnvelope):
     """Absolute idling time, in number of samples."""
     b_amplitude: float = 0.5
     """Relative B amplitude (wrt A)."""
+    padding_duration: int = 0
 
     def i(self, samples: int) -> Waveform:
         r"""I.
@@ -251,17 +252,25 @@ class Snz(BaseEnvelope):
             "The total duration of the square pulses should be even."
         )
 
-        square_pulse_duration = int((samples - self.t_idling) / 2 - 1)
+        padding = np.zeros(self.padding_duration)
+        square_pulse_duration = int(
+            (samples - self.t_idling - self.padding_duration * 2) / 2 - 1
+        )
         square_pulse = np.ones(square_pulse_duration)
-        return np.concatenate(
+
+        snz_pulse = np.concatenate(
             [
+                padding,
                 square_pulse,
                 [self.b_amplitude],
                 np.zeros(self.t_idling),
                 [-self.b_amplitude],
                 -square_pulse,
+                padding,
             ]
         )
+        assert snz_pulse.size == samples
+        return snz_pulse
 
 
 class Custom(BaseEnvelope):
