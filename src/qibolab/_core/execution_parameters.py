@@ -23,7 +23,7 @@ class AcquisitionType(Enum):
     """Demodulate and integrate the waveform."""
     RAW = auto()
     """Return the demodulated waveform."""
-
+    """Return the waveform, demodulated to baseband where supported (e.g. Qblox)."""
 
 class AveragingMode(Enum):
     """Data averaging modes from hardware."""
