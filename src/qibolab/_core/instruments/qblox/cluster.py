@@ -301,8 +301,7 @@ class Cluster(Controller):
                         sequences=sequences_,
                     )
                 )
-                if options_.acquisition_type is AcquisitionType.RAW:
-                    self._enable_raw_acquisition(acquisition_sequencers)
+                self._enable_raw_acquisition(acquisition_sequencers)
                 log.status(self.cluster, sequencers)
 
                 # finally execute the experiment, and fetch results
