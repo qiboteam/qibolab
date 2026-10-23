@@ -59,7 +59,6 @@ class ModuleConfig(Model):
     So, they are defined at the module-level, but dynamically prefixed for the physical
     port.
     """
-    # the following attributes are automatically processed and set
     scope_acq_trigger_mode_path0: Annotated[
         Literal["sequencer", "level"], ModuleType.QRM
     ] = "sequencer"
@@ -76,7 +75,11 @@ class ModuleConfig(Model):
 
     Cf. :attr:`scope_acq_trigger_mode_path0`.
     """
-    # TODO: support scope acquisition average
+    scope_acq_avg_mode_en_path0: Annotated[bool, ModuleType.QRM] = True
+    """Scope acquisition averaging mode enable for path 0."""
+
+    scope_acq_avg_mode_en_path1: Annotated[bool, ModuleType.QRM] = True
+    """Scope acquisition averaging mode enable for path 1."""
 
     @classmethod
     def build(
