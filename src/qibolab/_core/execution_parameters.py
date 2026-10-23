@@ -22,7 +22,6 @@ class AcquisitionType(Enum):
     INTEGRATION = auto()
     """Demodulate and integrate the waveform."""
     RAW = auto()
-    """Return the demodulated waveform."""
     """Return the waveform, demodulated to baseband where supported (e.g. Qblox)."""
 
 

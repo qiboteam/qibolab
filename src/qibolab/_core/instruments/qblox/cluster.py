@@ -254,6 +254,13 @@ class Cluster(Controller):
         # configure the modules
         _module_configs = self._configure_modules(configs)
 
+        # compute intermediate values for the experiment, such as expected frequencies
+        ifs_dict = (
+            self._ifs(configs)
+            if options.acquisition_type is AcquisitionType.RAW
+            else {}
+        )
+
         # Execute each batch sequentially, and concatenate results
         log = Logger(configs)
         results = {}
@@ -314,9 +321,7 @@ class Cluster(Controller):
                         acquisition=options_.acquisition_type,
                         shape=options_.results_shape(sweepers_),
                         sampling_rate=self.sampling_rate * consts.giga,
-                        frequencies=self._ifs(configs)
-                        if options_.acquisition_type is AcquisitionType.RAW
-                        else {},
+                        frequencies=ifs_dict,
                     )
                 )
 
