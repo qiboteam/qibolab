@@ -371,8 +371,8 @@ class Cluster(Controller):
     ]:
         """Configure sequencers.
 
-        The return value consists of the association map from channels to sequencers,
-        for each module. And the sequencer configurations.
+        Returns the channel-to-sequencer map, sequencer configurations grouped by
+        module slot, and acquisition sequencer indices grouped by module slot.
 
         For configuration testing purpose, it is possible to also configure sequencers
         with no sequence provided. In which case, it will attempt to assign sequencers
@@ -384,6 +384,12 @@ class Cluster(Controller):
         operate in scope mode.
 
         Modules with unchanged active sequencers only get the changed parameters.
+
+        Acquisition sequencers are relevant in :attr:`AcquisitionType.RAW` mode and are
+        necessary to trigger raw data acquisition in qblox modules. If there is more
+        than 1 acquisition sequencer in the same module the driver returns an error to
+        satisfy Qblox hardware constraints.
+        See https://docs.qblox.com/en/main/products/qblox_instruments/tutorials/QTM/130_scope_mode_qtm.html
         """
         sequencers = defaultdict(dict)
         acquisition_sequencers = defaultdict(list)
@@ -418,6 +424,7 @@ class Cluster(Controller):
                     module.is_rf_type,
                     sequence=sequences_[ch],
                 )
+
                 # Only RAW input sequencers set this flag to False; output
                 # sequencers leave it as None and cannot trigger scope capture.
                 if seqcfgs[slot][idx].demod_en_acq is False:
