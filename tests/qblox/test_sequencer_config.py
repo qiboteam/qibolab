@@ -41,7 +41,7 @@ def _channels_configs():
 
 
 def _build(channel_id, channels, configs, path):
-    """Build a SequencerConfig for a channel at the given port address."""
+    """Build a RAW-mode configuration to check mixer and NCO settings."""
     return SequencerConfig.build(
         address=PortAddress.from_path(path),
         channel_id=channel_id,
