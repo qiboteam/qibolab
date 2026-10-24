@@ -106,16 +106,8 @@ def _batch_sequences(
     qrm_channels: set[ChannelId],
     configs: Configs,
 ) -> list[PulseSequence]:
-    batched_seqs = (
-        batch_sequences_by_cluster_memory_limits(
-            sequences,
-            sweepers,
-            options,
-            qcm_channels,
-            qrm_channels,
-        )
-        if options.averaging_mode.average
-        else sequences
+    batched_seqs = batch_sequences_by_cluster_memory_limits(
+        sequences, sweepers, options, qcm_channels, qrm_channels
     )
     return [_add_time_of_flight(b, configs).align_to_delays() for b in batched_seqs]
 
@@ -237,9 +229,8 @@ class Cluster(Controller):
             sweepers, sequences
         )
 
-        # If acquisition is cyclic (averaging over shots on hardware), we combine as
-        # many sequences as possible in a single batch, according to the cluster
-        # memory limits.
+        # We combine as many sequences as possible in a single batch, according to the
+        # cluster memory limits (shots are further split by batch_shots if needed).
         qrm_slots = {
             slot for slot, module in self._modules.items() if module.is_qrm_type
         }

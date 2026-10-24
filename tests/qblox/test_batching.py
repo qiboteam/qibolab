@@ -53,7 +53,7 @@ def test_batch_sequences_by_cluster_memory_limits(monkeypatch):
     merged_sequences = batching.batch_sequences_by_cluster_memory_limits(
         sequences=[_sequence(), _sequence(), _sequence()],
         sweepers=[],
-        options=ExecutionParameters(relaxation_time=100),
+        options=ExecutionParameters(nshots=1, relaxation_time=100),
         qcm_channels={"0/drive"},
         qrm_channels={"0/acquisition"},
     )
@@ -67,16 +67,15 @@ def test_batch_sequences_by_cluster_memory_limits_oversize_sequence_error_raise(
     monkeypatch,
 ):
     """Raises ValueError when a single sequence exceeds cluster memory limits."""
-    # with the acq_memory limit of 5 and each sequence having a memory of 6, the
+    # with the acq_number limit of 0 and each sequence having 1 acquisition, the
     # individual sequence already exceeds the cluster memory limit, so a ValueError
     # should be raised.
-    monkeypatch.setattr(batching, "per_shot_memory", lambda *_args, **_kwargs: 6)
     monkeypatch.setattr(
         batching,
         "cluster_memory_limits",
         {
-            "acq_memory": 5,
-            "acq_number": 1000,
+            "acq_memory": 1000,
+            "acq_number": 0,
             "qcm_lines": 1000,
             "qrm_lines": 1000,
         },
@@ -89,7 +88,7 @@ def test_batch_sequences_by_cluster_memory_limits_oversize_sequence_error_raise(
         batching.batch_sequences_by_cluster_memory_limits(
             sequences=[_sequence()],
             sweepers=[],
-            options=ExecutionParameters(relaxation_time=100),
+            options=ExecutionParameters(nshots=1, relaxation_time=100),
             qcm_channels={"0/drive"},
             qrm_channels={"0/acquisition"},
         )

@@ -66,6 +66,26 @@ def _channel_sweep_register_counts(
     return dict(counts)
 
 
+def _acq_memory(
+    ps: PulseSequence, sweepers: list[ParallelSweepers], options: ExecutionParameters
+) -> int:
+    """Acquisition memory of a sequence, used only to pack sequences into batches.
+
+    In averaged mode, all shots share the same bins, so the per-shot memory is the
+    total. In single-shot mode, each shot needs its own bins, so the per-shot memory is
+    multiplied by the number of shots, capped at `ACQUISITION_MEMORY`. A sequence
+    exceeding `ACQUISITION_MEMORY` will be split by `batch_shots` anyway, so it should
+    fill a whole batch rather than be rejected. The output of `_acq_memory` is not
+    passed to `batch_shots`, which independently splits the shots of each batch based on
+    `per_shot_memory`.
+    """
+    per_shot = per_shot_memory(ps, sweepers, options)
+    if options.averaging_mode.average:
+        return per_shot
+    assert options.nshots is not None
+    return int(min(per_shot * options.nshots, ACQUISITION_MEMORY))
+
+
 def _init_batch() -> dict[str, int]:
     """Helper function to initialise the batch tracking variables."""
     return {
@@ -251,7 +271,7 @@ def _split_sequences_by_memory_limits(
     batches: list[list[PulseSequence]] = []
     for ps in sequences:
         ps_memory = {
-            "acq_memory": per_shot_memory(ps, sweepers, options),
+            "acq_memory": _acq_memory(ps, sweepers, options),
             "acq_number": len(ps.acquisitions),
             # The factor 1.6 is determined heuristically, for large number of gates
             # and iterations the ratio of ps objects to Lines is approx 1.56
