@@ -156,6 +156,8 @@ class Cluster(Controller):
     https://docs.qblox.com/en/main/getting_started/setup.html#connecting-to-multiple-instruments
     """
     _cluster: qblox.Cluster | None = None
+    _applied_seqcfgs: dict[SlotId, dict[int, config.SequencerConfig]] | None = None
+    """Sequencer configurations applied on the hardware, ``None`` if unknown."""
 
     @property
     def cluster(self) -> qblox.Cluster:
@@ -179,6 +181,7 @@ class Cluster(Controller):
     def reset(self) -> None:
         """Reset cluster parameters."""
         assert self._cluster is not None
+        self._applied_seqcfgs = None
         self._cluster.reset()
 
     def connect(self) -> None:
@@ -202,6 +205,8 @@ class Cluster(Controller):
             module.stop_sequencer()
         self._cluster.close()
         self._cluster = None
+        self.__dict__.pop("_modules", None)
+        self._applied_seqcfgs = None
 
     def _set_dc_offsets_to_0(self) -> None:
         flux_slot_to_ports: dict[SlotId, set[int]] = defaultdict(set)
@@ -286,7 +291,6 @@ class Cluster(Controller):
                 log.sequences(sequences_)
 
                 # then configure sequencers (including sequences upload)
-                self._disconnect_and_desync_sequencers()
                 sequencers, _sequencer_configs = self._configure_sequencers(
                     configs=configs,
                     acquisition=options_.acquisition_type,
@@ -303,7 +307,11 @@ class Cluster(Controller):
                 log.data(data)
 
                 # process raw results to adhere to standard format
-                lengths = integration_lengths(sequences_, sequencers, self._modules)
+                lengths = (
+                    integration_lengths(sequences_, sequencers, self._modules)
+                    if options_.acquisition_type is AcquisitionType.INTEGRATION
+                    else {}
+                )
                 psres.append(
                     extract(
                         data,
@@ -317,11 +325,12 @@ class Cluster(Controller):
             results |= concat_shots(psres, options)
         return results
 
-    def _disconnect_and_desync_sequencers(self) -> None:
+    def _disconnect_and_desync_sequencers(self, slots: set[SlotId]) -> None:
         """Clear the relevant module settings before applying a new sequence."""
         # see FAQ in docs for disconnect_outputs() and disconnect_inputs()
         # https://docs.qblox.com/en/v2025.12.0/products/qblox_instruments/faq.html
-        for module in self._modules.values():
+        for slot in slots:
+            module = self._modules[slot]
             # Disconnect outputs because `SequencerConfig.apply` creates new connections
             # between the indexed sequencer and various inputs/outputs. Existing
             # connections would otherwise cause the operation to fail.
@@ -356,6 +365,8 @@ class Cluster(Controller):
                 is_qcm_non_rf_type=module.is_qcm_type and not module.is_rf_type,
             )
             modcfg.apply(module)
+        # `ModuleConfig.apply` disconnects all sequencers
+        self._applied_seqcfgs = None
         return modcfgs
 
     def _configure_sequencers(
@@ -377,12 +388,14 @@ class Cluster(Controller):
         (:attr:`AcquisitionType.INTEGRATION`). The only true alternative to this value
         is :attr:`AcquisitionType.RAW`, since further configurations are required to
         operate in scope mode.
+
+        Modules with unchanged active sequencers only get the changed parameters.
         """
         sequencers = defaultdict(dict)
         exec_mode = sequences is not None
         sequences_ = defaultdict(lambda: None, sequences if exec_mode else {})
 
-        seqcfgs = {}
+        seqcfgs: dict[SlotId, dict[int, config.SequencerConfig]] = {}
         for slot, chs in self._channels_by_module.items():
             module = self._modules[slot]
 
@@ -390,11 +403,8 @@ class Cluster(Controller):
             # not be outnumbered
             assert len(module.sequencers) >= len(chs)
 
-            # configure all sequencers, and store association to channels
             seqcfgs[slot] = {}
-            for idx, ((ch, address), sequencer) in enumerate(
-                zip(chs, module.sequencers)
-            ):
+            for idx, (ch, address) in enumerate(chs):
                 # Only configure and register sequencer for active channels. For passive
                 # channels the sequencer operations are not relevant, e.g. a flux
                 # channel with no registered pulse will still set an offset, but this
@@ -404,7 +414,7 @@ class Cluster(Controller):
                 if exec_mode and ch not in sequences:
                     continue
 
-                seqcfg = seqcfgs[slot][idx] = config.SequencerConfig.build(
+                seqcfgs[slot][idx] = config.SequencerConfig.build(
                     address,
                     ch,
                     self.channels,
@@ -413,9 +423,33 @@ class Cluster(Controller):
                     module.is_rf_type,
                     sequence=sequences_[ch],
                 )
-                seqcfg.apply(sequencer)
                 # populate channel-to-sequencer mapping
                 sequencers[slot][ch] = idx
+
+        # Reconnect a module only if its active sequencers changed or the hardware
+        # state is unknown
+        applied_seqcfgs = self._applied_seqcfgs
+        stale = (
+            set(self._modules)
+            if applied_seqcfgs is None
+            else {
+                slot
+                for slot in seqcfgs.keys() | applied_seqcfgs.keys()
+                if seqcfgs.get(slot, {}).keys() != applied_seqcfgs.get(slot, {}).keys()
+            }
+        )
+        self._disconnect_and_desync_sequencers(stale)
+
+        for slot, cfgs in seqcfgs.items():
+            old = (
+                {}
+                if applied_seqcfgs is None or slot in stale
+                else applied_seqcfgs[slot]
+            )
+            module = self._modules[slot]
+            for idx, seqcfg in cfgs.items():
+                seqcfg.apply(module.sequencers[idx], old.get(idx))
+        self._applied_seqcfgs = seqcfgs
 
         return sequencers, seqcfgs
 
@@ -486,7 +520,7 @@ class Cluster(Controller):
 
         return acquisitions
 
-    @property
+    @cached_property
     def _modules(self) -> dict[SlotId, Module]:
         """Retrieve slot to module object mapping."""
         return {mod.slot_idx: mod for mod in self.cluster.modules if mod.present()}
