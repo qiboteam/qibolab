@@ -69,14 +69,20 @@ def _channel_sweep_register_counts(
 def _acq_memory(
     ps: PulseSequence, sweepers: list[ParallelSweepers], options: ExecutionParameters
 ) -> int:
-    """Acquisition memory required by a sequence."""
+    """Acquisition memory of a sequence, used only to pack sequences into batches.
+
+    In averaged mode, all shots share the same bins, so the per-shot memory is the
+    total. In single-shot mode, each shot needs its own bins, so the per-shot memory is
+    multiplied by the number of shots, capped at `ACQUISITION_MEMORY`. A sequence
+    exceeding `ACQUISITION_MEMORY` will be split by `batch_shots` anyway, so it should
+    fill a whole batch rather than be rejected. The output of `_acq_memory` is not
+    passed to `batch_shots`, which independently splits the shots of each batch based on
+    `per_shot_memory`.
+    """
     per_shot = per_shot_memory(ps, sweepers, options)
     if options.averaging_mode.average:
         return per_shot
     assert options.nshots is not None
-    # capped at ACQUISITION_MEMORY, since batch_shots will split the shots of a sequence
-    # exceeding the memory anyway. Without capping a limit-exceeded error would be
-    # raised
     return int(min(per_shot * options.nshots, ACQUISITION_MEMORY))
 
 
