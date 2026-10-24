@@ -1,61 +1,120 @@
-.. admonition:: Work in progress
+.. _main_doc_emulator:
 
-This documentation is currently in draft form and may be incomplete.
+Emulation
+=========
 
-Emulator
-========
+An emulator platform runs Qibolab pulse experiments against a physical model
+instead of a laboratory QPU. The experiment still uses a
+:class:`qibolab.Platform`, native gates, pulse sequences, execution options and
+acquisition identifiers. What changes is the source of the acquisitions:
+they are obtained from simulated quantum dynamics. This makes emulation useful
+for studying how pulse choices and model parameters affect an experiment before
+deploying it on hardware.
 
-Qibolab provides an internal simulation instrument that enables the emulation of a variety of quantum chip configurations, including systems with single or multiple qubits, fixed- or tunable-frequency architectures, and optional couplers. This emulator allows users to execute virtual Qibolab experiments in a manner fully consistent with their execution on real quantum processing units (QPUs).
+Emulation is different from both the built-in ``dummy`` platform and an ideal
+Qibo circuit simulator. ``dummy`` produces random test data without evolving a
+quantum system. A Qibo state-vector backend applies mathematical gate operators.
+A Qibolab emulator instead evolves the platform's physical model under the
+actual pulse program, including the dissipation represented in that model.
+Agreement with ideal gates depends on the model and the native pulse
+calibrations; it is not guaranteed by selecting an emulator.
 
-For a more detailed description of how Qibolab handles different QPUs (here referred to as :class:`.Platforms`), the reader is referred to :ref:`Platform guidelines <main_doc_platform>`.
+.. figure:: figures/emulation-models.svg
+    :alt: An ideal circuit simulator applies gate operators to a quantum state. A dummy platform returns random acquisition arrays. An emulator evolves a physical model under pulses and returns model-derived acquisition arrays.
+    :width: 100%
 
-Usage
------
+    Three different sources of results. Dummy and emulator platforms share
+    the pulse-execution interface, not the physics behind their acquisitions.
 
-The emulator leverages a third-party numerical engine that solves the Master Equation for a system governed by the sum of a time-independent Hamiltonian and a time-dependent (pulse) Hamiltonian. The solver produces the system density matrix at each time step. From this solution, the emulator extracts only those density matrices corresponding to acquisition pulses defined within the pulse sequence. The default engine is ``QutipEngine``; ``DynamiqsEngine`` is also available for users who want to run the same emulator workflow through Dynamiqs' JAX-based solvers.
+Installation and platform selection
+-----------------------------------
 
-The simulation engine can be selected when defining the emulator instrument in a platform:
+Install the optional numerical dependencies with:
 
-.. code-block:: python
+.. code-block:: console
 
-    from qibolab._core.instruments.emulator.engine import DynamiqsEngine
-    from qibolab.instruments.emulator import EmulatorController
+    pip install "qibolab[emulator]"
 
-    emulator = EmulatorController(
-        address="0.0.0.0",
-        channels=channels,
-        engine=DynamiqsEngine(device="gpu", precision="single"),
-    )
+The extra installs QuTiP and Dynamiqs. It does not install Qibo, supply a
+calibrated platform, or turn an existing dummy platform into a simulator. To
+execute Qibo circuits as well, install both extras:
 
-GPU execution is available through the third-party engine APIs, and the engines fail early with an import or device-selection error instead of silently running on CPU when the optional accelerator packages are missing.
+.. code-block:: console
 
-For Dynamiqs, set ``DynamiqsEngine(device="gpu")`` and install a CUDA-enabled JAX runtime. On CUDA 12 machines this is a single extra package staying within the JAX range supported by Dynamiqs:
+    pip install "qibolab[backend,emulator]"
 
-.. code-block:: bash
+The platform-loading rules are unchanged. ``create_platform("dummy")`` is the
+only built-in special name. ``"emulator"`` is not a built-in platform name:
+it works only if a platform directory with that name exists in a search path
+listed in ``QIBOLAB_PLATFORMS``. Load the name of an emulator platform provided
+by your platform repository, or pass an existing platform object to the backend.
 
-    pip install qibolab[emulator] "jax[cuda12]"
+For example, if your platform repository contains a configured numerical
+platform in a directory named ``my_emulated_platform``, add its parent directory
+to ``QIBOLAB_PLATFORMS`` and load it with
+``create_platform("my_emulated_platform")``. This name is illustrative, not
+built in. The :ref:`tutorials_emulator` tutorial follows this workflow without
+constructing or configuring a simulation driver.
 
-``DynamiqsEngine`` also exposes ``precision`` (``"single"`` is strongly recommended on consumer GPUs, whose double-precision throughput is severely limited) and ``method``: the default ``"adaptive"`` Tsit5 solver with ``rtol``/``atol`` control, or ``"fixed"``, a Rouchon solver with a constant ``fixed_step_dt`` that guarantees the same finest time resolution targeted by the QuTiP engine.
+Execution and interpretation
+----------------------------
 
-For QuTiP, set ``QutipEngine(device="gpu")``. The default data layer is `qutip-jax <https://github.com/qutip/qutip-jax>`_ (``pip install qutip-jax``), in which case the evolution runs through the diffrax integrator entirely on the accelerator, preserving the engine's maximum-step bound. The experimental `qutip-cupy <https://github.com/qutip/qutip-cupy>`_ data layer (not released on PyPI) can be selected with ``QutipEngine(device="gpu", gpu_dtype="cupyd")``; there the ODE integration remains on the CPU and only the operator algebra is offloaded.
+Pulse-level experiments use the same connection lifecycle as other platforms:
+connect, execute and disconnect, with cleanup in a ``finally`` block.
+The emulator does not require a connection to laboratory electronics.
+For circuits, the Qibolab backend manages this lifecycle as described in
+:ref:`main_doc_backend`, and the same native-gate and connectivity requirements
+apply.
 
-As a rule of thumb from the benchmarks in ``benchmarks/emulator_gpu.md``: single evolutions of the small bundled platforms are fastest on the QuTiP CPU engine; GPU execution pays off for batched parameter scans (the typical calibration workload) already at moderate system sizes, and for single evolutions of large Hilbert spaces, especially in single precision. The repository includes two benchmark helpers reproducing those tables:
+The normal return value is still a dictionary of arrays keyed by acquisition
+identifiers, not a quantum state or the full simulated evolution.
+``AcquisitionType.DISCRIMINATION`` with ``AveragingMode.SINGLESHOT`` requests
+classified shots, so their frequencies can estimate the modeled measurement
+distribution. Simultaneous final acquisitions allow the modeled correlations
+to be represented in those shots if the numerical platform samples the joint
+distribution. For multiqubit studies, confirm that the supplied model preserves
+these correlations rather than independently sampling each qubit's marginal
+distribution. Cyclic averaging instead requests an averaged result without a
+shot axis. A numerical platform may provide populations directly rather than
+estimate them by repeatedly sampling.
 
-.. code-block:: bash
+``AcquisitionType.INTEGRATION`` requests an I/Q-shaped representation, but that
+interface alone does not imply a physical readout-chain simulation. Numerical
+platforms may return population proxies or synthetic signals rather than
+laboratory voltages. Establish the meaning of these values for the supplied
+platform before interpreting their magnitude or phase. Similarly, binary
+classification does not by itself resolve leakage into higher levels of a
+multilevel model. The tutorial concentrates on classified shots, which have a
+clear interpretation as measurement outcomes, rather than raw digitizer traces.
 
-    # end-to-end emulator benchmark on the bundled platforms
-    python benchmarks/emulator_gpu.py --engine dynamiqs --device gpu --precision single
-    # solver-level size sweep, batched amplitude scan, and accuracy validation
-    python benchmarks/engine_sweep.py single --engine dynamiqs --device gpu --cases 3x3,3x4,3x5
-    python benchmarks/engine_sweep.py batched --engine dynamiqs --device gpu --case 3x3
-    python benchmarks/engine_sweep.py validate --case 3x2 --device gpu
+With no sweeps, a single-shot discrimination acquisition has shape
+``(nshots,)``, while single-shot integration has shape ``(nshots, 2)``.
+Cyclic discrimination returns a scalar array and cyclic integration returns
+an array of shape ``(2,)``. Parameter sweeps add their sweep axes to these
+results according to the usual execution-options convention. These are interface
+conventions; check which acquisition and averaging modes your supplied numerical
+platform supports.
 
-Since the simulator operates at the level of density matrices, it does not reproduce in-phase and quadrature (I-Q) measurement signals as in real experimental setups. Instead, it computes the measurement probabilities :math:`p_m = \bra{m} \rho \ket{m}` for each computational basis state :math:`\ket{m}`. Consequently, while the emulator supports all experiment types, in signal-based experiments (i.e., when :paramref:`AcquisitionType.INTEGRATION` is selected), the signal magnitude corresponds directly to these probabilities, whereas the signal phase carries no physical meaning.
+What the interface does not guarantee
+-------------------------------------
 
-The emulator supports both :paramref:`AveragingMode.SINGLESHOT` and :paramref:`AveragingMode.CYCLIC`. In the former case, the simulator returns discrete measurement outcomes corresponding to a finite number of shots, whereas in the latter it returns expectation values derived from the density matrix, typically the probability of the :math:`\ket{1}` state. Although SINGLESHOT mode includes statistical sampling noise, it is often computationally advantageous to bypass sampling and directly return the diagonal elements of the density matrix. In CYCLIC mode, Gaussian noise is additionally introduced, with a fixed standard deviation.
+The common execution interface does not specify a numerical model's treatment of
+measurement-induced state collapse, feedback, or reset. Before studying those
+protocols, establish that the supplied numerical platform implements the required
+measurement-conditioned dynamics. Merely returning a sampled acquisition does
+not establish that the state was collapsed before subsequent pulses. The
+tutorial avoids that assumption by using final measurements only.
 
-To accurately resolve qubit dynamics and capture all contributions from the time-dependent Hamiltonian (including control pulses), a Nyquist frequency is defined. By default, this is set to :math:`f_N = 20 \text{GHz}`, which allows accurate resolution of oscillations up to approximately :math:`10–15 \text{GHz}`. The choice of Nyquist frequency is critical, as it determines the temporal resolution of the simulation and informs adaptive tuning of the ODE solver parameters. Further details on this tuning procedure are provided in the implementation of the numerical engines.
+Similarly, verify support for the timing and parameters of a proposed sweep.
+A model that can produce correlated samples for simultaneous final measurements
+need not support acquisitions at different times, or sweeps that change those
+times. Begin with a fixed acquisition schedule and extend the experiment only
+within the supplied platform's capabilities.
 
-At present, state collapse is not implemented in the Qibolab emulator. As a result, this tool is not suitable for simulating mid-circuit measurements, and should be restricted to circuits in which all measurements occur simultaneously at the end of the computation. In physical systems, mid-circuit measurement induces wavefunction collapse; if the measured qubit is entangled with others, this process introduces correlations that condition the state of the remaining system. The current emulator does not account for such measurement-induced correlations, leading to intrinsically inaccurate results in these scenarios.
-
-An additional limitation arises from the handling of measurement ordering. In certain experimental protocols, the temporal order of measurements may vary across parameter sweeps, while the :paramref:`PulseSequence` object remains fixed and does not reflect such reordering. This discrepancy may introduce inconsistencies during the execution of :func:`qibolab._core.instruments.emulator.results.results`, which assumes alignment between the time-ordering structure and the acquisition pulses defined in the pulse sequence. If this alignment is violated, acquisition events may be incorrectly matched to simulation time steps, ultimately resulting in invalid outputs.
+Simulating a density matrix becomes expensive as the number of modeled
+subsystems and levels increases. Pulse durations and numerical resolution also
+affect runtime. Start with a small platform and a short sequence, and interpret
+results in the context of the supplied model rather than as predictions of
+unspecified hardware. Sampled readouts contain statistical noise, and a numerical
+platform may also add synthetic noise to its signals; exact counts are not
+expected to be reproducible physical predictions.
