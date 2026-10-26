@@ -390,7 +390,7 @@ class Cluster(Controller):
         necessary to trigger raw data acquisition in qblox modules. If there is more
         than 1 acquisition sequencer in the same module the driver returns an error to
         satisfy Qblox hardware constraints.
-        See https://docs.qblox.com/en/main/products/qblox_instruments/tutorials/QTM/130_scope_mode_qtm.html
+        See https://docs.qblox.com/en/main/products/qblox_instruments/tutorials/QRM/030_scope_acquisition.html
         """
         sequencers = defaultdict(dict)
         acquisition_sequencers = defaultdict(list)
@@ -416,6 +416,15 @@ class Cluster(Controller):
                 if exec_mode and ch not in sequences:
                     continue
 
+                if address.input and acquisition is AcquisitionType.RAW:
+                    acquisition_sequencers[slot].append(idx)
+                    if len(acquisition_sequencers[slot]) > 1:
+                        raise ValueError(
+                            "RAW acquisition supports only one acquisition sequencer per "
+                            f"module, but module in slot {slot} has {len(acquisition_sequencers[slot])}: "
+                            f"{acquisition_sequencers[slot]}."
+                        )
+
                 seqcfgs[slot][idx] = config.SequencerConfig.build(
                     address,
                     ch,
@@ -425,17 +434,6 @@ class Cluster(Controller):
                     module.is_rf_type,
                     sequence=sequences_[ch],
                 )
-
-                # Only RAW input sequencers set this flag to False; output
-                # sequencers leave it as None and cannot trigger scope capture.
-                if seqcfgs[slot][idx].demod_en_acq is False:
-                    acquisition_sequencers[slot].append(idx)
-                    if len(acquisition_sequencers[slot]) > 1:
-                        raise ValueError(
-                            "RAW acquisition supports only one acquisition sequencer per "
-                            f"module, but module in slot {slot} has {len(acquisition_sequencers[slot])}: "
-                            f"{acquisition_sequencers[slot]}."
-                        )
 
                 # populate channel-to-sequencer mapping
                 sequencers[slot][ch] = idx

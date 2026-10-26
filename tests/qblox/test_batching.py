@@ -133,6 +133,41 @@ def test_raw_acquisition_allows_at_most_one_pulse_per_sequencer(sweepers):
         )
 
 
+@pytest.mark.parametrize(
+    "acquisition_type", [AcquisitionType.INTEGRATION, AcquisitionType.DISCRIMINATION]
+)
+@pytest.mark.parametrize(
+    "sweepers",
+    [
+        [],
+        [[]],
+        [
+            [
+                Sweeper(
+                    parameter=Parameter.frequency,
+                    range=(1e6, 3e6, 1e6),
+                    channels=["0/acquisition"],
+                )
+            ]
+        ],
+    ],
+)
+def test_non_raw_acquisition_allows_multiple_pulses_and_sweepers(
+    acquisition_type, sweepers
+):
+    """RAW acquisition constraints do not apply to non-RAW acquisitions."""
+    acquisition = Q1Acquisition(num_bins=1, index=0)
+    sequence = Q1Sequence.empty().model_copy(
+        update={"acquisitions": {uuid4(): acquisition, uuid4(): acquisition}}
+    )
+
+    validate.validate_raw_acquisitions(
+        sequence,
+        parsweepers_list=sweepers,
+        acquisition_type=acquisition_type,
+    )
+
+
 @pytest.mark.parametrize("npoints", [1, 2])
 @pytest.mark.parametrize("sweeper_position", [0, 1])
 def test_raw_acquisition_rejects_sweepers(npoints, sweeper_position):
