@@ -245,14 +245,13 @@ class Snz(BaseEnvelope):
             0 & \text{for } \tau_{pad} + 2\tau + \tau_{idle} + 1 < t < 2\tau_{pad} + 2\tau + \tau_{idle} + 2
             \end{cases}.
 
-        Where $\tau$ is the duration of the square pulse, $\tau_{idle}$ the idling
-        time and $\tau_{pad}$ the padding duration, such that
-        $2\tau_{pad} + 2\tau + \tau_{idle} + 2$ equals the number of samples.
-
+        Where $\tau$ is the duration of the square pulse, $\tau_{idle}$ the idling time
+        and $\tau_{pad}$ the padding duration, such that $2\tau_{pad} + 2\tau +
+        \tau_{idle} + 2$ equals the number of samples.
         """
-        assert (samples - self.t_idling) % 2 == 0, (
-            "The total duration of the square pulses should be even."
-        )
+
+        if (samples - self.t_idling) % 2 != 0:
+            raise ValueError("The total duration of the square pulses should be even.")
 
         padding = np.zeros(self.padding_duration)
         square_pulse_duration = int(
@@ -265,7 +264,7 @@ class Snz(BaseEnvelope):
 
         square_pulse = np.ones(square_pulse_duration)
 
-        snz_pulse = np.concatenate(
+        return np.concatenate(
             [
                 padding,
                 square_pulse,
@@ -276,7 +275,6 @@ class Snz(BaseEnvelope):
                 padding,
             ]
         )
-        return snz_pulse
 
 
 class Custom(BaseEnvelope):
