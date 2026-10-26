@@ -68,7 +68,7 @@ def _bins_acquired_data(path0: list, path1: list, threshold: list) -> dict:
     }
 
 
-# An explicit zero frequency must still trigger demodulation, unlike a missing one.
+# An explicit zero intermediate frequency must still trigger the sqrt(2) scaling of the demodulation, unlike a missing one.
 @pytest.mark.parametrize("frequency", [0.0, 0.1])
 def test_extract_raw_scope_is_numeric(frequency):
     """Test that ``extract`` with ``AcquisitionType.RAW`` returns a numeric
