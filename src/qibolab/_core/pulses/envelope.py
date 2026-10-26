@@ -5,7 +5,7 @@ from typing import Annotated, Literal
 
 import numpy as np
 import numpy.typing as npt
-from pydantic import Field
+from pydantic import Field, NonNegativeInt
 from scipy.signal.windows import gaussian
 
 from ..serialize import Model, NdArray, eq
@@ -222,44 +222,57 @@ class Snz(BaseEnvelope):
 
     kind: Literal["snz"] = "snz"
 
-    t_idling: int
+    t_idling: NonNegativeInt
     """Absolute idling time, in number of samples."""
     b_amplitude: float = 0.5
     """Relative B amplitude (wrt A)."""
+    padding_duration: NonNegativeInt = 0
+    """Number of zero samples added before and after the pulse."""
 
     def i(self, samples: int) -> Waveform:
         r"""I.
 
         .. math::
 
-            \\Phi(t) =
+            \Phi(t) =
             \begin{cases}
-            1 & \text{for } 0 \\leq t < \tau \\
-            b & \text{for } t = \tau \\
-            0 & \text{for } \tau < t < \tau + \tau_{idle}\\
-            b & \text{for } t = \tau + \tau_{idle}\\
-            -1 & \text{for } \tau + \tau_{idle} < t \\leq 2\tau + \tau_{idle} \\
-            \\end{cases}.
+            0 & \text{for } 0 \leq t < \tau_{pad} \\
+            1 & \text{for } \tau_{pad} \leq t < \tau_{pad} + \tau \\
+            b & \text{for } t = \tau_{pad} + \tau \\
+            0 & \text{for } \tau_{pad} + \tau < t \leq \tau_{pad} + \tau + \tau_{idle} \\
+            -b & \text{for } t = \tau_{pad} + \tau + \tau_{idle} + 1 \\
+            -1 & \text{for } \tau_{pad} + \tau + \tau_{idle} + 1 < t \leq \tau_{pad} + 2\tau + \tau_{idle} + 1 \\
+            0 & \text{for } \tau_{pad} + 2\tau + \tau_{idle} + 1 < t < 2\tau_{pad} + 2\tau + \tau_{idle} + 2
+            \end{cases}.
 
-        Where $\tau$ is the duration of the square pulse.
-
+        Where $\tau$ is the duration of the square pulse, $\tau_{idle}$ the idling time
+        and $\tau_{pad}$ the padding duration, such that $2\tau_{pad} + 2\tau +
+        \tau_{idle} + 2$ equals the number of samples.
         """
-        assert samples > self.t_idling, (
-            "Number of samples shorter than the idling time."
-        )
-        assert (samples - self.t_idling) % 2 == 0, (
-            "The total duration of the square pulses should be even."
-        )
 
-        square_pulse_duration = int((samples - self.t_idling) / 2 - 1)
+        if (samples - self.t_idling) % 2 != 0:
+            raise ValueError("The total duration of the square pulses should be even.")
+
+        padding = np.zeros(self.padding_duration)
+        square_pulse_duration = int(
+            (samples - self.t_idling - self.padding_duration * 2 - 2) / 2
+        )
+        if square_pulse_duration < 0:
+            raise ValueError(
+                "Number of samples too short for idling time plus padding."
+            )
+
         square_pulse = np.ones(square_pulse_duration)
+
         return np.concatenate(
             [
+                padding,
                 square_pulse,
                 [self.b_amplitude],
                 np.zeros(self.t_idling),
                 [-self.b_amplitude],
                 -square_pulse,
+                padding,
             ]
         )
 
