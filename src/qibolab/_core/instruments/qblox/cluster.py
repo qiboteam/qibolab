@@ -7,7 +7,6 @@ from itertools import groupby
 from typing import cast
 
 import qblox_instruments as qblox
-import scipy.constants
 from qblox_instruments.qcodes_drivers.module import Module
 from qcodes.instrument import find_or_create_instrument
 
