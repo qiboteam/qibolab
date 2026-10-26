@@ -78,12 +78,17 @@ def validate_raw_acquisitions(
     run, RAW sequences are not batched; batching could place multiple
     acquisitions on the same sequencer and violate this constraint.
     """
-    if any(len(sweepers) > 0 for sweepers in parsweepers_list):
+    if acquisition_type is not AcquisitionType.RAW:
+        return
+
+    if any(sweepers for sweepers in parsweepers_list):
         raise ValueError("RAW acquisition does not support sweepers.")
-    if acquisition_type is AcquisitionType.RAW and len(sequence.acquisitions) > 1:
+
+    n_acquisitions = len(sequence.acquisitions)
+    if n_acquisitions > 1:
         raise ValueError(
             "RAW acquisition supports at most one acquisition pulse per "
-            f"sequencer: {len(sequence.acquisitions)}."
+            f"sequencer: {n_acquisitions}."
         )
 
 
