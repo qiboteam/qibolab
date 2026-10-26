@@ -7,6 +7,7 @@ from itertools import groupby
 from typing import cast
 
 import qblox_instruments as qblox
+import scipy.constants
 from qblox_instruments.qcodes_drivers.module import Module
 from qcodes.instrument import find_or_create_instrument
 
@@ -319,7 +320,7 @@ class Cluster(Controller):
                         lengths=lengths,
                         acquisition=options_.acquisition_type,
                         shape=options_.results_shape(sweepers_),
-                        sampling_rate=self.sampling_rate * consts.giga,
+                        sampling_rate=self.sampling_rate * scipy.constants.giga,
                         frequencies=ifs_dict,
                     )
                 )

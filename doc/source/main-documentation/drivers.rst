@@ -54,31 +54,6 @@ The following is a table of the currently supported or not supported features (d
 
 
 
-Qblox
-^^^^^
-
-With :attr:`qibolab.AcquisitionType.RAW`, the Qblox driver captures the input
-waveform through the module scope acquisition, mapping ``path0`` to I and ``path1``
-to Q, and returns it demodulated to baseband, but not integrated.
-
-Demodulation is performed in software, at the intermediate frequency (IF) of the
-readout. For each acquisition channel with a probe, the IF is computed as the probe
-frequency minus the frequency of the local oscillator (LO) associated to the channel,
-or as the probe frequency itself if no LO is present. The cluster sampling rate of
-1 GS/s is used to sample the carrier.
-
-- For a non-zero IF, the trace is processed with
-  :func:`qibolab._core.pulses.modulation.demodulate`: its global mean is subtracted,
-  to remove residual offsets, then it is rotated to baseband and scaled by
-  :math:`\sqrt{2}`, inverting the normalization of
-  :func:`qibolab._core.pulses.modulation.modulate`.
-- For a zero IF, there is no carrier to remove, and the DC component is the signal
-  itself: the trace is only scaled by :math:`\sqrt{2}`, consistently with the
-  non-zero IF case, while the mean is preserved.
-- For acquisition channels without a probe, no IF is defined and the scope trace is
-  returned unprocessed.
-
-
 Quantum Machines
 ^^^^^^^^^^^^^^^^
 
