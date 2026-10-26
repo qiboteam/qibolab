@@ -271,6 +271,7 @@ class Cluster(Controller):
                     slot = PortAddress.from_path(self.channels[channelid].path).slot
                     validate_sequence(
                         sequence=seq,
+                        parsweepers_list=sweepers_,
                         is_qrm=self._modules[slot].is_qrm_type,
                         acquisition_type=options_.acquisition_type,
                     )

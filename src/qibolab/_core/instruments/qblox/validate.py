@@ -5,6 +5,7 @@ from qibolab._core.execution_parameters import (
 )
 from qibolab._core.identifier import ChannelId
 from qibolab._core.sequence import PulseSequence
+from qibolab._core.sweeper import ParallelSweepers
 
 from .limits import (
     ACQUISITION_MEMORY,
@@ -67,6 +68,7 @@ def assert_instruction_memory(lines: list[Line], is_qrm: bool) -> None:
 
 def validate_raw_acquisitions(
     sequence: Q1Sequence,
+    parsweepers_list: list[ParallelSweepers],
     acquisition_type: AcquisitionType,
 ) -> None:
     """Ensure each sequencer performs no more than one RAW acquisition per run.
@@ -76,6 +78,8 @@ def validate_raw_acquisitions(
     run, RAW sequences are not batched; batching could place multiple
     acquisitions on the same sequencer and violate this constraint.
     """
+    if any(len(sweepers) > 0 for sweepers in parsweepers_list):
+        raise ValueError("RAW acquisition does not support sweepers.")
     if acquisition_type is AcquisitionType.RAW and len(sequence.acquisitions) > 1:
         raise ValueError(
             "RAW acquisition supports at most one acquisition pulse per "
@@ -85,6 +89,7 @@ def validate_raw_acquisitions(
 
 def validate_sequence(
     sequence: Q1Sequence,
+    parsweepers_list: list[ParallelSweepers],
     is_qrm: bool,
     acquisition_type: AcquisitionType,
 ) -> None:
@@ -93,7 +98,7 @@ def validate_sequence(
     assert_acquisition_memory(list(sequence.acquisitions.values()))
     assert_waveform_memory(list(sequence.waveforms.values()))
     assert_weight_memory(list(sequence.weights.values()))
-    validate_raw_acquisitions(sequence, acquisition_type)
+    validate_raw_acquisitions(sequence, parsweepers_list, acquisition_type)
 
 
 def validate_raw_averaging_mode(options: ExecutionParameters) -> None:
