@@ -227,6 +227,7 @@ class Snz(BaseEnvelope):
     b_amplitude: float = 0.5
     """Relative B amplitude (wrt A)."""
     padding_duration: int = 0
+    """Number of zero samples added before and after the pulse."""
 
     def i(self, samples: int) -> Waveform:
         r"""I.
