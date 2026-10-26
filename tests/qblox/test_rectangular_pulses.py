@@ -86,7 +86,12 @@ def test_long_rectangular_pulse_fits_waveform_memory():
     result = _compile([("ch1", pulse)])
     q1seq = result["ch1"]
     assert len(q1seq.waveforms) == 0
-    validate_sequence(q1seq, is_qrm=False, acquisition_type=AcquisitionType.INTEGRATION)
+    validate_sequence(
+        q1seq,
+        parsweepers_list=[],
+        is_qrm=False,
+        acquisition_type=AcquisitionType.INTEGRATION,
+    )
 
 
 def test_rectangular_amplitude_sweeper():
