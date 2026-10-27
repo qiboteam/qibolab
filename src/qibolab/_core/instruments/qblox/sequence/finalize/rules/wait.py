@@ -1,6 +1,17 @@
 from qibolab._core.serialize import Model
 
-from ....q1asm.ast_ import Block, Line, Loop, Move, Reference, Wait
+from ....q1asm.ast_ import (
+    Block,
+    Jlt,
+    Jmp,
+    Line,
+    Loop,
+    Move,
+    Reference,
+    Register,
+    Sub,
+    Wait,
+)
 from ...asm import Registers
 from ..components import BlockRule, LineRule
 
@@ -11,6 +22,8 @@ __all__ = [
 ]
 
 MAX_WAIT = 2**16 - 1
+REGISTER_WAIT_CHUNK = MAX_WAIT - 3
+"""Chunk subtracted from a long register wait, keeping the remainder at least 4 ns."""
 
 
 class LongWaits(Model):
@@ -20,18 +33,44 @@ class LongWaits(Model):
 
 def _match_long_wait(line: Line, state: LongWaits) -> tuple[bool, LongWaits]:
     instr = line.instruction
-    match = (
-        isinstance(instr, Wait)
-        and isinstance(instr.duration, int)
-        and instr.duration > MAX_WAIT
+    match = isinstance(instr, Wait) and (
+        (isinstance(instr.duration, int) and instr.duration > MAX_WAIT)
+        or isinstance(instr.duration, Register)
     )
     return match, state
+
+
+def _map_register_wait(line: Line, state: LongWaits) -> tuple[Block, LongWaits]:
+    """Split a register wait at runtime, since its value is only known then."""
+    instr = line.instruction
+    assert isinstance(instr, Wait) and isinstance(instr.duration, Register)
+    register = Registers.wait.value
+    label = f"wait{state.n}"
+    end = f"{label}_end"
+
+    block = [
+        Line(
+            instruction=Move(source=instr.duration, destination=register),
+            comment=line.comment,
+        ),
+        Line(
+            instruction=Jlt(a=register, b=MAX_WAIT + 1, address=Reference(label=end)),
+            label=label,
+        ),
+        Wait(duration=REGISTER_WAIT_CHUNK),
+        Sub(a=register, b=REGISTER_WAIT_CHUNK, destination=register),
+        Jmp(address=Reference(label=label)),
+        Line(instruction=Wait(duration=register), label=end),
+    ]
+    return block, LongWaits(n=state.n + 1)
 
 
 def _map_long_wait(line: Line, state: LongWaits) -> tuple[Block, LongWaits]:
     instr = line.instruction
     assert isinstance(instr, Wait)
     duration = instr.duration
+    if isinstance(duration, Register):
+        return _map_register_wait(line, state)
     assert isinstance(duration, int)
 
     iterations = duration // MAX_WAIT
@@ -52,6 +91,10 @@ long_wait = LineRule(init_state=LongWaits, match=_match_long_wait, map=_map_long
 """Split a long immediate wait.
 
 It accounts for the wait instruction limit, defined by :const:`MAX_WAIT`.
+
+Register waits (i.e. swept durations) are always expanded, since their value is not
+known at compile time: they are consumed in chunks of :const:`REGISTER_WAIT_CHUNK` until
+the remainder fits a single wait.
 
 Each loop is labelled with its own unique tag, which is assigned sequentially by keeping
 the count of expanded loops.
