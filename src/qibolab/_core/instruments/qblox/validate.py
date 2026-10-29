@@ -1,8 +1,4 @@
-from qibolab._core.execution_parameters import (
-    AcquisitionType,
-    AveragingMode,
-    ExecutionParameters,
-)
+from qibolab._core.execution_parameters import AcquisitionType, ExecutionParameters
 from qibolab._core.identifier import ChannelId
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import ParallelSweepers
@@ -107,13 +103,20 @@ def validate_sequence(
 
 
 def validate_raw_averaging_mode(options: ExecutionParameters) -> None:
-    """Reject RAW averaging modes that exceed Qblox scope-memory limits."""
+    """Reject RAW averaging modes that exceed Qblox scope-memory limits.
+
+    Only single-shot RAW acquisition is unsupported: the scope memory cannot
+    retain a separate trace for every shot. Any averaged mode is accepted,
+    since the Qblox driver executes ``SEQUENTIAL`` and ``CYCLIC`` identically
+    (a single hardware-averaged trace).
+    """
     if (
         options.acquisition_type is AcquisitionType.RAW
-        and options.averaging_mode is not AveragingMode.CYCLIC
+        and not options.averaging_mode.average
     ):
         # Qblox scope memory cannot retain a separate RAW trace for every shot.
         raise NotImplementedError(
-            "Qblox RAW acquisition requires AveragingMode.CYCLIC because of "
-            "scope acquisition memory limits."
+            "Qblox RAW acquisition requires an averaged AveragingMode because of "
+            "scope acquisition memory limits; AveragingMode.SINGLESHOT is not "
+            "supported."
         )

@@ -139,7 +139,7 @@ def test_raw_acquisition_sequencers(acquisition_cluster, acquisition, exec_mode)
         instrument._modules[3].sequencers[0].connect_sequencer.assert_not_called()
 
 
-def test_play_rejects_raw_non_cyclic_before_execution():
+def test_play_rejects_raw_single_shot_before_execution():
     """The averaging mode is validated before touching the instrument."""
     options = ExecutionParameters(
         acquisition_type=AcquisitionType.RAW,
@@ -147,30 +147,34 @@ def test_play_rejects_raw_non_cyclic_before_execution():
     )
 
     # not connected: any instrument access would fail with a different error
-    with pytest.raises(NotImplementedError, match="AveragingMode.CYCLIC"):
+    with pytest.raises(NotImplementedError, match="AveragingMode.SINGLESHOT"):
         Cluster(name="cluster", address="0.0.0.0").play({}, [], options, [])
 
 
-@pytest.mark.parametrize(
-    "averaging_mode", [AveragingMode.SINGLESHOT, AveragingMode.SEQUENTIAL]
-)
-def test_raw_acquisition_rejects_non_cyclic_averaging(averaging_mode):
-    """Reject modes that cannot use hardware-averaged scope data."""
+def test_raw_acquisition_rejects_single_shot_averaging():
+    """Reject the only mode that cannot use hardware-averaged scope data."""
     # Scope-memory limits rule out storing separate RAW traces for each shot.
     options = ExecutionParameters(
         acquisition_type=AcquisitionType.RAW,
-        averaging_mode=averaging_mode,
+        averaging_mode=AveragingMode.SINGLESHOT,
     )
 
-    with pytest.raises(NotImplementedError, match="AveragingMode.CYCLIC"):
+    with pytest.raises(NotImplementedError, match="AveragingMode.SINGLESHOT"):
         validate.validate_raw_averaging_mode(options)
 
 
-def test_raw_acquisition_accepts_cyclic_averaging():
-    """Allow RAW capture when shots are averaged in the scope hardware."""
+@pytest.mark.parametrize(
+    "averaging_mode", [AveragingMode.CYCLIC, AveragingMode.SEQUENTIAL]
+)
+def test_raw_acquisition_accepts_averaged_modes(averaging_mode):
+    """Allow RAW capture whenever shots are averaged in the scope hardware.
+
+    The Qblox driver executes SEQUENTIAL and CYCLIC identically, so both are
+    compatible with a single hardware-averaged trace.
+    """
     options = ExecutionParameters(
         acquisition_type=AcquisitionType.RAW,
-        averaging_mode=AveragingMode.CYCLIC,
+        averaging_mode=averaging_mode,
     )
 
     validate.validate_raw_averaging_mode(options)

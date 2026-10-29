@@ -490,8 +490,8 @@ class Cluster(Controller):
         Scope averaging is instead enabled on all QRM modules by the
         :class:`config.ModuleConfig` defaults, such that RAW traces are averaged over
         shots in hardware. Since the scope memory can not retain a separate trace per
-        shot, RAW acquisition is restricted to cyclic averaging (cf.
-        :func:`validate.validate_raw_averaging_mode`).
+        shot, RAW acquisition is restricted to averaged modes, i.e. single-shot
+        averaging is rejected (cf. :func:`validate.validate_raw_averaging_mode`).
         """
 
         for slot, seq_indices in acq_sequencers.items():
