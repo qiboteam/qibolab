@@ -75,8 +75,8 @@ def test_extract_raw_scope_is_numeric(frequency):
     ``(n_samples, 2)`` array from the nested scope data."""
     n_samples = 10
     sampling_rate = 1.0
-    # Opposite I/Q values keep the global mean zero, including at zero frequency,
-    # so demodulation's DC removal does not change the expected envelope.
+    # At nonzero frequency the trace spans whole periods, so each path has zero mean
+    # and DC removal does not change the envelope; zero-IF traces skip DC removal.
     envelope = np.array([np.ones(n_samples), -np.ones(n_samples)])
     modulated = modulate(envelope, frequency, sampling_rate)
     acquisitions = {
