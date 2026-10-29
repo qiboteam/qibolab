@@ -106,10 +106,10 @@ def validate_raw_options(
 ) -> None:
     """Reject RAW sweepers and averaging modes that exceed Qblox scope limits.
 
-    Only single-shot RAW acquisition is unsupported: the scope memory cannot
-    retain a separate trace for every shot. Any averaged mode is accepted,
-    since the Qblox driver executes ``SEQUENTIAL`` and ``CYCLIC`` identically
-    (a single hardware-averaged trace).
+    RAW acquisition supports neither sweepers nor single-shot averaging: the scope
+    memory cannot retain a separate trace for every shot or sweep point. Any averaged
+    mode is accepted, since the Qblox driver executes ``SEQUENTIAL`` and ``CYCLIC``
+    identically (a single hardware-averaged trace).
     """
     if options.acquisition_type is not AcquisitionType.RAW:
         return
