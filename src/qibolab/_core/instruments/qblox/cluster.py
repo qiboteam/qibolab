@@ -43,7 +43,7 @@ from .utils import (
 )
 from .validate import (
     assert_channels_exclusion,
-    validate_raw_averaging_mode,
+    validate_raw_options,
     validate_sequence,
 )
 
@@ -214,7 +214,7 @@ class Cluster(Controller):
     ) -> dict[PulseId, Result]:
         """Execute the given experiment."""
 
-        validate_raw_averaging_mode(options)
+        validate_raw_options(options, sweepers)
         self.reset()
 
         processed_sequences, phase_sweeper_present = _merge_phases_if_no_phase_sweeper(
@@ -271,7 +271,6 @@ class Cluster(Controller):
                     slot = PortAddress.from_path(self.channels[channelid].path).slot
                     validate_sequence(
                         sequence=seq,
-                        parsweepers_list=sweepers_,
                         is_qrm=self._modules[slot].is_qrm_type,
                         acquisition_type=options_.acquisition_type,
                     )
@@ -491,7 +490,7 @@ class Cluster(Controller):
         :class:`config.ModuleConfig` defaults, such that RAW traces are averaged over
         shots in hardware. Since the scope memory can not retain a separate trace per
         shot, RAW acquisition is restricted to averaged modes, i.e. single-shot
-        averaging is rejected (cf. :func:`validate.validate_raw_averaging_mode`).
+        averaging is rejected (cf. :func:`validate.validate_raw_options`).
         """
 
         for slot, seq_indices in acq_sequencers.items():

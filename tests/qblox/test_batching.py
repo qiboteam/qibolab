@@ -102,8 +102,7 @@ def test_raw_acquisition_sequences_are_not_batched(monkeypatch):
     assert len(unbatched) == len(sequences)
 
 
-@pytest.mark.parametrize("sweepers", [[], [[]]])
-def test_raw_acquisition_allows_at_most_one_pulse_per_sequencer(sweepers):
+def test_raw_acquisition_allows_at_most_one_pulse_per_sequencer():
     """Reject repeated RAW captures while allowing multiple integrated acquisitions."""
     acquisition = Q1Acquisition(num_bins=1, index=0)
     one_acquisition = Q1Sequence.empty().model_copy(
@@ -116,19 +115,16 @@ def test_raw_acquisition_allows_at_most_one_pulse_per_sequencer(sweepers):
     # The limit applies per sequencer, i.e. per compiled sequence.
     validate.validate_raw_acquisitions(
         one_acquisition,
-        parsweepers_list=sweepers,
         acquisition_type=AcquisitionType.RAW,
     )
     # The limit only applies to RAW acquisitions.
     validate.validate_raw_acquisitions(
         two_acquisitions,
-        parsweepers_list=sweepers,
         acquisition_type=AcquisitionType.INTEGRATION,
     )
     with pytest.raises(ValueError, match="at most one acquisition pulse per sequencer"):
         validate.validate_raw_acquisitions(
             two_acquisitions,
-            parsweepers_list=sweepers,
             acquisition_type=AcquisitionType.RAW,
         )
 
@@ -163,8 +159,10 @@ def test_non_raw_acquisition_allows_multiple_pulses_and_sweepers(
 
     validate.validate_raw_acquisitions(
         sequence,
-        parsweepers_list=sweepers,
         acquisition_type=acquisition_type,
+    )
+    validate.validate_raw_options(
+        ExecutionParameters(acquisition_type=acquisition_type), sweepers
     )
 
 
@@ -172,9 +170,6 @@ def test_non_raw_acquisition_allows_multiple_pulses_and_sweepers(
 @pytest.mark.parametrize("sweeper_position", [0, 1])
 def test_raw_acquisition_rejects_sweepers(npoints, sweeper_position):
     """Reject nonempty sweeper groups, even after an empty group or with one point."""
-    sequence = Q1Sequence.empty().model_copy(
-        update={"acquisitions": {uuid4(): Q1Acquisition(num_bins=1, index=0)}}
-    )
     sweeper = Sweeper(
         parameter=Parameter.frequency,
         range=(1e6, (npoints + 1) * 1e6, 1e6),
@@ -182,13 +177,12 @@ def test_raw_acquisition_rejects_sweepers(npoints, sweeper_position):
     )
     sweepers = [[] for _ in range(sweeper_position)] + [[sweeper]]
 
+    options = ExecutionParameters(
+        acquisition_type=AcquisitionType.RAW, averaging_mode=AveragingMode.CYCLIC
+    )
+
     with pytest.raises(ValueError, match="RAW acquisition does not support sweepers"):
-        validate.validate_sequence(
-            sequence,
-            parsweepers_list=sweepers,
-            is_qrm=True,
-            acquisition_type=AcquisitionType.RAW,
-        )
+        validate.validate_raw_options(options, sweepers)
 
 
 def test_batch_sequences_by_cluster_memory_limits_oversize_sequence_error_raise(

@@ -88,7 +88,6 @@ def test_long_rectangular_pulse_fits_waveform_memory():
     assert len(q1seq.waveforms) == 0
     validate_sequence(
         q1seq,
-        parsweepers_list=[],
         is_qrm=False,
         acquisition_type=AcquisitionType.INTEGRATION,
     )

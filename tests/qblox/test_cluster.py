@@ -160,7 +160,7 @@ def test_raw_acquisition_rejects_single_shot_averaging():
     )
 
     with pytest.raises(NotImplementedError, match="AveragingMode.SINGLESHOT"):
-        validate.validate_raw_averaging_mode(options)
+        validate.validate_raw_options(options, [])
 
 
 @pytest.mark.parametrize(
@@ -177,7 +177,7 @@ def test_raw_acquisition_accepts_averaged_modes(averaging_mode):
         averaging_mode=averaging_mode,
     )
 
-    validate.validate_raw_averaging_mode(options)
+    validate.validate_raw_options(options, [])
 
 
 def test_non_raw_acquisition_allows_single_shot_averaging():
@@ -187,4 +187,4 @@ def test_non_raw_acquisition_allows_single_shot_averaging():
         averaging_mode=AveragingMode.SINGLESHOT,
     )
 
-    validate.validate_raw_averaging_mode(options)
+    validate.validate_raw_options(options, [])

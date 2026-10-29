@@ -63,9 +63,7 @@ def assert_instruction_memory(lines: list[Line], is_qrm: bool) -> None:
 
 
 def validate_raw_acquisitions(
-    sequence: Q1Sequence,
-    parsweepers_list: list[ParallelSweepers],
-    acquisition_type: AcquisitionType,
+    sequence: Q1Sequence, acquisition_type: AcquisitionType
 ) -> None:
     """Ensure each sequencer performs no more than one RAW acquisition per run.
 
@@ -77,9 +75,6 @@ def validate_raw_acquisitions(
     if acquisition_type is not AcquisitionType.RAW:
         return
 
-    if any(sweepers for sweepers in parsweepers_list):
-        raise ValueError("RAW acquisition does not support sweepers.")
-
     n_acquisitions = len(sequence.acquisitions)
     if n_acquisitions > 1:
         raise ValueError(
@@ -89,31 +84,33 @@ def validate_raw_acquisitions(
 
 
 def validate_sequence(
-    sequence: Q1Sequence,
-    parsweepers_list: list[ParallelSweepers],
-    is_qrm: bool,
-    acquisition_type: AcquisitionType,
+    sequence: Q1Sequence, is_qrm: bool, acquisition_type: AcquisitionType
 ) -> None:
     """Validate sequence memory limits and RAW acquisition constraints."""
     assert_instruction_memory(sequence.program.lines, is_qrm)
     assert_acquisition_memory(list(sequence.acquisitions.values()))
     assert_waveform_memory(list(sequence.waveforms.values()))
     assert_weight_memory(list(sequence.weights.values()))
-    validate_raw_acquisitions(sequence, parsweepers_list, acquisition_type)
+    validate_raw_acquisitions(sequence, acquisition_type)
 
 
-def validate_raw_averaging_mode(options: ExecutionParameters) -> None:
-    """Reject RAW averaging modes that exceed Qblox scope-memory limits.
+def validate_raw_options(
+    options: ExecutionParameters, sweepers: list[ParallelSweepers]
+) -> None:
+    """Reject RAW sweepers and averaging modes that exceed Qblox scope limits.
 
     Only single-shot RAW acquisition is unsupported: the scope memory cannot
     retain a separate trace for every shot. Any averaged mode is accepted,
     since the Qblox driver executes ``SEQUENTIAL`` and ``CYCLIC`` identically
     (a single hardware-averaged trace).
     """
-    if (
-        options.acquisition_type is AcquisitionType.RAW
-        and not options.averaging_mode.average
-    ):
+    if options.acquisition_type is not AcquisitionType.RAW:
+        return
+
+    if any(sweepers):
+        raise ValueError("RAW acquisition does not support sweepers.")
+
+    if not options.averaging_mode.average:
         # Qblox scope memory cannot retain a separate RAW trace for every shot.
         raise NotImplementedError(
             "Qblox RAW acquisition requires an averaged AveragingMode because of "
