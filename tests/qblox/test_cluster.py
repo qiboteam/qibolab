@@ -1,6 +1,7 @@
 from collections import defaultdict
 from types import SimpleNamespace
 from unittest.mock import MagicMock, call
+from uuid import uuid4
 
 import pytest
 
@@ -19,6 +20,10 @@ from qibolab._core.instruments.qblox import validate
 from qibolab._core.instruments.qblox.cluster import Cluster
 from qibolab._core.instruments.qblox.config import ModuleConfig
 from qibolab._core.instruments.qblox.sequence import Q1Sequence
+from qibolab._core.instruments.qblox.sequence.acquisition import (
+    Acquisition as Q1Acquisition,
+)
+from qibolab._core.sweeper import Parameter, Sweeper
 
 
 @pytest.fixture
@@ -180,11 +185,82 @@ def test_raw_acquisition_accepts_averaged_modes(averaging_mode):
     validate.validate_raw_options(options, [])
 
 
-def test_non_raw_acquisition_allows_single_shot_averaging():
-    """Keep the scope-memory restriction specific to RAW acquisitions."""
+@pytest.mark.parametrize(
+    "acquisition_type", [AcquisitionType.INTEGRATION, AcquisitionType.DISCRIMINATION]
+)
+@pytest.mark.parametrize(
+    "sweepers",
+    [
+        [],
+        [[]],
+        [
+            [
+                Sweeper(
+                    parameter=Parameter.frequency,
+                    range=(1e6, 3e6, 1e6),
+                    channels=["0/acquisition"],
+                )
+            ]
+        ],
+    ],
+)
+def test_non_raw_acquisition_allows_single_shot_and_sweepers(
+    acquisition_type, sweepers
+):
+    """Keep the scope-memory restrictions specific to RAW acquisitions."""
     options = ExecutionParameters(
-        acquisition_type=AcquisitionType.INTEGRATION,
+        acquisition_type=acquisition_type,
         averaging_mode=AveragingMode.SINGLESHOT,
     )
 
-    validate.validate_raw_options(options, [])
+    validate.validate_raw_options(options, sweepers)
+
+
+def test_raw_acquisition_allows_at_most_one_pulse_per_sequencer():
+    """Reject repeated RAW captures while allowing multiple integrated acquisitions."""
+    acquisition = Q1Acquisition(num_bins=1, index=0)
+    one_acquisition = Q1Sequence.empty().model_copy(
+        update={"acquisitions": {uuid4(): acquisition}}
+    )
+    two_acquisitions = Q1Sequence.empty().model_copy(
+        update={"acquisitions": {uuid4(): acquisition, uuid4(): acquisition}}
+    )
+
+    # The limit applies per sequencer, i.e. per compiled sequence.
+    validate.validate_raw_acquisitions(
+        one_acquisition,
+        acquisition_type=AcquisitionType.RAW,
+    )
+    # The limit only applies to RAW acquisitions.
+    for acquisition_type in (
+        AcquisitionType.INTEGRATION,
+        AcquisitionType.DISCRIMINATION,
+    ):
+        validate.validate_raw_acquisitions(
+            two_acquisitions,
+            acquisition_type=acquisition_type,
+        )
+    with pytest.raises(ValueError, match="at most one acquisition pulse per sequencer"):
+        validate.validate_raw_acquisitions(
+            two_acquisitions,
+            acquisition_type=AcquisitionType.RAW,
+        )
+
+
+@pytest.mark.parametrize("npoints", [1, 2])
+@pytest.mark.parametrize("sweeper_position", [0, 1])
+def test_raw_acquisition_rejects_sweepers(npoints, sweeper_position):
+    """Reject nonempty sweeper groups, even after an empty group or with one point."""
+    sweeper = Sweeper(
+        parameter=Parameter.frequency,
+        range=(1e6, (npoints + 1) * 1e6, 1e6),
+        channels=["0/acquisition"],
+    )
+    sweepers = [[] for _ in range(sweeper_position)] + [[sweeper]]
+
+    options = ExecutionParameters(
+        acquisition_type=AcquisitionType.RAW, averaging_mode=AveragingMode.CYCLIC
+    )
+
+    with pytest.raises(ValueError, match="RAW acquisition does not support sweepers"):
+        validate.validate_raw_options(options, sweepers)
