@@ -1,5 +1,11 @@
-from qibolab._core.execution_parameters import AcquisitionType, ExecutionParameters
+from qibolab._core.execution_parameters import (
+    AcquisitionType,
+    ExecutionParameters,
+    default,
+)
 from qibolab._core.identifier import ChannelId
+from qibolab._core.pulses import Acquisition as AcquisitionPulse
+from qibolab._core.pulses import Readout
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import ParallelSweepers
 
@@ -8,6 +14,7 @@ from .limits import (
     ACQUISITION_NUMBER,
     QCM_INSTRUCTION_MEMORY,
     QRM_INSTRUCTION_MEMORY,
+    SCOPE_MEMORY,
     WAVEFORM_MEMORY,
     WAVEFORM_NUMBER,
     WEIGHT_MEMORY,
@@ -117,3 +124,31 @@ def validate_raw_options(
             "scope acquisition memory limits; AveragingMode.SINGLESHOT is not "
             "supported."
         )
+
+
+def validate_raw_duration(
+    sequences: list[PulseSequence], options: ExecutionParameters
+) -> None:
+    """Require each RAW shot to span the whole scope memory.
+
+    The scope capture restarts at every shot. Samples never written by the current
+    experiment retain data from previous ones, since hardware averaging does not reset
+    them. Acquisition and relaxation are a lower bound of the time between two captures,
+    so together they must fill the trace.
+    """
+    if options.acquisition_type is not AcquisitionType.RAW:
+        return
+
+    relaxation = default(options.relaxation_time, 0)
+    for sequence in sequences:
+        for _, event in sequence:
+            acq = event.acquisition if isinstance(event, Readout) else event
+            if (
+                isinstance(acq, AcquisitionPulse)
+                and acq.duration + relaxation < SCOPE_MEMORY
+            ):
+                raise ValueError(
+                    f"RAW acquisition requires acquisition duration ({acq.duration:g} "
+                    f"ns) plus relaxation time ({relaxation:g} ns) to be at least "
+                    f"{SCOPE_MEMORY} ns, to fill the scope memory."
+                )
