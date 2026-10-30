@@ -22,7 +22,7 @@ class AcquisitionType(Enum):
     INTEGRATION = auto()
     """Demodulate and integrate the waveform."""
     RAW = auto()
-    """Acquire the waveform as it is."""
+    """Return the waveform, demodulated to baseband."""
 
 
 class AveragingMode(Enum):
