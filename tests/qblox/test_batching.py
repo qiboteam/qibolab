@@ -1,9 +1,13 @@
 import pytest
 from pydantic import ValidationError
 
-from qibolab._core.execution_parameters import AveragingMode, ExecutionParameters
+from qibolab._core.execution_parameters import (
+    AcquisitionType,
+    AveragingMode,
+    ExecutionParameters,
+)
 from qibolab._core.identifier import ChannelId
-from qibolab._core.instruments.qblox import batching
+from qibolab._core.instruments.qblox import batching, cluster
 from qibolab._core.instruments.qblox.q1asm.ast_ import Register
 from qibolab._core.instruments.qblox.sequence.sequence import compile
 from qibolab._core.pulses import (
@@ -61,6 +65,36 @@ def test_batch_sequences_by_cluster_memory_limits(monkeypatch):
     assert len(merged_sequences) == 2
     assert len(merged_sequences[0].acquisitions) == 2
     assert len(merged_sequences[1].acquisitions) == 1
+
+
+def test_raw_acquisition_sequences_are_not_batched(monkeypatch):
+    """Keep RAW sequences separate to avoid repeated captures on one sequencer."""
+    # Time-of-flight padding is independent of the batching decision under test.
+    monkeypatch.setattr(
+        cluster,
+        "_add_time_of_flight",
+        lambda sequence, _configs: sequence,
+    )
+    monkeypatch.setattr(
+        cluster,
+        "batch_sequences_by_cluster_memory_limits",
+        lambda *_args, **_kwargs: pytest.fail("RAW sequences must not be batched"),
+    )
+
+    sequences = [_sequence(), _sequence()]
+    unbatched = cluster._batch_sequences(
+        sequences,
+        sweepers=[],
+        options=ExecutionParameters(
+            acquisition_type=AcquisitionType.RAW,
+            averaging_mode=AveragingMode.CYCLIC,
+        ),
+        qcm_channels={"0/drive"},
+        qrm_channels={"0/acquisition"},
+        configs={},
+    )
+
+    assert len(unbatched) == len(sequences)
 
 
 def test_batch_sequences_by_cluster_memory_limits_oversize_sequence_error_raise(
