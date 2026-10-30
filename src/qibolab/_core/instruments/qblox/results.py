@@ -99,11 +99,7 @@ def _scope(data: ScopeData, frequency: float | None, sampling_rate: float) -> Re
     res = np.array([data["path0"]["data"], data["path1"]["data"]])
     # Demodulate scope data to baseband when a frequency is provided.
     if frequency is not None:
-        res = (
-            np.sqrt(2) * res
-            if frequency == 0
-            else demodulate(res, frequency, sampling_rate)
-        )
+        res = demodulate(res, frequency, sampling_rate)
     return np.moveaxis(res, 0, -1)
 
 
