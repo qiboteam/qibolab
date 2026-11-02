@@ -92,7 +92,7 @@ class SequencerConfig(Model):
 
         # channels can be used in continuous waveform mode; typically, this is done to
         # pump TWPAs
-        is_cw = sequence is not None and sequence.is_cw
+        is_cw = sequence is not None and sequence.is_continuous_wave
 
         # conditional configurations
         cfg = cls(

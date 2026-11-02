@@ -28,7 +28,7 @@ from qibolab._core.sweeper import Parameter, Sweeper
 
 def test_q1sequence_cw():
     seq = Q1Sequence.cw()
-    assert seq.is_cw is True
+    assert seq.is_continuous_wave is True
     assert len(seq.waveforms) == 1
     assert len(seq.acquisitions) == 0
     assert len(seq.program.elements) == 1
@@ -50,7 +50,7 @@ def test_q1sequence_from_twpa_frequency_swept():
         duration=1000.0,
     )
 
-    assert seq.is_cw is False
+    assert seq.is_continuous_wave is False
     assert len(seq.waveforms) == 0
     assert len(seq.acquisitions) == 0
 
@@ -99,7 +99,7 @@ def test_q1sequence_from_twpa_offset_swept():
         duration=500.0,
     )
 
-    assert seq.is_cw is False
+    assert seq.is_continuous_wave is False
     instructions = [line.instruction for line in seq.program.elements]
     assert any(isinstance(ins, UpdParam) for ins in instructions)
     assert any(isinstance(ins, WaitSync) for ins in instructions)
@@ -128,7 +128,7 @@ def test_compile_twpa_cw():
         twpas={"twpa": ("8/o1", None)},
     )
     assert "twpa" in seqs
-    assert seqs["twpa"].is_cw is True
+    assert seqs["twpa"].is_continuous_wave is True
 
 
 def test_compile_twpa_swept():
@@ -148,7 +148,7 @@ def test_compile_twpa_swept():
         twpas={"twpa": ("8/o1", None)},
     )
     assert "twpa" in seqs
-    assert seqs["twpa"].is_cw is False
+    assert seqs["twpa"].is_continuous_wave is False
 
 
 # ---------------------------------------------------------------------------
