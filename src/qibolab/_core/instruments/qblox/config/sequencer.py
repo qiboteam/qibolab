@@ -17,7 +17,7 @@ from qibolab._core.identifier import ChannelId
 from qibolab._core.serialize import Model
 
 from ..q1asm.ast_ import Acquire, Line
-from ..sequence import Q1Sequence
+from ..sequence import CW_WAVEFORM_INDEX, Q1Sequence
 from .port import PortAddress
 
 __all__ = []
@@ -118,8 +118,8 @@ class SequencerConfig(Model):
             mod_en_awg=rf,
             cont_mode_en_awg_path0=True if is_cw else None,
             cont_mode_en_awg_path1=True if is_cw else None,
-            cont_mode_waveform_idx_awg_path0=0 if is_cw else None,
-            cont_mode_waveform_idx_awg_path1=0 if is_cw else None,
+            cont_mode_waveform_idx_awg_path0=CW_WAVEFORM_INDEX if is_cw else None,
+            cont_mode_waveform_idx_awg_path1=CW_WAVEFORM_INDEX if is_cw else None,
         )
 
         # acquisition

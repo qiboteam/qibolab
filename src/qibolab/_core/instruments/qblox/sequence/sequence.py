@@ -23,7 +23,10 @@ from .program import program, twpa_program
 from .sweepers import is_offset_rectangular
 from .waveforms import Waveform, WaveformIndex, waveforms
 
-__all__ = ["Q1Sequence"]
+__all__ = ["CW_WAVEFORM_INDEX", "Q1Sequence"]
+
+CW_WAVEFORM_INDEX: WaveformIndex = 0
+"""Memory index of the waveform played in continuous waveform mode."""
 
 
 def _weight_len(w: Weight | None) -> int | None:
@@ -142,7 +145,9 @@ class Q1Sequence(Model):
     @classmethod
     def cw(cls) -> "Q1Sequence":
         return cls(
-            waveforms={0: Waveform(data=np.zeros(4), index=0)},
+            waveforms={
+                CW_WAVEFORM_INDEX: Waveform(data=np.zeros(4), index=CW_WAVEFORM_INDEX)
+            },
             weights={},
             acquisitions={},
             program=Program(elements=[Line.instr(Stop())]),
