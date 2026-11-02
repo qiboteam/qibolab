@@ -49,6 +49,12 @@ def test_platform_sampling_rate(platform):
     assert platform.sampling_rate >= 1
 
 
+def test_coupler_positional_lookup():
+    platform = create_dummy()
+    # dummy couplers are named 0, 1, 3, 4: position 2 is coupler 3
+    assert platform.coupler(2) == (3, platform.couplers[3])
+
+
 def test_duplicated_acquisition():
     """A shallow copy will duplicate the object.
 

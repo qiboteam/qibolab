@@ -314,7 +314,7 @@ class Platform:
             return qubit, elements[qubit]
         except KeyError:
             assert isinstance(qubit, int)
-            return list(self.qubits.items())[qubit]
+            return list(elements.items())[qubit]
 
     def qubit(self, qubit: QubitId) -> tuple[QubitId, Qubit]:
         """Retrieve physical qubit name and object.
