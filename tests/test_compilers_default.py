@@ -146,6 +146,24 @@ def test_iswap_to_sequence():
     assert sequence == test_sequence
 
 
+def test_padding_follows_wire_names():
+    """Test end-of-gate padding targets the physical qubit from ``wire_names``.
+
+    Logical qubit 0 is mapped to physical qubit 1, so the delay padding the measurement
+    must land on qubit 1's drive channel, not on qubit 0's.
+    """
+    platform = create_platform("dummy")
+    circuit = Circuit(1, wire_names=[1])
+    measurement = gates.M(0)
+    circuit.add(measurement)
+    # the measurement map keeps the untrimmed gate sequence, padding included
+    _, measurement_map = Compiler.default().compile(circuit, platform)
+    delays = {
+        ch for ch, pulse in measurement_map[measurement] if isinstance(pulse, Delay)
+    }
+    assert delays == {platform.qubits[1].drive}
+
+
 def test_cnot_to_sequence():
     platform = create_platform("dummy")
     natives = platform.natives
