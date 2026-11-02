@@ -7,6 +7,7 @@ from itertools import groupby
 from typing import cast
 
 import qblox_instruments as qblox
+import scipy.constants
 from qblox_instruments.qcodes_drivers.module import Module
 from qcodes.instrument import find_or_create_instrument
 
@@ -16,6 +17,8 @@ from qibolab._core.components import (
     DcChannel,
     DcConfig,
     IqChannel,
+    IqConfig,
+    OscillatorConfig,
 )
 from qibolab._core.execution_parameters import (
     AcquisitionType,
@@ -53,7 +56,7 @@ logger = logging.getLogger(__name__)
 
 __all__ = ["Cluster"]
 
-SAMPLING_RATE = 1
+SAMPLING_RATE = 1  # GS/s
 
 
 def _compute_duration(
@@ -251,6 +254,13 @@ class Cluster(Controller):
         # configure the modules
         _module_configs = self._configure_modules(configs)
 
+        # compute intermediate values for the experiment, such as expected frequencies
+        ifs_dict = (
+            self._ifs(configs)
+            if options.acquisition_type is AcquisitionType.RAW
+            else {}
+        )
+
         # Execute each batch sequentially, and concatenate results
         log = Logger(configs)
         results = {}
@@ -306,10 +316,12 @@ class Cluster(Controller):
                 )
                 psres.append(
                     extract(
-                        data,
-                        lengths,
-                        options_.acquisition_type,
-                        options_.results_shape(sweepers_),
+                        acquired_data=data,
+                        lengths=lengths,
+                        acquisition=options_.acquisition_type,
+                        shape=options_.results_shape(sweepers_),
+                        sampling_rate=self.sampling_rate * scipy.constants.giga,
+                        frequencies=ifs_dict,
                     )
                 )
 
@@ -618,3 +630,22 @@ class Cluster(Controller):
             )
             if mix is not None
         }
+
+    def _ifs(self, configs: Configs) -> dict[ChannelId, float]:
+        """Compute the intermediate frequencies for demodulation.
+
+        IFs are computed in Hz.
+        """
+        frequencies = {}
+
+        channels = self.channels
+        los = self._los
+        for ch, channel in channels.items():
+            if not isinstance(channel, AcquisitionChannel) or channel.probe is None:
+                continue
+
+            probe = channel.probe
+            lo = los.get(ch)
+            lo_freq = cast(OscillatorConfig, configs[lo]).frequency if lo else 0.0
+            frequencies[ch] = cast(IqConfig, configs[probe]).frequency - lo_freq
+        return frequencies

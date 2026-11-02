@@ -62,7 +62,7 @@ def demodulate(
     which is essentially the inverse of this function.
     """
     # in case the offsets have not been removed in hardware
-    modulated = modulated - np.mean(modulated)
+    modulated = modulated - np.mean(modulated, axis=1, keepdims=True)
 
     samples = np.arange(modulated.shape[1])
     phases = (2 * np.pi * freq / rate) * samples
