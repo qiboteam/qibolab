@@ -2,9 +2,14 @@ from typing import Literal
 
 import pytest
 
-from qibolab._core.components.configs import Config
+from qibolab._core.components.configs import Config, IqConfig
 from qibolab._core.native import Native, TwoQubitNatives
-from qibolab._core.parameters import ConfigKinds, Parameters, TwoQubitContainer
+from qibolab._core.parameters import (
+    ConfigKinds,
+    Parameters,
+    TwoQubitContainer,
+    update_configs,
+)
 from qibolab._core.platform.load import create_platform
 from qibolab._core.pulses.pulse import Pulse
 
@@ -104,3 +109,18 @@ def test_update():
     assert dummy.settings.nshots == 42
     assert dummy.natives.single_qubit[1].RX[0][1].amplitude == -0.123
     assert dummy.natives.single_qubit[1].RX[0][1].duration == 456.7
+
+
+def test_update_configs():
+    configs = {"drive": IqConfig(frequency=5e9)}
+    update_configs(configs, [{"drive": {"frequency": 6e9}}])
+    assert configs["drive"] == IqConfig(frequency=6e9)
+
+
+@pytest.mark.parametrize(
+    "changes", [{"offset": 0.0}, {"frequency": "high"}], ids=["unknown", "invalid"]
+)
+def test_update_configs_validation(changes):
+    configs = {"drive": IqConfig(frequency=5e9)}
+    with pytest.raises(ValueError):
+        update_configs(configs, [{"drive": changes}])
