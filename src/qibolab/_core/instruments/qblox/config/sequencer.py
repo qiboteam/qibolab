@@ -144,16 +144,15 @@ class SequencerConfig(Model):
         # same IO sequencer)
         probe = channels[channel_id].iqout(channel_id)
         if probe is not None:
-            probe_config = configs[probe]
+            probe_config = cast(IqConfig, configs[probe])
             probe_ = cast(IqChannel, channels[probe])
             assert probe_.lo is not None
             lo_freq = cast(OscillatorConfig, configs[probe_.lo]).frequency
             cfg.nco_freq = int(probe_config.frequency - lo_freq)
-            if isinstance(probe_config, IqConfig):
-                cfg.mixer_corr_gain_ratio = probe_config.scale_q
-                # imbalance corrections are stored in radians, while the Qblox parameter
-                # is in degrees (accepting values in the [-45, 45] range)
-                cfg.mixer_corr_phase_offset_degree = np.degrees(probe_config.phase_q)
+            cfg.mixer_corr_gain_ratio = probe_config.scale_q
+            # imbalance corrections are stored in radians, while the Qblox parameter
+            # is in degrees (accepting values in the [-45, 45] range)
+            cfg.mixer_corr_phase_offset_degree = np.degrees(probe_config.phase_q)
 
         return cfg
 

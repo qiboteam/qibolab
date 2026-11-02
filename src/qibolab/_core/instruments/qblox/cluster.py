@@ -75,14 +75,11 @@ class Cluster(Controller):
     As described in:
     https://docs.qblox.com/en/main/getting_started/setup.html#connecting-to-multiple-instruments
     """
-    twpas: dict[str, tuple[str, str | None]] = Field(default_factory=dict)
-    """TWPA pump sources.
+    twpas: dict[ChannelId, IqChannel] = Field(default_factory=dict)
+    """TWPA pump channels.
 
-    Maps TWPA identifiers (which match keys in :attr:`Parameters.configs`
-    holding the :class:`OscillatorConfig` for the pump tone) to a tuple of
-    ``(port_path, mixer_config_name)`` where ``mixer_config_name`` optionally
-    references a :class:`MixerOffsetConfig` in :attr:`Parameters.configs` (or
-    ``None`` if not used).
+    They are regular IQ channels, configured by an :class:`IqConfig` (pump tone) and
+    the usual LO and mixer configurations.
 
     Each entry generates either a continuous-wave tone in the background or a
     synchronized single-pulse sweep when targeted by channel sweepers.
@@ -98,18 +95,13 @@ class Cluster(Controller):
 
         :attr:`channels` only holds the ones declared for the platform, as for any
         :class:`Controller`. Further categories of channels are added on top of them,
-        as the virtual channels constructed for the TWPAs (cf. :attr:`twpas`), possibly
-        followed by more in the future.
+        as the TWPAs (cf. :attr:`twpas`), possibly followed by more in the future.
 
         In most situations, TWPA channels can be considered as regular ones: they have a
         Q1 sequence associated (program and waveforms), in both continuous wave (cw) and
         swept modes. They also have LOs and mixers, as much as the other drive channels.
         """
-        twpa_channels: dict[ChannelId, Channel] = {
-            twpa_id: IqChannel(path=port_path, lo=twpa_id, mixer=mixer_name)
-            for twpa_id, (port_path, mixer_name) in self.twpas.items()
-        }
-        return self.channels | twpa_channels
+        return self.channels | self.twpas
 
     @property
     def cluster(self) -> qblox.Cluster:
