@@ -169,14 +169,14 @@ class DynamiqsEngine(SimulationEngine):
                 )
 
         method = kwargs.pop("method", self._method(time))
-        options = kwargs.pop("options", self.engine.Options(progress_meter=False))
+        progress_meter = kwargs.pop("progress_meter", False)
         result = self.engine.mesolve(
             hamiltonian,
             [_unwrap(op) for op in collapse_operators or []],
             _unwrap(initial_state),
             time,
             method=method,
-            options=options,
+            progress_meter=progress_meter,
             **kwargs,
         )
 

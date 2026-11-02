@@ -52,7 +52,7 @@ jobs:
     - name: Install uv
       uses: astral-sh/setup-uv@v10.0.1
       with:
-        python-version: "3.11"
+        python-version: "3.12"
     - name: Install qibolab main
       run: uv sync --all-extras --group tests
     - name: Execute on ${{ matrix.platform }}
