@@ -166,7 +166,8 @@ def twpa_program(
     experiment_ = [
         UpdParam(duration=4),
         WaitSync(duration=4),
-        Wait(duration=duration),
+        # Enforce a minimum wait of 4 ns corresponding to one clock cycle
+        Wait(duration=max(duration, 4)),
     ]
     singleshot = options.averaging_mode is AveragingMode.SINGLESHOT
 
