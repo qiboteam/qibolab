@@ -8,7 +8,7 @@ from typing import cast
 
 import qblox_instruments as qblox
 import scipy.constants
-from pydantic import Field
+from pydantic import Field, model_validator
 from qblox_instruments.qcodes_drivers.module import Module
 from qcodes.instrument import find_or_create_instrument
 
@@ -75,33 +75,28 @@ class Cluster(Controller):
     As described in:
     https://docs.qblox.com/en/main/getting_started/setup.html#connecting-to-multiple-instruments
     """
-    twpas: dict[ChannelId, IqChannel] = Field(default_factory=dict)
-    """TWPA pump channels.
+    twpas: set[ChannelId] = Field(default_factory=set)
+    """Channels pumping TWPAs.
 
-    They are regular IQ channels, configured by an :class:`IqConfig` (pump tone) and
-    the usual LO and mixer configurations.
-
-    Each entry generates either a continuous-wave tone in the background or a
-    synchronized single-pulse sweep when targeted by channel sweepers.
+    They are regular IQ channels in :attr:`channels`, configured by an
+    :class:`IqConfig` (pump tone) and the usual LO and mixer configurations. They have
+    a Q1 sequence associated (program and waveforms) as well, generating either a
+    continuous-wave tone in the background, or a synchronized single-pulse sweep when
+    targeted by channel sweepers.
     """
 
     _cluster: qblox.Cluster | None = None
     _applied_seqcfgs: dict[SlotId, dict[int, config.SequencerConfig]] | None = None
     """Sequencer configurations applied on the hardware, ``None`` if unknown."""
 
-    @cached_property
-    def connected_channels(self) -> dict[ChannelId, Channel]:
-        """All the channels connected to the cluster, whatever their category.
-
-        :attr:`channels` only holds the ones declared for the platform, as for any
-        :class:`Controller`. Further categories of channels are added on top of them,
-        as the TWPAs (cf. :attr:`twpas`), possibly followed by more in the future.
-
-        In most situations, TWPA channels can be considered as regular ones: they have a
-        Q1 sequence associated (program and waveforms), in both continuous wave (cw) and
-        swept modes. They also have LOs and mixers, as much as the other drive channels.
-        """
-        return self.channels | self.twpas
+    @model_validator(mode="after")
+    def _check_twpas(self):
+        invalid = {
+            ch for ch in self.twpas if not isinstance(self.channels.get(ch), IqChannel)
+        }
+        if invalid:
+            raise ValueError(f"TWPAs have to be IQ channels in `channels`: {invalid}")
+        return self
 
     @property
     def cluster(self) -> qblox.Cluster:
@@ -238,9 +233,7 @@ class Cluster(Controller):
                 )
 
                 for channelid, seq in sequences_.items():
-                    slot = PortAddress.from_path(
-                        self.connected_channels[channelid].path
-                    ).slot
+                    slot = PortAddress.from_path(self.channels[channelid].path).slot
                     validate_sequence(
                         sequence=seq,
                         is_qrm=self._modules[slot].is_qrm_type,
@@ -318,9 +311,7 @@ class Cluster(Controller):
         for slot, chs in self._channels_by_module.items():
             module = self._modules[slot]
             ids = {id for id, _ in chs}
-            channels = {
-                id: ch for id, ch in self.connected_channels.items() if id in ids
-            }
+            channels = {id: ch for id, ch in self.channels.items() if id in ids}
             los = config.module.los(self._los, configs, ids)
             mixers = config.module.mixers(self._mixers, configs, ids)
             modcfg = modcfgs[slot] = config.ModuleConfig.build(
@@ -403,7 +394,7 @@ class Cluster(Controller):
                 seqcfgs[slot][idx] = config.SequencerConfig.build(
                     address,
                     ch,
-                    self.connected_channels,
+                    self.channels,
                     configs,
                     acquisition,
                     module.is_rf_type,
@@ -551,7 +542,7 @@ class Cluster(Controller):
         """
         addresses = {
             name: PortAddress.from_path(ch.path)
-            for name, ch in self.connected_channels.items()
+            for name, ch in self.channels.items()
             if name not in self._probes
         }
         return {
@@ -572,12 +563,12 @@ class Cluster(Controller):
         address the LO through the API. While the LO identifier is used
         to retrieve the configuration.
         """
-        return _iqout_reference(self.connected_channels, "lo")
+        return _iqout_reference(self.channels, "lo")
 
     @cached_property
     def _mixers(self) -> dict[ChannelId, str]:
         """Extract channel to mixer mapping."""
-        return _iqout_reference(self.connected_channels, "mixer")
+        return _iqout_reference(self.channels, "mixer")
 
     def _ifs(self, configs: Configs) -> dict[ChannelId, float]:
         """Compute the intermediate frequencies for demodulation.

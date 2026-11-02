@@ -3,7 +3,12 @@
 import numpy as np
 import pytest
 
-from qibolab._core.components import IqChannel, IqConfig, OscillatorConfig
+from qibolab._core.components import (
+    AcquisitionChannel,
+    IqChannel,
+    IqConfig,
+    OscillatorConfig,
+)
 from qibolab._core.execution_parameters import AcquisitionType, ExecutionParameters
 from qibolab._core.instruments.qblox.cluster import Cluster
 from qibolab._core.instruments.qblox.config.port import PortAddress, PortConfig
@@ -125,7 +130,7 @@ def test_compile_twpa_cw():
         options=options,
         sampling_rate=1.0,
         merged_vzs=True,
-        twpas={"twpa": IqChannel(path="8/o1", lo="twpa/lo")},
+        twpas={"twpa"},
     )
     assert "twpa" in seqs
     assert seqs["twpa"].is_continuous_wave is True
@@ -145,7 +150,7 @@ def test_compile_twpa_swept():
         options=options,
         sampling_rate=1.0,
         merged_vzs=True,
-        twpas={"twpa": IqChannel(path="8/o1", lo="twpa/lo")},
+        twpas={"twpa"},
     )
     assert "twpa" in seqs
     assert seqs["twpa"].is_continuous_wave is False
@@ -160,7 +165,8 @@ def test_sequencer_config_build_twpa_cw():
     c = Cluster(
         address="addr",
         name="my_cluster",
-        twpas={"twpa": IqChannel(path="8/o1", lo="twpa/lo")},
+        channels={"twpa": IqChannel(path="8/o1", lo="twpa/lo")},
+        twpas={"twpa"},
     )
     address = PortAddress.from_path("8/o1")
     configs = {
@@ -172,7 +178,7 @@ def test_sequencer_config_build_twpa_cw():
     cfg = SequencerConfig.build(
         address=address,
         channel_id="twpa",
-        channels=c.connected_channels,
+        channels=c.channels,
         configs=configs,
         acquisition=AcquisitionType.INTEGRATION,
         rf=True,
@@ -196,7 +202,8 @@ def test_sequencer_config_build_twpa_with_mixer():
     c = Cluster(
         address="addr",
         name="my_cluster",
-        twpas={"twpa": IqChannel(path="8/o1", lo="twpa/lo", mixer="mixer2")},
+        channels={"twpa": IqChannel(path="8/o1", lo="twpa/lo", mixer="mixer2")},
+        twpas={"twpa"},
     )
     address = PortAddress.from_path("8/o1")
     configs = {
@@ -209,7 +216,7 @@ def test_sequencer_config_build_twpa_with_mixer():
     cfg = SequencerConfig.build(
         address=address,
         channel_id="twpa",
-        channels=c.connected_channels,
+        channels=c.channels,
         configs=configs,
         acquisition=AcquisitionType.INTEGRATION,
         rf=True,
@@ -221,7 +228,7 @@ def test_sequencer_config_build_twpa_with_mixer():
     assert cfg.mixer_corr_phase_offset_degree == 0.0
 
     port = PortConfig.build(
-        channel=c.connected_channels["twpa"],
+        channel=c.channels["twpa"],
         config=configs["twpa"],
         in_=False,
         out=True,
@@ -237,7 +244,8 @@ def test_sequencer_config_build_twpa_swept():
     c = Cluster(
         address="addr",
         name="my_cluster",
-        twpas={"twpa": IqChannel(path="8/o1", lo="twpa/lo")},
+        channels={"twpa": IqChannel(path="8/o1", lo="twpa/lo")},
+        twpas={"twpa"},
     )
     address = PortAddress.from_path("8/o1")
     configs = {
@@ -256,7 +264,7 @@ def test_sequencer_config_build_twpa_swept():
     cfg = SequencerConfig.build(
         address=address,
         channel_id="twpa",
-        channels=c.connected_channels,
+        channels=c.channels,
         configs=configs,
         acquisition=AcquisitionType.INTEGRATION,
         rf=True,
@@ -280,29 +288,38 @@ def test_sequencer_config_build_twpa_swept():
 
 def test_cluster_twpa_fields_defaults():
     c = Cluster(address="addr", name="my_cluster")
-    assert c.twpas == {}
+    assert c.twpas == set()
 
 
 def test_cluster_twpa_custom():
     c = Cluster(
         address="addr",
         name="my_cluster",
-        twpas={"twpa1": IqChannel(path="8/o1", lo="twpa1/lo")},
+        channels={"twpa1": IqChannel(path="8/o1", lo="twpa1/lo")},
+        twpas={"twpa1"},
     )
-    assert c.twpas == {"twpa1": IqChannel(path="8/o1", lo="twpa1/lo")}
+    assert c.twpas == {"twpa1"}
+
+
+@pytest.mark.parametrize(
+    "channels", [{}, {"twpa": AcquisitionChannel(path="8/i1")}], ids=["missing", "acq"]
+)
+def test_cluster_twpa_invalid(channels):
+    with pytest.raises(ValueError, match="TWPAs have to be IQ channels"):
+        Cluster(address="addr", name="my_cluster", channels=channels, twpas={"twpa"})
 
 
 def test_cluster_twpa_channels_by_module():
     c = Cluster(
         address="addr",
         name="my_cluster",
-        channels={"drive": IqChannel(path="8/o2")},
-        twpas={
+        channels={
+            "drive": IqChannel(path="8/o2"),
             "twpa": IqChannel(path="8/o1", lo="twpa/lo"),
             "twpa2": IqChannel(path="7/o1", lo="twpa2/lo", mixer="mixer2"),
         },
+        twpas={"twpa", "twpa2"},
     )
-    assert c.connected_channels == c.channels | c.twpas
 
     by_mod = c._channels_by_module
     assert 8 in by_mod
