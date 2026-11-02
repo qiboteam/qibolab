@@ -171,7 +171,7 @@ def test_sequencer_config_build_twpa_cw():
     cfg = SequencerConfig.build(
         address=address,
         channel_id="twpa",
-        channels=c.all_channels,
+        channels=c.connected_channels,
         configs=configs,
         acquisition=AcquisitionType.INTEGRATION,
         rf=True,
@@ -207,7 +207,7 @@ def test_sequencer_config_build_twpa_with_mixer():
     cfg = SequencerConfig.build(
         address=address,
         channel_id="twpa",
-        channels=c.all_channels,
+        channels=c.connected_channels,
         configs=configs,
         acquisition=AcquisitionType.INTEGRATION,
         rf=True,
@@ -219,7 +219,7 @@ def test_sequencer_config_build_twpa_with_mixer():
     assert cfg.mixer_corr_phase_offset_degree is None
 
     port = PortConfig.build(
-        channel=c.all_channels["twpa"],
+        channel=c.connected_channels["twpa"],
         config=configs["twpa"],
         in_=False,
         out=True,
@@ -253,7 +253,7 @@ def test_sequencer_config_build_twpa_swept():
     cfg = SequencerConfig.build(
         address=address,
         channel_id="twpa",
-        channels=c.all_channels,
+        channels=c.connected_channels,
         configs=configs,
         acquisition=AcquisitionType.INTEGRATION,
         rf=True,
@@ -294,15 +294,15 @@ def test_cluster_twpa_channels_by_module():
         channels={"drive": IqChannel(path="8/o2")},
         twpas={"twpa": ("8/o1", None), "twpa2": ("7/o1", "mixer2")},
     )
-    assert "drive" in c.all_channels
-    assert "twpa" in c.all_channels
-    assert "twpa2" in c.all_channels
-    assert c.all_channels["twpa"].path == "8/o1"
-    assert c.all_channels["twpa"].lo == "twpa"
-    assert c.all_channels["twpa"].mixer is None
-    assert c.all_channels["twpa2"].path == "7/o1"
-    assert c.all_channels["twpa2"].lo == "twpa2"
-    assert c.all_channels["twpa2"].mixer == "mixer2"
+    assert "drive" in c.connected_channels
+    assert "twpa" in c.connected_channels
+    assert "twpa2" in c.connected_channels
+    assert c.connected_channels["twpa"].path == "8/o1"
+    assert c.connected_channels["twpa"].lo == "twpa"
+    assert c.connected_channels["twpa"].mixer is None
+    assert c.connected_channels["twpa2"].path == "7/o1"
+    assert c.connected_channels["twpa2"].lo == "twpa2"
+    assert c.connected_channels["twpa2"].mixer == "mixer2"
 
     by_mod = c._channels_by_module
     assert 8 in by_mod

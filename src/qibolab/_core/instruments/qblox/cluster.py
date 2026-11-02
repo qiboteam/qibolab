@@ -93,8 +93,13 @@ class Cluster(Controller):
     """Sequencer configurations applied on the hardware, ``None`` if unknown."""
 
     @cached_property
-    def all_channels(self) -> dict[ChannelId, Channel]:
-        """All channels including virtual channels constructed for TWPAs.
+    def connected_channels(self) -> dict[ChannelId, Channel]:
+        """All the channels connected to the cluster, whatever their category.
+
+        :attr:`channels` only holds the ones declared for the platform, as for any
+        :class:`Controller`. Further categories of channels are added on top of them,
+        as the virtual channels constructed for the TWPAs (cf. :attr:`twpas`), possibly
+        followed by more in the future.
 
         In most situations, TWPA channels can be considered as regular ones: they have a
         Q1 sequence associated (program and waveforms), in both continuous wave (cw) and
@@ -241,7 +246,9 @@ class Cluster(Controller):
                 )
 
                 for channelid, seq in sequences_.items():
-                    slot = PortAddress.from_path(self.all_channels[channelid].path).slot
+                    slot = PortAddress.from_path(
+                        self.connected_channels[channelid].path
+                    ).slot
                     validate_sequence(
                         sequence=seq,
                         is_qrm=self._modules[slot].is_qrm_type,
@@ -319,7 +326,9 @@ class Cluster(Controller):
         for slot, chs in self._channels_by_module.items():
             module = self._modules[slot]
             ids = {id for id, _ in chs}
-            channels = {id: ch for id, ch in self.all_channels.items() if id in ids}
+            channels = {
+                id: ch for id, ch in self.connected_channels.items() if id in ids
+            }
             los = config.module.los(self._los, configs, ids)
             mixers = config.module.mixers(self._mixers, configs, ids)
             modcfg = modcfgs[slot] = config.ModuleConfig.build(
@@ -402,7 +411,7 @@ class Cluster(Controller):
                 seqcfgs[slot][idx] = config.SequencerConfig.build(
                     address,
                     ch,
-                    self.all_channels,
+                    self.connected_channels,
                     configs,
                     acquisition,
                     module.is_rf_type,
@@ -550,7 +559,7 @@ class Cluster(Controller):
         """
         addresses = {
             name: PortAddress.from_path(ch.path)
-            for name, ch in self.all_channels.items()
+            for name, ch in self.connected_channels.items()
             if name not in self._probes
         }
         return {
@@ -571,12 +580,12 @@ class Cluster(Controller):
         address the LO through the API. While the LO identifier is used
         to retrieve the configuration.
         """
-        return _iqout_reference(self.all_channels, "lo")
+        return _iqout_reference(self.connected_channels, "lo")
 
     @cached_property
     def _mixers(self) -> dict[ChannelId, str]:
         """Extract channel to mixer mapping."""
-        return _iqout_reference(self.all_channels, "mixer")
+        return _iqout_reference(self.connected_channels, "mixer")
 
     def _ifs(self, configs: Configs) -> dict[ChannelId, float]:
         """Compute the intermediate frequencies for demodulation.

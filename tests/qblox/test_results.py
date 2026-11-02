@@ -186,7 +186,7 @@ def test_cluster_intermediate_frequencies():
         "lo/0": OscillatorConfig(frequency=7.0e9, power=0),
         "1/probe": IqConfig(frequency=150e6),
     }
-    cluster = SimpleNamespace(channels=channels, all_channels=channels)
+    cluster = SimpleNamespace(channels=channels, connected_channels=channels)
     cluster._los = Cluster._los.func(cluster)
 
     frequencies = Cluster._ifs(cluster, configs)
