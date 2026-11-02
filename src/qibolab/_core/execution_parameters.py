@@ -1,6 +1,6 @@
 from enum import Enum, auto
 from math import prod
-from typing import Any, TypeVar
+from typing import Any
 
 from pydantic import Field
 from scipy.constants import nano
@@ -50,12 +50,9 @@ Maps component name to corresponding update, which in turn is a map from
 config property name that needs an update to its new value.
 """
 
-# TODO: replace with https://docs.python.org/3/reference/compound_stmts.html#type-params
-T = TypeVar("T")
-
 
 # TODO: lift for general usage in Qibolab
-def default(value: T | None, default: T) -> T:
+def default[T](value: T | None, default: T) -> T:
     """None replacement shortcut."""
     return value if value is not None else default
 

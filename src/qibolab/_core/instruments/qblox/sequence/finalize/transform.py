@@ -1,7 +1,7 @@
 from functools import reduce
 
 from ...q1asm.ast_ import Block, BlockList, Line, block_to_lines
-from .components import BlockRule, LineRule, Pipeline, State, Step
+from .components import BlockRule, LineRule, Pipeline, Step
 
 
 def _line_traverse(
@@ -27,7 +27,7 @@ def _line_traverse(
     return block_to_lines(result)
 
 
-def _block_traverse(lines: list[Line], rule: BlockRule[State]) -> list[Line]:
+def _block_traverse[State](lines: list[Line], rule: BlockRule[State]) -> list[Line]:
     state = rule.init_state()
     result: BlockList = []
 
