@@ -178,7 +178,7 @@ def test_sequencer_config_build_twpa_cw():
     address = PortAddress.from_path("8/o1")
     configs = {
         "twpa": IqConfig(frequency=6.5e9),
-        "twpa/lo": OscillatorConfig(frequency=6.5e9, power=10.0),
+        "twpa/lo": OscillatorConfig(frequency=6.5e9, power=-10.0),
     }
 
     seq = Q1Sequence.cw()
@@ -213,7 +213,7 @@ def test_sequencer_config_build_twpa_with_mixer():
     address = PortAddress.from_path("8/o1")
     configs = {
         "twpa": IqConfig(frequency=6.5e9),
-        "twpa/lo": OscillatorConfig(frequency=6.5e9, power=10.0),
+        "twpa/lo": OscillatorConfig(frequency=6.5e9, power=-10.0),
         "mixer2": MixerOffsetConfig(offset_i=0.01, offset_q=-0.02),
     }
 
@@ -255,7 +255,7 @@ def test_sequencer_config_build_twpa_swept():
     address = PortAddress.from_path("8/o1")
     configs = {
         "twpa": IqConfig(frequency=6.5e9, scale_q=0.9, phase_q=0.1),
-        "twpa/lo": OscillatorConfig(frequency=6.5e9, power=10.0),
+        "twpa/lo": OscillatorConfig(frequency=6.5e9, power=-10.0),
     }
 
     options = ExecutionParameters(nshots=10, relaxation_time=1000)
@@ -379,11 +379,15 @@ def test_twpa_attenuation_and_offset():
     assert att == 10
     assert np.isclose(offset, 10.0 ** (-1.5 / 20.0))
 
-    # Backwards-compatibility with positive power values
-    assert twpa_attenuation_and_offset(10.0) == (10, 1.0)
-    att, offset = twpa_attenuation_and_offset(5.0)
-    assert att == 4
-    assert np.isclose(offset, 10.0 ** (-1.0 / 20.0))
+    # Beyond the maximum attenuation, the offset applies the whole remainder
+    att, offset = twpa_attenuation_and_offset(-70.0)
+    assert att == 60
+    assert np.isclose(offset, 10.0 ** (-10.0 / 20.0))
+
+
+def test_twpa_attenuation_and_offset_above_full_scale():
+    with pytest.warns(UserWarning, match="exceeds the full scale"):
+        assert twpa_attenuation_and_offset(5.0) == (0, 1.0)
 
 
 def test_port_config_twpa_attenuation():
