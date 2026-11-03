@@ -60,11 +60,14 @@ def demodulate(
 
     The role of the arguments is the same of the corresponding ones in :func:`modulate`,
     which is essentially the inverse of this function.
+
+    Samples are on the last axis, so that a batch of traces of shape ``(2, ..., samples)``
+    can be demodulated at once.
     """
     # in case the offsets have not been removed in hardware
-    modulated = modulated - np.mean(modulated, axis=1, keepdims=True)
+    modulated = modulated - np.mean(modulated, axis=-1, keepdims=True)
 
-    samples = np.arange(modulated.shape[1])
+    samples = np.arange(modulated.shape[-1])
     phases = (2 * np.pi * freq / rate) * samples
     cos = np.cos(phases)
     sin = np.sin(phases)
@@ -72,4 +75,4 @@ def demodulate(
 
     # the normalization is related to `demod`, but only applied at the end for the sake
     # of performances
-    return np.sqrt(2) * np.einsum("ijt,jt->it", demod, modulated)
+    return np.sqrt(2) * np.einsum("ijt,j...t->i...t", demod, modulated)

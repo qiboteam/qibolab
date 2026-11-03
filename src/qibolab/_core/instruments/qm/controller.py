@@ -6,6 +6,7 @@ from dataclasses import asdict, dataclass
 from os import PathLike
 from pathlib import Path
 
+import scipy.constants
 from pydantic import Field
 from qm import QmPendingJob, QuantumMachine, QuantumMachinesManager, generate_qua_script
 from qm.api.v2.qm_api_old import QmApiWithDeprecations
@@ -576,7 +577,13 @@ class QmController(Controller):
                 acquisition = acquisitions[(op, channel_id)]
             else:
                 acquisition = acquisitions[(op, channel_id)] = create_acquisition(
-                    op, channel_id, options, acq_config.threshold, acq_config.iq_angle
+                    op,
+                    channel_id,
+                    options,
+                    acq_config.threshold,
+                    acq_config.iq_angle,
+                    self.config.elements[channel_id].intermediate_frequency,
+                    self.sampling_rate * scipy.constants.giga,
                 )
             acquisition.keys.append(readout.acquisition.id)
 
