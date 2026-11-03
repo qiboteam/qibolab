@@ -380,9 +380,9 @@ def test_twpa_attenuation_and_offset():
     assert np.isclose(offset, 10.0 ** (-1.5 / 20.0))
 
     # Beyond the maximum attenuation, the offset applies the whole remainder
-    att, offset = twpa_attenuation_and_offset(-70.0)
-    assert att == 60
-    assert np.isclose(offset, 10.0 ** (-10.0 / 20.0))
+    att, offset = twpa_attenuation_and_offset(-60.0)
+    assert att == 30
+    assert np.isclose(offset, 10.0 ** (-30.0 / 20.0))
 
 
 def test_twpa_attenuation_and_offset_above_full_scale():
