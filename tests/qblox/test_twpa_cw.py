@@ -23,6 +23,7 @@ from qibolab._core.instruments.qblox.q1asm.ast_ import (
     WaitSync,
 )
 from qibolab._core.instruments.qblox.sequence import Q1Sequence, compile
+from qibolab._core.instruments.qblox.sequence.asm import Registers
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import Parameter, Sweeper
 
@@ -112,8 +113,13 @@ def test_q1sequence_from_twpa_offset_swept():
     assert not any(
         isinstance(ins, Wait) and ins.duration == 100_000 for ins in instructions
     )
-    assert any(isinstance(ins, SetAwgOffs) for ins in instructions)
     assert any(isinstance(ins, Loop) for ins in instructions)
+    # the swept offset drives the first path only, as the static offset, such that the
+    # pump amplitude is the same in both modes
+    offsets = [ins for ins in instructions if isinstance(ins, SetAwgOffs)]
+    assert len(offsets) > 0
+    assert all(ins.value_1 == Registers.zero.value for ins in offsets)
+    assert all(ins.value_0 != Registers.zero.value for ins in offsets)
 
 
 # ---------------------------------------------------------------------------

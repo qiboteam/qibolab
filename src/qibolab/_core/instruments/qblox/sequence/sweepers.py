@@ -299,11 +299,23 @@ class _Update(Model):
     reset: Callable[[Value], Instruction] | None
 
 
+def _set_offset(value: Value) -> SetAwgOffs:
+    r"""Set the offset on the first path only.
+
+    As for the static offsets, and the rectangular pulses synthesized through offsets.
+    Setting it on both paths would instead result, on IQ channels, in a tone of
+    amplitude :math:`\sqrt{2}` times the offset, after modulation.
+
+    The second path is zeroed with an operand of the same kind, as required by
+    ``set_awg_offs``.
+    """
+    zero = Registers.zero.value if isinstance(value, Register) else 0
+    return SetAwgOffs(value_0=value, value_1=zero)
+
+
 _SWEEP_UPDATE: dict[Parameter, _Update] = {
     Parameter.frequency: _Update(update=lambda v: SetFreq(value=v), reset=None),
-    Parameter.offset: _Update(
-        update=lambda v: SetAwgOffs(value_0=v, value_1=v), reset=None
-    ),
+    Parameter.offset: _Update(update=_set_offset, reset=None),
     Parameter.amplitude: _Update(
         update=lambda v: SetAwgGain(value_0=v, value_1=v),
         reset=lambda _: SetAwgGain(
