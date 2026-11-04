@@ -172,6 +172,7 @@ class Cluster(Controller):
         # hardware-dependent caches, possibly changed on reconnection
         self.__dict__.pop("_modules", None)
         self.__dict__.pop("_twpa_max_attenuations", None)
+        self.__dict__.pop("_probe_latencies", None)
         self._applied_seqcfgs = None
 
     def _set_dc_offsets_to_0(self) -> None:
@@ -226,12 +227,18 @@ class Cluster(Controller):
             },
         )
 
-        batched_seqs = _batch_sequences(
-            processed_sequences, sweepers_, options, qcm_channels, qrm_channels, configs
-        )
-
-        # configure the modules
+        # configure the modules (before self._probe_latencies)
         self._configure_modules(configs)
+
+        batched_seqs = _batch_sequences(
+            processed_sequences,
+            sweepers_,
+            options,
+            qcm_channels,
+            qrm_channels,
+            configs,
+            self._probe_latencies,
+        )
 
         # compute intermediate values for the experiment, such as expected frequencies
         ifs_dict = (
@@ -665,6 +672,27 @@ class Cluster(Controller):
             frequencies[ch] = cast(IqConfig, configs[probe]).frequency - lo_freq
         return frequencies
 
+    @cached_property
+    def _probe_latencies(self) -> dict[ChannelId, int]:
+        """Retrieve the output latency of the probe of each acquisition channel.
+
+        Latencies are reported by the instrument in seconds, and converted to ns.
+
+        They only depend on the filters configuration, which is fixed for probes (cf.
+        :meth:`config.PortConfig.build`). But they have to be first retrieved after the
+        modules configuration, which sets it.
+        """
+        latencies = {}
+        for ch, channel in self.channels.items():
+            if not isinstance(channel, AcquisitionChannel) or channel.probe is None:
+                continue
+
+            address = PortAddress.from_path(self.channels[channel.probe].path)
+            module = self._modules[address.slot]
+            latency = module.parameters[f"out{address.ports[0] - 1}_latency"]()
+            latencies[ch] = round(latency * scipy.constants.giga)
+        return latencies
+
 
 def _iqout_reference(
     channels: dict[ChannelId, Channel], name: str
@@ -696,7 +724,9 @@ def _compute_duration(
     return options.estimate_duration([ps], sweepers, wait_sync_duration)
 
 
-def _add_time_of_flight(sequence: PulseSequence, configs: Configs) -> PulseSequence:
+def _add_time_of_flight(
+    sequence: PulseSequence, configs: Configs, latencies: dict[ChannelId, int]
+) -> PulseSequence:
     return PulseSequence(
         [
             (
@@ -704,7 +734,9 @@ def _add_time_of_flight(sequence: PulseSequence, configs: Configs) -> PulseSeque
                 ev
                 if not isinstance(ev, Readout)
                 else ev.model_copy(
-                    update={"time_of_flight": time_of_flight(configs[ch])}
+                    update={
+                        "time_of_flight": time_of_flight(configs[ch], latencies[ch])
+                    }
                 ),
             )
             for ch, ev in sequence
@@ -719,6 +751,7 @@ def _batch_sequences(
     qcm_channels: set[ChannelId],
     qrm_channels: set[ChannelId],
     configs: Configs,
+    latencies: dict[ChannelId, int],
 ) -> list[PulseSequence]:
     batched_seqs = (
         batch_sequences_by_cluster_memory_limits(
@@ -727,7 +760,10 @@ def _batch_sequences(
         if options.acquisition_type is not AcquisitionType.RAW
         else sequences
     )
-    return [_add_time_of_flight(b, configs).align_to_delays() for b in batched_seqs]
+    return [
+        _add_time_of_flight(b, configs, latencies).align_to_delays()
+        for b in batched_seqs
+    ]
 
 
 def _merge_phases_if_no_phase_sweeper(
