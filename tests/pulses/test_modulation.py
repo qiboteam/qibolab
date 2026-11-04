@@ -70,3 +70,10 @@ def test_demodulation():
 
     demod1 = demodulate(mod + np.ones_like(mod), freq, rate)
     np.testing.assert_allclose(demod1, demod)
+
+    # batches of traces, with samples on the last axis
+    batch = np.stack([mod, 2 * mod, 3 * mod], axis=1)
+    demod2 = demodulate(batch, freq, rate)
+    assert demod2.shape == batch.shape
+    for k in range(batch.shape[1]):
+        np.testing.assert_allclose(demod2[:, k], (k + 1) * demod)

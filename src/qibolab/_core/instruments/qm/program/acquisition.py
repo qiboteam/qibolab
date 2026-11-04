@@ -12,6 +12,7 @@ from qibolab._core.execution_parameters import (
     ExecutionParameters,
 )
 from qibolab._core.identifier import ChannelId
+from qibolab._core.pulses.modulation import demodulate
 
 
 def _collect(i, q, npulses):
@@ -113,6 +114,10 @@ def assign_variables_to_element(element, *variables):
 class RawAcquisition(Acquisition):
     """QUA variables used for raw waveform acquisition."""
 
+    intermediate_frequency: float = 0.0
+    """Frequency used to demodulate the raw trace to baseband, in Hz."""
+    sampling_rate: float = 1e9
+    """Sampling rate of the raw trace, in Hz."""
     adc_stream: _ResultSource | None = None
     """Stream to collect raw ADC data."""
 
@@ -135,8 +140,13 @@ class RawAcquisition(Acquisition):
     def fetch(self, handles):
         ires = handles.get(f"{self.name}_I").fetch_all()
         qres = handles.get(f"{self.name}_Q").fetch_all()
-        # convert raw ADC signal to volts
-        signal = _collect(raw_to_volts(ires), raw_to_volts(qres), self.npulses)
+        # convert raw ADC signal to volts, and demodulate to baseband
+        i, q = demodulate(
+            raw_to_volts(np.stack([ires, qres])),
+            self.intermediate_frequency,
+            self.sampling_rate,
+        )
+        signal = _collect(i, q, self.npulses)
         return _split(signal, self.npulses)
 
 
@@ -264,6 +274,8 @@ def create_acquisition(
     options: ExecutionParameters,
     threshold: float,
     angle: float,
+    intermediate_frequency: float = 0.0,
+    sampling_rate: float = 1e9,
 ) -> Acquisition:
     """Create container for the variables used for saving acquisition in the
     QUA program.
@@ -275,6 +287,11 @@ def create_acquisition(
     kwargs = {}
     if options.acquisition_type is AcquisitionType.DISCRIMINATION:
         kwargs = {"threshold": threshold, "angle": angle}
+    elif options.acquisition_type is AcquisitionType.RAW:
+        kwargs = {
+            "intermediate_frequency": intermediate_frequency,
+            "sampling_rate": sampling_rate,
+        }
     acquisition = ACQUISITION_TYPES[options.acquisition_type](
         operation, element, average, **kwargs
     )
