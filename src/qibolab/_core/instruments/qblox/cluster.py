@@ -42,7 +42,7 @@ from .utils import (
     batch_shots,
     concat_shots,
     lo_configs,
-    time_of_flights,
+    time_of_flight,
 )
 from .validate import (
     assert_channels_exclusion,
@@ -74,14 +74,15 @@ def _compute_duration(
 
 
 def _add_time_of_flight(sequence: PulseSequence, configs: Configs) -> PulseSequence:
-    time_of_flights_ = time_of_flights(configs)
     return PulseSequence(
         [
             (
                 ch,
                 ev
                 if not isinstance(ev, Readout)
-                else ev.model_copy(update={"time_of_flight": time_of_flights_[ch]}),
+                else ev.model_copy(
+                    update={"time_of_flight": time_of_flight(configs[ch])}
+                ),
             )
             for ch, ev in sequence
         ]
