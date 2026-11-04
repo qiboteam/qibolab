@@ -1,21 +1,18 @@
 from collections.abc import Callable
-from typing import Generic, TypeAlias, TypeVar
 
 from qibolab._core.serialize import Model
 
 from ...q1asm.ast_ import Block, Line
 
-State = TypeVar("State")
-"""Generic carried-on state."""
-Match: TypeAlias = Callable[[Line, State], tuple[bool, State]]
+type Match[State] = Callable[[Line, State], tuple[bool, State]]
 """Matching condition."""
-LineMap: TypeAlias = Callable[[Line, State], tuple[Block, State]]
+type LineMap[State] = Callable[[Line, State], tuple[Block, State]]
 """Transformation acting on individual lines."""
-BlockMap: TypeAlias = Callable[[list[Line], State], tuple[Block, State]]
+type BlockMap[State] = Callable[[list[Line], State], tuple[Block, State]]
 """Transformation acting on a block of instructions."""
 
 
-class LineRule(Model, Generic[State]):
+class LineRule[State](Model):
     """Line-matching transformation.
 
     ``init_state`` creates fresh state for each traversal. For every input line,
@@ -45,7 +42,7 @@ class LineRule(Model, Generic[State]):
         return annotated, state
 
 
-class BlockRule(Model, Generic[State]):
+class BlockRule[State](Model):
     """Block-matching transformation.
 
     ``init_state`` creates fresh state for each traversal. Outside a block, ``start``
@@ -74,7 +71,7 @@ class BlockRule(Model, Generic[State]):
     "The transformation applied."
 
 
-Step: TypeAlias = tuple[LineRule, ...] | LineRule | BlockRule
+type Step = tuple[LineRule, ...] | LineRule | BlockRule
 """Transformation step.
 
 It is supposed to iterate through the entire set of instructions exactly once.
@@ -106,7 +103,7 @@ This avoids ambiguity between overlapping blocks or competing block rules.
 """
 
 
-Pipeline: TypeAlias = tuple[Step, ...]
+type Pipeline = tuple[Step, ...]
 """Series of transformation from Q1ASM-like code into executable.
 
 A pipeline is transforming a possibly internal extension of Q1ASM into a different one.
