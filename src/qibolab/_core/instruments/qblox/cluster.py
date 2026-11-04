@@ -292,7 +292,8 @@ class Cluster(Controller):
                 # process raw results to adhere to standard format
                 lengths = (
                     integration_lengths(sequences_, sequencers, self._modules)
-                    if options_.acquisition_type is AcquisitionType.INTEGRATION
+                    if options_.acquisition_type
+                    in (AcquisitionType.INTEGRATION, AcquisitionType.RAW)
                     else {}
                 )
                 psres.append(
