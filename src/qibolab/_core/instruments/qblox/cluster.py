@@ -46,7 +46,6 @@ from .utils import (
 )
 from .validate import (
     assert_channels_exclusion,
-    validate_raw_duration,
     validate_raw_options,
     validate_sequence,
 )
@@ -219,7 +218,6 @@ class Cluster(Controller):
         """Execute the given experiment."""
 
         validate_raw_options(options, sweepers)
-        validate_raw_duration(sequences, options)
         self.reset()
 
         processed_sequences, phase_sweeper_present = _merge_phases_if_no_phase_sweeper(
