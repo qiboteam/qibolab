@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="570" viewBox="0 0 760 570" role="img" aria-labelledby="title desc">
+  <title id="title">From a Qibo circuit to measurement outcomes</title>
+  <desc id="desc">Outside the Qibolab backend, Qibo transpilation places logical qubits, routes interactions, and rewrites gates. Inside the backend, compilation uses platform natives to produce a timed channel sequence and measurement map; execution produces acquisition arrays; result bookkeeping maps acquisition IDs to circuit measurement gates and returns measured bits and frequencies, not a quantum state.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0 1 L8 5 L0 9" fill="none" stroke="#526078" stroke-width="1.5"/></marker>
+  </defs>
+  <rect width="760" height="570" rx="12" fill="#fff"/>
+  <g font-family="sans-serif" font-size="17" fill="#243047">
+    <text x="380" y="30" text-anchor="middle" font-size="21" font-weight="bold">General Qibo circuit</text>
+    <path d="M380 40 V60" stroke="#526078" stroke-width="2" marker-end="url(#arrow)"/>
+    <rect x="130" y="66" width="500" height="76" rx="9" fill="#f4f5f8" stroke="#526078"/>
+    <text x="380" y="96" text-anchor="middle" font-size="21" font-weight="bold">Qibo transpilation pipeline</text>
+    <text x="380" y="122" text-anchor="middle">Placement + routing + rewriting into supported gates</text>
+    <rect x="24" y="181" width="712" height="365" rx="12" fill="#faf7ff" stroke="#7145bd" stroke-dasharray="6 4"/>
+    <path d="M380 142 V227" stroke="#526078" stroke-width="2" marker-end="url(#arrow)"/>
+    <text x="395" y="170">Compatible circuit</text>
+    <text x="46" y="214" font-size="20" font-weight="bold">Qibolab backend</text>
+    <rect x="130" y="233" width="500" height="76" rx="9" fill="#f0eaff" stroke="#7145bd"/>
+    <text x="380" y="263" text-anchor="middle" font-size="21" font-weight="bold">Compilation using platform natives</text>
+    <text x="380" y="289" text-anchor="middle">Timed channel sequence + measurement map</text>
+    <path d="M380 309 V336" stroke="#526078" stroke-width="2" marker-end="url(#arrow)"/>
+    <rect x="130" y="342" width="500" height="76" rx="9" fill="#e8f4fa" stroke="#387c99"/>
+    <text x="380" y="372" text-anchor="middle" font-size="21" font-weight="bold">Platform execution</text>
+    <text x="380" y="398" text-anchor="middle">Acquisition ID &#8594; result array</text>
+    <path d="M380 418 V445" stroke="#526078" stroke-width="2" marker-end="url(#arrow)"/>
+    <rect x="130" y="451" width="500" height="76" rx="9" fill="#f4f5f8" stroke="#526078"/>
+    <text x="380" y="481" text-anchor="middle" font-size="21" font-weight="bold">Measurement bookkeeping</text>
+    <text x="380" y="507" text-anchor="middle">Measured bits and frequencies, not a quantum state</text>
+  </g>
+</svg>

@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="370" viewBox="0 0 760 370" role="img" aria-labelledby="title desc">
+  <title id="title">The tutorial circuit measures only wires zero and two</title>
+  <desc id="desc">Default wire names map logical wires 0, 1, 2 to physical qubits 0, 1, 2. GPI2 acts on 0 with phi pi over 2, then CZ connects 0 and 2, then M measures 0 and 2. Wire 1 has no gates or measurement. The sample array has 128 shot rows and columns in measured order: wire 0, then wire 2. Gate widths do not indicate pulse duration.</desc>
+  <rect width="760" height="370" rx="12" fill="#fff"/>
+  <g font-family="sans-serif" font-size="17" fill="#243047">
+    <text x="28" y="33" font-size="21" font-weight="bold">Logical wires = physical IDs in this example</text>
+    <text x="28" y="96">0</text><text x="28" y="156">1</text><text x="28" y="216">2</text>
+    <path d="M65 90 H710 M65 150 H710 M65 210 H710" stroke="#526078" stroke-width="2"/>
+    <rect x="130" y="65" width="145" height="50" rx="5" fill="#f0eaff" stroke="#7145bd"/>
+    <text x="202" y="86" text-anchor="middle" font-weight="bold">GPI2</text><text x="202" y="107" text-anchor="middle" font-size="16">&#966; = &#960;/2</text>
+    <path d="M390 90 V210" stroke="#7145bd" stroke-width="3"/>
+    <g fill="#7145bd"><circle cx="390" cy="90" r="8"/><circle cx="390" cy="210" r="8"/></g>
+    <text x="405" y="134" font-weight="bold">CZ</text>
+    <g fill="#e8f4fa" stroke="#387c99"><rect x="535" y="65" width="65" height="50" rx="5"/><rect x="535" y="185" width="65" height="50" rx="5"/></g>
+    <text x="567" y="97" text-anchor="middle" font-weight="bold">M</text><text x="567" y="217" text-anchor="middle" font-weight="bold">M</text>
+    <text x="455" y="170" font-size="16">Wire 1 stays unmeasured</text>
+    <path d="M615 90 H652 V278 M615 210 H692 V278" fill="none" stroke="#387c99" stroke-width="2" stroke-dasharray="5 4"/>
+    <rect x="28" y="278" width="704" height="68" rx="9" fill="#f4f5f8" stroke="#526078"/>
+    <text x="48" y="307" font-weight="bold">samples.shape = (128, 2)</text>
+    <text x="48" y="331" font-size="16">One row per shot; no column for wire 1</text>
+    <text x="449" y="305" font-size="16">Column</text><text x="449" y="333" font-size="16">Wire</text>
+    <text x="652" y="305" text-anchor="middle" font-weight="bold">0</text><text x="692" y="305" text-anchor="middle" font-weight="bold">1</text>
+    <text x="652" y="333" text-anchor="middle">0</text><text x="692" y="333" text-anchor="middle">2</text>
+  </g>
+</svg>

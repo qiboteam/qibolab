@@ -33,6 +33,7 @@ class _PulseLike(Model):
         return self.id_
 
     def new(self) -> "PulseLike":
+        """Return a deep copy with a fresh instruction identifier."""
         return cast(PulseLike, self.model_copy(deep=True, update={"id_": uuid4()}))
 
     def __eq__(self, other: object) -> bool:
@@ -178,6 +179,7 @@ class Readout(_PulseLike):
         return self.acquisition.id
 
     def new(self) -> "PulseLike":
+        """Copy the readout with fresh readout, acquisition, and probe identifiers."""
         return cast(
             PulseLike,
             self.model_copy(
