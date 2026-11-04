@@ -46,7 +46,6 @@ from .utils import (
 )
 from .validate import (
     assert_channels_exclusion,
-    validate_raw_duration,
     validate_raw_options,
     validate_sequence,
 )
@@ -219,7 +218,6 @@ class Cluster(Controller):
         """Execute the given experiment."""
 
         validate_raw_options(options, sweepers)
-        validate_raw_duration(sequences, options)
         self.reset()
 
         processed_sequences, phase_sweeper_present = _merge_phases_if_no_phase_sweeper(
@@ -311,7 +309,8 @@ class Cluster(Controller):
                 # process raw results to adhere to standard format
                 lengths = (
                     integration_lengths(sequences_, sequencers, self._modules)
-                    if options_.acquisition_type is AcquisitionType.INTEGRATION
+                    if options_.acquisition_type
+                    in (AcquisitionType.INTEGRATION, AcquisitionType.RAW)
                     else {}
                 )
                 psres.append(
