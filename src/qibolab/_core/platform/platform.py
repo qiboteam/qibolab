@@ -308,13 +308,15 @@ class Platform:
         """Dump platform."""
         (path / PARAMETERS).write_text(self.parameters.model_dump_json(indent=4))
 
-    def _element(self, qubit: QubitId, coupler: bool = False) -> tuple[QubitId, Qubit]:
+    def _element(
+        self, element: QubitId, coupler: bool = False
+    ) -> tuple[QubitId, Qubit]:
         elements = self.qubits if not coupler else self.couplers
         try:
-            return qubit, elements[qubit]
+            return element, elements[element]
         except KeyError:
-            assert isinstance(qubit, int)
-            return list(self.qubits.items())[qubit]
+            assert isinstance(element, int)
+            return list(elements.items())[element]
 
     def qubit(self, qubit: QubitId) -> tuple[QubitId, Qubit]:
         """Retrieve physical qubit name and object.

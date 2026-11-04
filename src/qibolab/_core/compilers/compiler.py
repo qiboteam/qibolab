@@ -157,7 +157,7 @@ class Compiler:
         end = start + gate_seq.duration
         final = PulseSequence()
         for q in gate.qubits:
-            qubit = platform.qubit(q)[1]
+            qubit = platform.qubit(wire_names[q])[1]
             # all actual qubits have a non-null drive channel, and couplers are not
             # explicitedly listed in gates
             assert qubit.drive is not None
