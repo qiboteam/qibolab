@@ -162,8 +162,7 @@
                                 },
                                 "relative_phase": 0.0,
                                 "chirp": null
-                            },
-                            "time_of_flight": 0.0
+                            }
                         }
                     ]
                 ],
@@ -238,8 +237,7 @@
                                 },
                                 "relative_phase": 0.0,
                                 "chirp": null
-                            },
-                            "time_of_flight": 0.0
+                            }
                         }
                     ]
                 ],
