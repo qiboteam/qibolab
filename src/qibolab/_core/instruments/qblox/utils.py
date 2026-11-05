@@ -86,20 +86,18 @@ def lo_configs(
 
 
 def time_of_flight(config: Config, latency: int) -> float:
-    """Extract time of flight configuration.
+    """Extract time of flight.
 
-    The delay has to be an integer number of nanoseconds, of at least 4 ns, since it
-    becomes the duration of a Q1 instruction.
-
-    The ``latency`` of the probe output, in ns, is supplemented, to account for the
-    extra delay caused by pre-distortion filters, and consequent delay compensations.
-    Cf.
+    The ``latency`` of the probe output, in ns, is supplemented to the configured
+    delay, to account for the extra delay caused by pre-distortion filters, and
+    consequent delay compensations. Cf.
     https://docs.qblox.com/en/v0.17.1/cluster/real_time_predistortions.html#bypasses-and-delays
     """
     assert isinstance(config, AcquisitionConfig)
-    if config.delay < 4 or not float(config.delay).is_integer():
+    tof = config.delay + latency
+    if tof < 4 or not float(tof).is_integer():
         raise ValueError(
-            f"Acquisition delay must be an integer number of ns, of at least 4 ns: "
-            f"{config.delay}."
+            "Acquisition time of flight (delay + probe latency) must be an integer "
+            f"number of ns, of at least 4 ns: {tof}."
         )
-    return config.delay + latency
+    return tof
