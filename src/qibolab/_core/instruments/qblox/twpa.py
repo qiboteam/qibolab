@@ -27,7 +27,9 @@ def twpa_attenuation_and_offset(
 
     Follows the standard Qibolab convention, where the power is the opposite of the
     attenuation, relative to the full scale of the port (thus ``power <= 0``).
-    The port attenuation is the largest even integer not exceeding the target one, and
+    The port attenuation is the largest even integer not exceeding the target one, since
+    it is programmable in 2 dB steps (cf. `QCM-RF II
+    <https://docs.qblox.com/en/main/products/architecture/modules/qcm_rf.html>`_), and
     the remainder is applied by the offset, ensuring ``offset <= 1``.
 
     The port attenuation is clamped to its available range, up to ``max_attenuation``
@@ -49,5 +51,6 @@ def twpa_attenuation_and_offset(
     target_att = max(-power, 0)
     att = min(int(target_att // 2) * 2, max_attenuation)
     delta = target_att - att
+    # a change in amplitude by a factor of 10 corresponds to a 20 dB change in level
     offset = float(10.0 ** (-delta / 20.0))
     return att, offset

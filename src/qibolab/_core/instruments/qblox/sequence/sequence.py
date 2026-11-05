@@ -135,6 +135,12 @@ class Q1Sequence(Model):
         duration: float,
         offset: float = 1.0,
     ) -> "Q1Sequence":
+        """Sweep a TWPA pump, synchronized with the other sequencers.
+
+        The swept offsets are scaled by ``offset``, applying the remainder of the pump
+        power beyond its port attenuation (cf.
+        :func:`~qibolab._core.instruments.qblox.twpa.twpa_attenuation_and_offset`).
+        """
         duration_samples = int(duration * sampling_rate)
         _, sweepers_ = _apply_sampling_rate([], sweepers, sampling_rate)
         if offset != 1.0:
