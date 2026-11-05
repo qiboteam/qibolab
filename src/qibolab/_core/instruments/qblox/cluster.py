@@ -321,6 +321,7 @@ class Cluster(Controller):
                 los,
                 mixers,
                 is_qcm_non_rf_type=module.is_qcm_type and not module.is_rf_type,
+                twpas=self.twpas,
             )
             modcfg.apply(module)
         # `ModuleConfig.apply` disconnects all sequencers

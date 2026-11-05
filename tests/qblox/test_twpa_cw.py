@@ -11,6 +11,7 @@ from qibolab._core.components import (
 )
 from qibolab._core.execution_parameters import AcquisitionType, ExecutionParameters
 from qibolab._core.instruments.qblox.cluster import Cluster
+from qibolab._core.instruments.qblox.config.module import ModuleConfig
 from qibolab._core.instruments.qblox.config.port import PortAddress, PortConfig
 from qibolab._core.instruments.qblox.config.sequencer import SequencerConfig
 from qibolab._core.instruments.qblox.q1asm.ast_ import (
@@ -390,40 +391,51 @@ def test_twpa_attenuation_and_offset_above_full_scale():
         assert twpa_attenuation_and_offset(5.0) == (0, 1.0)
 
 
-def test_port_config_twpa_attenuation():
-    ch = IqChannel(path="8/o1")
-    p1 = PortConfig.build(
-        channel=ch,
-        config=OscillatorConfig(frequency=6.5e9, power=-10.0),
+def _port_att(power: float, twpa: bool) -> int | None:
+    return PortConfig.build(
+        channel=IqChannel(path="8/o1"),
+        config=IqConfig(frequency=6.5e9),
         in_=False,
         out=True,
-        lo=OscillatorConfig(frequency=6.5e9, power=-10.0),
+        lo=OscillatorConfig(frequency=6.5e9, power=power),
         mixer=None,
         is_qcm_non_rf_type=False,
-    )
-    assert p1.att == 10
+        twpa=twpa,
+    ).att
 
-    p2 = PortConfig.build(
-        channel=ch,
-        config=OscillatorConfig(frequency=6.5e9, power=-5.0),
-        in_=False,
-        out=True,
-        lo=OscillatorConfig(frequency=6.5e9, power=-5.0),
-        mixer=None,
-        is_qcm_non_rf_type=False,
-    )
-    assert p2.att == 4
 
-    p3 = PortConfig.build(
-        channel=ch,
-        config=OscillatorConfig(frequency=6.5e9, power=-11.5),
-        in_=False,
-        out=True,
-        lo=OscillatorConfig(frequency=6.5e9, power=-11.5),
-        mixer=None,
-        is_qcm_non_rf_type=False,
+@pytest.mark.parametrize(
+    "power, att", [(-10.0, 10), (-5.0, 4), (-11.5, 10), (-34.0, 30), (-60.0, 30)]
+)
+def test_port_config_twpa_attenuation(power, att):
+    """TWPA ports leave the remainder to the AWG offset, within the assumed range."""
+    assert _port_att(power, twpa=True) == att
+
+
+@pytest.mark.parametrize("power, att", [(-10.0, 10), (-5.0, 5), (-34.0, 34)])
+def test_port_config_attenuation(power, att):
+    """Other ports apply the whole attenuation, unaffected by the TWPA splitting."""
+    assert _port_att(power, twpa=False) == att
+
+
+def test_module_config_twpa_attenuation():
+    """Only the ports of TWPA channels are marked, within a module."""
+    channels = {
+        "drive": IqChannel(path="8/o1", lo="drive/lo"),
+        "twpa": IqChannel(path="8/o2", lo="twpa/lo"),
+    }
+    configs = {
+        "drive": IqConfig(frequency=6e9),
+        "drive/lo": OscillatorConfig(frequency=6e9, power=-35.0),
+        "twpa": IqConfig(frequency=8e9),
+        "twpa/lo": OscillatorConfig(frequency=8e9, power=-35.0),
+    }
+    los = {id: configs[f"{id}/lo"] for id in channels}
+    modcfg = ModuleConfig.build(
+        channels, configs, los, {}, is_qcm_non_rf_type=False, twpas={"twpa"}
     )
-    assert p3.att == 10
+    assert modcfg.ports["out0_att"] == 35
+    assert modcfg.ports["out1_att"] == 30
 
 
 def test_sequencer_config_build_twpa_arbitrary_power_cw():

@@ -1,3 +1,4 @@
+from collections.abc import Collection
 from enum import Flag, auto
 from typing import Annotated, Any, Literal, cast
 
@@ -89,6 +90,7 @@ class ModuleConfig(Model):
         los: dict[ChannelId, OscillatorConfig],
         mixers: dict[ChannelId, MixerOffsetConfig],
         is_qcm_non_rf_type: bool,
+        twpas: Collection[ChannelId] = (),
     ) -> "ModuleConfig":
         # generate port configurations as a dictionary
         def portconfig(*args, **kwargs) -> tuple[str, port.StrDict]:
@@ -123,6 +125,7 @@ class ModuleConfig(Model):
                     out=out,
                     lo=los.get(id),
                     mixer=mixers.get(id),
+                    twpa=id in twpas,
                 )
                 # scrape all channels for port configurations
                 for id, ch in all_channels
