@@ -70,7 +70,7 @@ def _compute_duration(
     # It should be checked with Qblox if the sync time can indeed be of the
     # order of 900 ns.
     wait_sync_duration = 900
-    return options.estimate_duration([ps], sweepers, wait_sync_duration)
+    return options.estimate_duration([ps], sweepers, overhead=wait_sync_duration)
 
 
 def _add_time_of_flight(
