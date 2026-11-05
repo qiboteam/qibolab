@@ -108,14 +108,18 @@ class ExecutionParameters(Model):
         self,
         sequences: list[PulseSequence],
         sweepers: list[ParallelSweepers],
-        time_of_flight: float = 0.0,
+        overhead: float = 0.0,
     ) -> float:
-        """Estimate experiment duration."""
+        """Estimate experiment duration.
+
+        ``overhead`` is an additional fixed time per shot, in ns, not represented in the
+        sequences.
+        """
         duration = sum(seq.duration for seq in sequences)
         relaxation = default(self.relaxation_time, 0)
         nshots = default(self.nshots, 0)
         return (
-            (duration + len(sequences) * relaxation + time_of_flight)
+            (duration + len(sequences) * relaxation + overhead)
             * nshots
             * nano
             * prod(iteration_length(s) for s in sweepers)
