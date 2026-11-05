@@ -86,7 +86,7 @@ def lo_configs(
 
 
 def time_of_flight(config: Config, latency: int) -> float:
-    """Extract time of flight.
+    """Compute the time of flight of an acquisition.
 
     The ``latency`` of the probe output, in ns, is supplemented to the configured
     delay, to account for the extra delay caused by pre-distortion filters, and
@@ -98,6 +98,7 @@ def time_of_flight(config: Config, latency: int) -> float:
     if tof < 4 or not float(tof).is_integer():
         raise ValueError(
             "Acquisition time of flight (delay + probe latency) must be an integer "
-            f"number of ns, of at least 4 ns: {tof}."
+            "number of ns, of at least 4, since it becomes the duration of a Q1 "
+            f"instruction. Instead found {tof}."
         )
     return tof
