@@ -3,7 +3,12 @@ from typing import cast
 
 import numpy as np
 
-from qibolab._core.components import AcquisitionConfig, Configs, OscillatorConfig
+from qibolab._core.components import (
+    AcquisitionConfig,
+    Config,
+    Configs,
+    OscillatorConfig,
+)
 from qibolab._core.execution_parameters import AveragingMode, ExecutionParameters
 from qibolab._core.identifier import ChannelId, Result
 from qibolab._core.pulses import Acquisition, Readout
@@ -80,15 +85,20 @@ def lo_configs(
     return {ch: cast(OscillatorConfig, configs[lo]) for ch, lo in los.items()}
 
 
-def time_of_flights(configs: Configs) -> dict[ChannelId, float]:
-    """Extract time of flights configurations.
+def time_of_flight(config: Config, latency: int) -> float:
+    """Compute the time of flight of an acquisition.
 
-    An additional 340 ns are supplemented, to account for the extra delay caused by
-    usage of all pre-distortion filters, and consequent delay compensations. Cf.
+    The ``latency`` of the probe output, in ns, is supplemented to the configured
+    delay, to account for the extra delay caused by pre-distortion filters, and
+    consequent delay compensations. Cf.
     https://docs.qblox.com/en/v0.17.1/cluster/real_time_predistortions.html#bypasses-and-delays
     """
-    return {
-        ch: max(config.delay, 4.0) + 340
-        for ch, config in configs.items()
-        if isinstance(config, AcquisitionConfig)
-    }
+    assert isinstance(config, AcquisitionConfig)
+    tof = config.delay + latency
+    if tof < 4 or not float(tof).is_integer():
+        raise ValueError(
+            "Acquisition time of flight (delay + probe latency) must be an integer "
+            "number of ns, of at least 4, since it becomes the duration of a Q1 "
+            f"instruction. Instead found {tof}."
+        )
+    return tof

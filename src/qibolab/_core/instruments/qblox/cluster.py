@@ -42,7 +42,7 @@ from .utils import (
     batch_shots,
     concat_shots,
     lo_configs,
-    time_of_flights,
+    time_of_flight,
 )
 from .validate import (
     assert_channels_exclusion,
@@ -70,18 +70,23 @@ def _compute_duration(
     # It should be checked with Qblox if the sync time can indeed be of the
     # order of 900 ns.
     wait_sync_duration = 900
-    return options.estimate_duration([ps], sweepers, wait_sync_duration)
+    return options.estimate_duration([ps], sweepers, overhead=wait_sync_duration)
 
 
-def _add_time_of_flight(sequence: PulseSequence, configs: Configs) -> PulseSequence:
-    time_of_flights_ = time_of_flights(configs)
+def _add_time_of_flight(
+    sequence: PulseSequence, configs: Configs, latencies: dict[ChannelId, int]
+) -> PulseSequence:
     return PulseSequence(
         [
             (
                 ch,
                 ev
                 if not isinstance(ev, Readout)
-                else ev.model_copy(update={"time_of_flight": time_of_flights_[ch]}),
+                else ev.model_copy(
+                    update={
+                        "time_of_flight": time_of_flight(configs[ch], latencies[ch])
+                    }
+                ),
             )
             for ch, ev in sequence
         ]
@@ -95,6 +100,7 @@ def _batch_sequences(
     qcm_channels: set[ChannelId],
     qrm_channels: set[ChannelId],
     configs: Configs,
+    latencies: dict[ChannelId, int],
 ) -> list[PulseSequence]:
     batched_seqs = (
         batch_sequences_by_cluster_memory_limits(
@@ -103,7 +109,10 @@ def _batch_sequences(
         if options.acquisition_type is not AcquisitionType.RAW
         else sequences
     )
-    return [_add_time_of_flight(b, configs).align_to_delays() for b in batched_seqs]
+    return [
+        _add_time_of_flight(b, configs, latencies).align_to_delays()
+        for b in batched_seqs
+    ]
 
 
 def _merge_phases_if_no_phase_sweeper(
@@ -192,6 +201,7 @@ class Cluster(Controller):
         self._cluster.close()
         self._cluster = None
         self.__dict__.pop("_modules", None)
+        self.__dict__.pop("_probe_latencies", None)
         self._applied_seqcfgs = None
 
     def _set_dc_offsets_to_0(self) -> None:
@@ -245,12 +255,18 @@ class Cluster(Controller):
             },
         )
 
-        batched_seqs = _batch_sequences(
-            processed_sequences, sweepers_, options, qcm_channels, qrm_channels, configs
-        )
-
-        # configure the modules
+        # configure the modules (before self._probe_latencies)
         _module_configs = self._configure_modules(configs)
+
+        batched_seqs = _batch_sequences(
+            processed_sequences,
+            sweepers_,
+            options,
+            qcm_channels,
+            qrm_channels,
+            configs,
+            self._probe_latencies,
+        )
 
         # compute intermediate values for the experiment, such as expected frequencies
         ifs_dict = (
@@ -648,3 +664,24 @@ class Cluster(Controller):
             lo_freq = cast(OscillatorConfig, configs[lo]).frequency if lo else 0.0
             frequencies[ch] = cast(IqConfig, configs[probe]).frequency - lo_freq
         return frequencies
+
+    @cached_property
+    def _probe_latencies(self) -> dict[ChannelId, int]:
+        """Retrieve the output latency of the probe of each acquisition channel.
+
+        Latencies are reported by the instrument in seconds, and converted to ns.
+
+        They only depend on the filters configuration, which is fixed for probes (cf.
+        :meth:`config.PortConfig.build`). But they have to be first retrieved after the
+        modules configuration, which sets it.
+        """
+        latencies = {}
+        for ch, channel in self.channels.items():
+            if not isinstance(channel, AcquisitionChannel) or channel.probe is None:
+                continue
+
+            address = PortAddress.from_path(self.channels[channel.probe].path)
+            module = self._modules[address.slot]
+            latency = module.parameters[f"out{address.ports[0] - 1}_latency"]()
+            latencies[ch] = round(latency * scipy.constants.giga)
+        return latencies
