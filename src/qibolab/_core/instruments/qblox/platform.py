@@ -1,5 +1,7 @@
 import re
 from collections import defaultdict
+from collections.abc import Mapping
+from typing import NamedTuple
 
 from qibolab._core.components.channels import (
     AcquisitionChannel,
@@ -8,9 +10,18 @@ from qibolab._core.components.channels import (
     IqChannel,
 )
 from qibolab._core.identifier import ChannelId, QubitId
+from qibolab._core.qubits import QubitMap
 from qibolab._core.serialize import Model
 
-__all__ = ["Channels", "Twpa", "Twpas", "infer_los", "infer_mixers", "map_ports"]
+__all__ = [
+    "Channels",
+    "Twpa",
+    "Twpas",
+    "build_channels",
+    "infer_los",
+    "infer_mixers",
+    "map_ports",
+]
 
 Channels = dict[ChannelId, Channel]
 Twpas = set[ChannelId]
@@ -168,3 +179,63 @@ def infer_los(cluster: dict) -> dict[tuple[QubitId, bool], str]:
 def infer_mixers(cluster: dict) -> dict[tuple[QubitId, bool], str]:
     """Infer mixer names for output channels."""
     return _infer_outputs(cluster, "mixer")
+
+
+class _Outputs(NamedTuple):
+    """LOs and mixers of the output channels, inferred from the compact representation.
+
+    Both are mappings from ``(element, probe)``, cf. :func:`_infer_outputs`.
+    """
+
+    los: dict[tuple[QubitId, bool], str]
+    mixers: dict[tuple[QubitId, bool], str]
+
+    @classmethod
+    def infer(cls, cluster: ClusterMap) -> "_Outputs":
+        return cls(los=infer_los(cluster), mixers=infer_mixers(cluster))
+
+    def references(self, element: QubitId, probe: bool) -> dict[str, str]:
+        """Channel references to the LO and mixer, if any."""
+        key = (element, probe)
+        return {
+            name: ref
+            for name, ref in (
+                ("lo", self.los.get(key)),
+                ("mixer", self.mixers.get(key)),
+            )
+            if ref is not None
+        }
+
+
+def build_channels(
+    cluster: ClusterMap,
+    qubits: QubitMap,
+    couplers: QubitMap | None = None,
+    twpa_pumps: Mapping[QubitId, ChannelId] | None = None,
+) -> tuple[Channels, Twpas]:
+    """Build the complete channels from the compact representation.
+
+    On top of :func:`map_ports`, the probe and drive channels of RF modules are connected
+    to their LOs and mixers, whose names are inferred by :func:`infer_los` and
+    :func:`infer_mixers`. Moreover, the acquisition channels are connected to the TWPA
+    pumping their transmission line, as specified by ``twpa_pumps``, mapping elements
+    to the identifiers of :class:`Twpa` instances in ``cluster``.
+    """
+    channels, twpas = map_ports(cluster, qubits, couplers)
+    outputs = _Outputs.infer(cluster)
+    pumps = {} if twpa_pumps is None else twpa_pumps
+    unknown = {pump for pump in pumps.values() if pump not in twpas}
+    if len(unknown) > 0:
+        raise ValueError(f"TWPA pumps not defined in the cluster: {unknown}")
+
+    for name, el in (dict(qubits) | dict(couplers or {})).items():
+        updates: dict[ChannelId | None, dict[str, str]] = {
+            el.probe: outputs.references(name, True),
+            el.drive: outputs.references(name, False),
+            el.acquisition: {"twpa_pump": pumps[name]} if name in pumps else {},
+        }
+        for id_, update in updates.items():
+            if id_ is not None and id_ in channels and len(update) > 0:
+                channels[id_] = channels[id_].model_copy(update=update)
+
+    return channels, twpas
