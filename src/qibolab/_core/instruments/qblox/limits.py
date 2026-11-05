@@ -18,13 +18,6 @@ QRM_INSTRUCTION_MEMORY = 12288
 https://docs.qblox.com/en/v0.16.0/cluster/q1_sequence_processor.html#instruction-memory
 """
 
-MAX_OUTPUT_ATTENUATION = 30
-"""Maximum output attenuation of RF modules [dB].
-
-The actual one is reported by each module, ranging from 30 dB to 60 dB. The lowest is
-assumed, as any further attenuation is applied through the AWG offset.
-"""
-
 WEIGHT_MEMORY = 2**14
 """Maximum waveform memory available.
 

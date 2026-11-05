@@ -17,7 +17,6 @@ from qibolab._core.components.filters import (
 from qibolab._core.serialize import Model
 
 from ..identifiers import SlotId
-from ..twpa import twpa_attenuation_and_offset
 
 __all__ = []
 
@@ -173,15 +172,15 @@ class PortConfig(BaseModel):
         lo: OscillatorConfig | None,
         mixer: MixerOffsetConfig | None,
         is_qcm_non_rf_type: bool,
-        twpa: bool = False,
+        twpa_attenuation: int | None = None,
     ) -> "PortConfig":
         """Create port configuration for the desired channel.
 
         Multiple channels can share the same port, in which case they should set
         consistent configurations.
 
-        ``twpa`` marks the channels pumping TWPAs, whose power is split between the port
-        attenuation and the AWG offset (cf. :meth:`att_`).
+        ``twpa_attenuation`` is only set for channels pumping TWPAs, whose power is split
+        between the port attenuation and the AWG offset (cf. :meth:`att_`).
         """
         n = PortAddress.from_path(channel.path).ports[0] - 1
 
@@ -221,7 +220,8 @@ class PortConfig(BaseModel):
                 if (acq and not in_out) or only_out:
                     # TODO: input attenuation unused, but available in Qblox
                     port.att_(
-                        lo if not in_ else lo.model_copy(update={"power": 0.0}), twpa
+                        lo if not in_ else lo.model_copy(update={"power": 0.0}),
+                        twpa_attenuation if not in_ else None,
                     )
 
             # but we do have separate mixers for input and output (on QRM, and only out
@@ -242,15 +242,15 @@ class PortConfig(BaseModel):
         self.lo_en = True
         self.lo_freq = int(lo.frequency)
 
-    def att_(self, lo: OscillatorConfig, twpa: bool = False) -> None:
+    def att_(self, lo: OscillatorConfig, twpa: int | None = None) -> None:
         """Set the port attenuation from the LO power.
 
         The whole attenuation is applied by the port, but for TWPA pumps, whose
-        remainder is applied by the AWG offset in continuous waveform mode (cf.
-        :func:`twpa_attenuation_and_offset`). Other channels have no such offset, and
-        their attenuation is not limited to the range assumed for TWPAs.
+        attenuation ``twpa`` is computed by
+        :func:`~qibolab._core.instruments.qblox.twpa.twpa_attenuation_and_offset`, since
+        the remainder is applied by the AWG offset in continuous waveform mode.
         """
-        self.att = twpa_attenuation_and_offset(lo.power)[0] if twpa else -int(lo.power)
+        self.att = -int(lo.power) if twpa is None else twpa
 
     def mixer(self, mixer: MixerOffsetConfig) -> None:
         self.offset_path0 = mixer.offset_i

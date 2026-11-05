@@ -1,4 +1,4 @@
-from collections.abc import Collection
+from collections.abc import Mapping
 from enum import Flag, auto
 from typing import Annotated, Any, Literal, cast
 
@@ -90,8 +90,14 @@ class ModuleConfig(Model):
         los: dict[ChannelId, OscillatorConfig],
         mixers: dict[ChannelId, MixerOffsetConfig],
         is_qcm_non_rf_type: bool,
-        twpas: Collection[ChannelId] = (),
+        twpas: Mapping[ChannelId, int] = {},
     ) -> "ModuleConfig":
+        """Build the module configuration.
+
+        ``twpas`` maps the channels pumping TWPAs to their port attenuation (cf.
+        :meth:`.PortConfig.build`).
+        """
+
         # generate port configurations as a dictionary
         def portconfig(*args, **kwargs) -> tuple[str, port.StrDict]:
             p = port.PortConfig.build(
@@ -125,7 +131,7 @@ class ModuleConfig(Model):
                     out=out,
                     lo=los.get(id),
                     mixer=mixers.get(id),
-                    twpa=id in twpas,
+                    twpa_attenuation=twpas.get(id),
                 )
                 # scrape all channels for port configurations
                 for id, ch in all_channels

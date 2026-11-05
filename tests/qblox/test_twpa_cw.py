@@ -25,7 +25,10 @@ from qibolab._core.instruments.qblox.q1asm.ast_ import (
 )
 from qibolab._core.instruments.qblox.sequence import Q1Sequence, compile
 from qibolab._core.instruments.qblox.sequence.asm import Registers
-from qibolab._core.instruments.qblox.twpa import twpa_attenuation_and_offset
+from qibolab._core.instruments.qblox.twpa import (
+    max_output_attenuation,
+    twpa_attenuation_and_offset,
+)
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import Parameter, Sweeper
 
@@ -138,7 +141,7 @@ def test_compile_twpa_cw():
         options=options,
         sampling_rate=1.0,
         merged_vzs=True,
-        twpas={"twpa": IqChannel(path="8/o1", lo="twpa/lo")},
+        twpas={"twpa": 1.0},
     )
     assert "twpa" in seqs
     assert seqs["twpa"].is_continuous_wave is True
@@ -158,7 +161,7 @@ def test_compile_twpa_swept():
         options=options,
         sampling_rate=1.0,
         merged_vzs=True,
-        twpas={"twpa": IqChannel(path="8/o1", lo="twpa/lo")},
+        twpas={"twpa": 1.0},
     )
     assert "twpa" in seqs
     assert seqs["twpa"].is_continuous_wave is False
@@ -360,38 +363,42 @@ def test_compile_twpa_rejects_pulses():
 # ---------------------------------------------------------------------------
 
 
-def test_twpa_attenuation_and_offset():
+@pytest.mark.parametrize("max_attenuation", [30, 60])
+def test_twpa_attenuation_and_offset(max_attenuation):
     # Power = 0 dBm (0 dB att) -> (0, 1.0)
-    assert twpa_attenuation_and_offset(0.0) == (0, 1.0)
+    assert twpa_attenuation_and_offset(0.0, max_attenuation) == (0, 1.0)
 
     # Even power (e.g. -10 dBm -> 10 dB att) -> (10, 1.0)
-    assert twpa_attenuation_and_offset(-10.0) == (10, 1.0)
-    assert twpa_attenuation_and_offset(-4.0) == (4, 1.0)
+    assert twpa_attenuation_and_offset(-10.0, max_attenuation) == (10, 1.0)
+    assert twpa_attenuation_and_offset(-4.0, max_attenuation) == (4, 1.0)
 
     # Odd / arbitrary power (e.g. -5 dBm -> 5 dB target att):
     # Port attenuation is 4 dB, offset fine-tunes 1 dB
-    att, offset = twpa_attenuation_and_offset(-5.0)
+    att, offset = twpa_attenuation_and_offset(-5.0, max_attenuation)
     assert att == 4
     assert np.isclose(offset, 10.0 ** (-1.0 / 20.0))
 
     # Fractional power (e.g. -11.5 dBm -> 11.5 dB target att):
     # Port attenuation is 10 dB, offset fine-tunes 1.5 dB
-    att, offset = twpa_attenuation_and_offset(-11.5)
+    att, offset = twpa_attenuation_and_offset(-11.5, max_attenuation)
     assert att == 10
     assert np.isclose(offset, 10.0 ** (-1.5 / 20.0))
 
-    # Beyond the maximum attenuation, the offset applies the whole remainder
-    att, offset = twpa_attenuation_and_offset(-60.0)
-    assert att == 30
-    assert np.isclose(offset, 10.0 ** (-30.0 / 20.0))
+
+@pytest.mark.parametrize("max_attenuation", [30, 60])
+def test_twpa_attenuation_and_offset_beyond_maximum(max_attenuation):
+    """Beyond the maximum attenuation of the port, the offset applies the remainder."""
+    att, offset = twpa_attenuation_and_offset(-70.0, max_attenuation)
+    assert att == max_attenuation
+    assert np.isclose(offset, 10.0 ** (-(70.0 - max_attenuation) / 20.0))
 
 
 def test_twpa_attenuation_and_offset_above_full_scale():
     with pytest.warns(UserWarning, match="exceeds the full scale"):
-        assert twpa_attenuation_and_offset(5.0) == (0, 1.0)
+        assert twpa_attenuation_and_offset(5.0, 30) == (0, 1.0)
 
 
-def _port_att(power: float, twpa: bool) -> int | None:
+def _port_att(power: float, twpa_attenuation: int | None = None) -> int | None:
     return PortConfig.build(
         channel=IqChannel(path="8/o1"),
         config=IqConfig(frequency=6.5e9),
@@ -400,26 +407,23 @@ def _port_att(power: float, twpa: bool) -> int | None:
         lo=OscillatorConfig(frequency=6.5e9, power=power),
         mixer=None,
         is_qcm_non_rf_type=False,
-        twpa=twpa,
+        twpa_attenuation=twpa_attenuation,
     ).att
 
 
-@pytest.mark.parametrize(
-    "power, att", [(-10.0, 10), (-5.0, 4), (-11.5, 10), (-34.0, 30), (-60.0, 30)]
-)
-def test_port_config_twpa_attenuation(power, att):
-    """TWPA ports leave the remainder to the AWG offset, within the assumed range."""
-    assert _port_att(power, twpa=True) == att
+def test_port_config_twpa_attenuation():
+    """TWPA ports apply the attenuation computed for them, ignoring the LO power."""
+    assert _port_att(-35.0, twpa_attenuation=30) == 30
 
 
 @pytest.mark.parametrize("power, att", [(-10.0, 10), (-5.0, 5), (-34.0, 34)])
 def test_port_config_attenuation(power, att):
     """Other ports apply the whole attenuation, unaffected by the TWPA splitting."""
-    assert _port_att(power, twpa=False) == att
+    assert _port_att(power) == att
 
 
 def test_module_config_twpa_attenuation():
-    """Only the ports of TWPA channels are marked, within a module."""
+    """Only the ports of TWPA channels get their computed attenuation."""
     channels = {
         "drive": IqChannel(path="8/o1", lo="drive/lo"),
         "twpa": IqChannel(path="8/o2", lo="twpa/lo"),
@@ -432,10 +436,65 @@ def test_module_config_twpa_attenuation():
     }
     los = {id: configs[f"{id}/lo"] for id in channels}
     modcfg = ModuleConfig.build(
-        channels, configs, los, {}, is_qcm_non_rf_type=False, twpas={"twpa"}
+        channels, configs, los, {}, is_qcm_non_rf_type=False, twpas={"twpa": 30}
     )
     assert modcfg.ports["out0_att"] == 35
     assert modcfg.ports["out1_att"] == 30
+
+
+class _AttenuatorModule:
+    """Module reporting the maximum attenuation of its outputs, as the Qblox driver."""
+
+    def __init__(self, max_attenuation: int):
+        self.max_attenuation = max_attenuation
+
+    def _get_max_out_att_0(self) -> int:
+        return self.max_attenuation
+
+    def _get_max_out_att_1(self) -> int:
+        return self.max_attenuation
+
+
+@pytest.mark.parametrize("max_attenuation", [30, 60])
+def test_max_output_attenuation(max_attenuation):
+    module = _AttenuatorModule(max_attenuation)
+    assert max_output_attenuation(module, 1) == max_attenuation
+
+
+def test_cluster_twpa_powers():
+    """Each pump is split within the attenuation range of its own module."""
+    c = Cluster(
+        address="addr",
+        name="my_cluster",
+        channels={
+            "twpa": IqChannel(path="8/o2", lo="twpa/lo"),
+            "twpa2": IqChannel(path="10/o1", lo="twpa2/lo"),
+            "twpa3": IqChannel(path="10/o2"),
+        },
+        twpas={"twpa", "twpa2", "twpa3"},
+    )
+    # QCM-RF II in slot 8, original QCM-RF in slot 10
+    c.__dict__["_modules"] = {8: _AttenuatorModule(30), 10: _AttenuatorModule(60)}
+    configs = {
+        "twpa/lo": OscillatorConfig(frequency=8e9, power=-40.0),
+        "twpa2/lo": OscillatorConfig(frequency=8e9, power=-40.0),
+    }
+    powers = c._twpa_powers(configs)
+    # pumps without LO keep their full offset, and are thus omitted
+    assert set(powers) == {"twpa", "twpa2"}
+    assert powers["twpa"][0] == 30
+    assert np.isclose(powers["twpa"][1], 10.0 ** (-10.0 / 20.0))
+    assert powers["twpa2"] == (40, 1.0)
+
+
+def test_mock_module_max_output_attenuation():
+    from qibolab._core.instruments.qblox.mock.cluster import (
+        MOCK_MAX_OUTPUT_ATTENUATION,
+        MockModule,
+    )
+
+    module = MockModule(8)
+    assert max_output_attenuation(module, 0) == MOCK_MAX_OUTPUT_ATTENUATION
 
 
 def test_sequencer_config_build_twpa_arbitrary_power_cw():
@@ -452,6 +511,7 @@ def test_sequencer_config_build_twpa_arbitrary_power_cw():
     }
 
     seq = Q1Sequence.cw()
+    expected_offset = 10.0 ** (-1.0 / 20.0)
     cfg = SequencerConfig.build(
         address=address,
         channel_id="twpa",
@@ -460,12 +520,12 @@ def test_sequencer_config_build_twpa_arbitrary_power_cw():
         acquisition=AcquisitionType.INTEGRATION,
         rf=True,
         sequence=seq,
+        cw_offset=expected_offset,
     )
 
     assert cfg.sync_en is False
     assert cfg.cont_mode_en_awg_path0 is True
     assert cfg.cont_mode_en_awg_path1 is True
-    expected_offset = 10.0 ** (-1.0 / 20.0)
     assert np.isclose(cfg.offset_awg_path0, expected_offset)
 
 
@@ -495,7 +555,7 @@ def test_q1sequence_from_twpa_offset_swept_scaled():
     assert any(ins.source == expected_start for ins in moves)
 
 
-def test_compile_twpa_offset_swept_with_configs():
+def test_compile_twpa_offset_swept_scaled():
     ps = PulseSequence()
     options = ExecutionParameters(nshots=10, relaxation_time=1000)
     sweeper = Sweeper(
@@ -503,18 +563,14 @@ def test_compile_twpa_offset_swept_with_configs():
         values=np.array([0.1, 0.2]),
         channels=["twpa"],
     )
-    configs = {
-        "twpa": IqConfig(frequency=6.5e9),
-        "twpa/lo": OscillatorConfig(frequency=6.5e9, power=-5.0),
-    }
+    offset_scale = 10.0 ** (-1.0 / 20.0)
     seqs = compile(
         sequence=ps,
         sweepers=[[sweeper]],
         options=options,
         sampling_rate=1.0,
         merged_vzs=True,
-        twpas={"twpa": IqChannel(path="8/o1", lo="twpa/lo")},
-        configs=configs,
+        twpas={"twpa": offset_scale},
     )
     assert "twpa" in seqs
     seq = seqs["twpa"]
@@ -523,7 +579,6 @@ def test_compile_twpa_offset_swept_with_configs():
     from qibolab._core.instruments.qblox.q1asm.ast_ import Move
     from qibolab._core.instruments.qblox.sequence.asm import convert
 
-    offset_scale = 10.0 ** (-1.0 / 20.0)
     expected_start = int(convert(0.1 * offset_scale, Parameter.offset))
     instructions = [line.instruction for line in seq.program.elements]
     moves = [ins for ins in instructions if isinstance(ins, Move)]
