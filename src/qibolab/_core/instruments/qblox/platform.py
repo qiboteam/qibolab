@@ -14,8 +14,6 @@ __all__ = ["Channels", "Twpa", "Twpas", "infer_los", "infer_mixers", "map_ports"
 
 Channels = dict[ChannelId, Channel]
 Twpas = set[ChannelId]
-SlotMap = dict[str | int, list[QubitId]]
-ClusterMap = dict[str, tuple[int, SlotMap]]
 
 
 class Twpa(Model):
@@ -24,6 +22,10 @@ class Twpa(Model):
     name: str
     lo: str | None = None
     mixer: str | None = None
+
+
+SlotMap = dict[str | int, list[QubitId | Twpa]]
+ClusterMap = dict[str, tuple[int, SlotMap]]
 
 
 def _chtype(mod: str, input: bool) -> tuple[str, type[Channel]]:
