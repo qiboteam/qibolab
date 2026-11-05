@@ -157,7 +157,12 @@ class Readout(_PulseLike):
 
     acquisition: Acquisition
     probe: Pulse
-    time_of_flight: float = 0.0
+    time_of_flight: float = Field(default=0.0, exclude=True)
+    """Delay in ns between probe start and acquisition start.
+
+    Set by drivers at execution time so that :attr:`duration` accounts for it during
+    alignment. It is excluded from serialization so do not set in platform definitions.
+    """
 
     @classmethod
     def from_probe(cls, probe: Pulse):
