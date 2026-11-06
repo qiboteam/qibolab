@@ -140,7 +140,7 @@ def integration_weights(element: str, readout_len: int, kernel=None, angle: floa
         sin = [(np.sin(angle), readout_len)]
     else:
         cos = [(i, 4) for i in kernel.real[::4]]
-        sin = [(i, 4) for i in kernel.imag[::4]]
+        sin = [(-i, 4) for i in kernel.imag[::4]]
 
     return {
         f"cosine_weights_{element}": {
