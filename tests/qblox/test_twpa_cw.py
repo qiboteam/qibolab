@@ -5,6 +5,7 @@ import pytest
 
 from qibolab._core.components import (
     AcquisitionChannel,
+    DcChannel,
     IqChannel,
     IqConfig,
     OscillatorConfig,
@@ -614,3 +615,163 @@ def test_compile_twpa_offset_swept_scaled():
     instructions = [line.instruction for line in seq.program.elements]
     moves = [ins for ins in instructions if isinstance(ins, Move)]
     assert any(ins.source == expected_start for ins in moves)
+
+
+# ---------------------------------------------------------------------------
+# `map_ports` and `Twpa` helpers
+# ---------------------------------------------------------------------------
+
+
+def test_map_ports_with_twpa():
+    from qibolab._core.instruments.qblox.platform import Twpa, map_ports
+    from qibolab._core.qubits import Qubit
+
+    cluster = {
+        "qcm_rf0": (
+            8,
+            {
+                "o1": [Twpa(name="twpa")],
+                "o2": ["q0"],
+            },
+        ),
+        "qcm_rf1": (
+            7,
+            {
+                1: [Twpa(name="twpa2", lo="twpa2/lo", mixer="mixer2")],
+                2: ["q1"],
+            },
+        ),
+        "qrm_rf0": (
+            6,
+            {
+                "io1": ["q0", "q1"],
+            },
+        ),
+    }
+
+    qubits = {
+        "q0": Qubit(drive="0/drive", probe="0/probe", acquisition="0/acquisition"),
+        "q1": Qubit(drive="1/drive", probe="1/probe", acquisition="1/acquisition"),
+    }
+
+    channels, twpas = map_ports(cluster, qubits)
+
+    # Channels checks
+    assert "0/drive" in channels
+    assert channels["0/drive"].path == "8/o2"
+    assert "1/drive" in channels
+    assert channels["1/drive"].path == "7/o2"
+    assert "0/probe" in channels
+    assert channels["0/probe"].path == "6/o1"
+    assert "0/acquisition" in channels
+    assert channels["0/acquisition"].path == "6/i1"
+    assert channels["0/acquisition"].probe == "0/probe"
+
+    # Twpas checks
+    assert twpas == {"twpa", "twpa2"}
+    assert channels["twpa"] == IqChannel(path="8/o1")
+    assert channels["twpa2"] == IqChannel(path="7/o1", lo="twpa2/lo", mixer="mixer2")
+    assert (
+        Cluster(address="addr", name="c", channels=channels, twpas=twpas).twpas == twpas
+    )
+
+
+def test_infer_los_and_mixers_with_twpa():
+    from qibolab._core.instruments.qblox.platform import Twpa, infer_los, infer_mixers
+
+    cluster = {
+        "qcm_rf0": (
+            8,
+            {
+                "o1": [Twpa(name="twpa")],
+                "o2": ["q0"],
+            },
+        ),
+        "qrm_rf0": (
+            6,
+            {
+                "io1": ["q0"],
+            },
+        ),
+    }
+
+    los = infer_los(cluster)
+    mixers = infer_mixers(cluster)
+
+    assert los == {
+        ("q0", False): "qcm_rf0/o2/lo",
+        ("q0", True): "qrm_rf0/o1/lo",
+    }
+    assert mixers == {
+        ("q0", False): "qcm_rf0/o2/mixer",
+        ("q0", True): "qrm_rf0/o1/mixer",
+    }
+
+
+def _platinum_like():
+    from qibolab._core.instruments.qblox.platform import Twpa
+    from qibolab._core.qubits import Qubit
+
+    cluster = {
+        "qrm_rf": (18, {"io1": [0, 1]}),
+        "qcm_rf0": (12, {1: [0]}),
+        "qcm_rf2": (
+            8,
+            {
+                1: [1],
+                2: [Twpa(name="twpa", lo="qcm_rf2/o2/lo", mixer="qcm_rf2/o2/mixer")],
+            },
+        ),
+        "qcm0": (16, {1: [0], 2: [1]}),
+    }
+    qubits = {i: Qubit.default(i) for i in range(2)}
+    return cluster, qubits
+
+
+def test_build_channels():
+    from qibolab._core.instruments.qblox.platform import build_channels
+
+    cluster, qubits = _platinum_like()
+    channels, twpas = build_channels(cluster, qubits, twpa_pumps={0: "twpa", 1: "twpa"})
+
+    assert twpas == {"twpa"}
+    assert channels["twpa"] == IqChannel(
+        path="8/o2", lo="qcm_rf2/o2/lo", mixer="qcm_rf2/o2/mixer"
+    )
+    for q in qubits.values():
+        assert channels[q.acquisition].twpa_pump == "twpa"
+        assert channels[q.acquisition].probe == q.probe
+    assert channels[qubits[0].probe].lo == "qrm_rf/o1/lo"
+    assert channels[qubits[0].probe].mixer == "qrm_rf/o1/mixer"
+    assert channels[qubits[0].drive].lo == "qcm_rf0/o1/lo"
+    assert channels[qubits[1].drive].mixer == "qcm_rf2/o1/mixer"
+    # baseband flux channels are not connected to any LO or mixer
+    assert channels[qubits[0].flux] == DcChannel(path="16/o1")
+
+
+def test_build_channels_without_pumps():
+    from qibolab._core.instruments.qblox.platform import build_channels
+
+    cluster, qubits = _platinum_like()
+    channels, _ = build_channels(cluster, qubits)
+    assert all(channels[q.acquisition].twpa_pump is None for q in qubits.values())
+
+
+def test_build_channels_unknown_pump():
+    from qibolab._core.instruments.qblox.platform import build_channels
+
+    cluster, qubits = _platinum_like()
+    with pytest.raises(ValueError, match="not defined in the cluster"):
+        build_channels(cluster, qubits, twpa_pumps={0: "missing"})
+
+
+def test_cluster_from_map():
+    from qibolab._core.instruments.qblox.platform import build_channels
+
+    cluster, qubits = _platinum_like()
+    pumps = {0: "twpa", 1: "twpa"}
+    c = Cluster.from_map("c", "addr", cluster, qubits, twpa_pumps=pumps)
+    channels, twpas = build_channels(cluster, qubits, twpa_pumps=pumps)
+    assert (c.name, c.address) == ("c", "addr")
+    assert c.channels == channels
+    assert c.twpas == twpas
