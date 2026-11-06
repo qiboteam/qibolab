@@ -126,8 +126,12 @@ class AcquisitionConfig(Config):
     """Signal angle in the IQ-plane for disciminating ground and excited
     states."""
     kernel: Annotated[NdArray | None, Field(repr=False)] = None
-    """Integration weights to be used when post-processing the acquired
-    signal."""
+    """Complex integration weights :math:`k_n`, one per sample :math:`n` of the
+    acquisition window, each with :math:`|k_n| \\le 1`.
+
+    They are applied to the samples :math:`s_n` of the baseband signal (the one returned
+    by :attr:`AcquisitionType.RAW`) as :math:`\\sum_n k_n s_n`.
+    """
 
     def __eq__(self, other) -> bool:
         return eq(self, other)
