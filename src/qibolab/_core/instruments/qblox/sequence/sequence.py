@@ -237,6 +237,21 @@ def _check_no_offset_sweep_on_awg_offset_pulse_channel(
         )
 
 
+def _check_no_pulses_on_twpas(
+    sequence: PulseSequence, twpas: Collection[ChannelId]
+) -> None:
+    """Reject sequences playing on TWPA channels.
+
+    TWPA pumps only generate a continuous tone, possibly swept, thus any pulse on their
+    channels would be ignored.
+    """
+    played = sorted(str(ch) for ch in set(sequence.channels) & set(twpas))
+    if len(played) > 0:
+        raise ValueError(
+            f"Pulses can not be played on TWPA channels, but found on {', '.join(played)}."
+        )
+
+
 def compile(
     sequence: PulseSequence,
     sweepers: list[ParallelSweepers],
@@ -246,6 +261,7 @@ def compile(
     twpas: Collection[ChannelId] = (),
 ) -> dict[ChannelId, Q1Sequence]:
     _check_no_offset_sweep_on_awg_offset_pulse_channel(sequence, sweepers)
+    _check_no_pulses_on_twpas(sequence, twpas)
     duration = sequence.duration
     sweeper_channels = {ch: [] for ch in swept_channels(sweepers)}
     return {

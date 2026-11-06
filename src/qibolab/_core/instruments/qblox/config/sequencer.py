@@ -74,8 +74,6 @@ class SequencerConfig(Model):
     cont_mode_en_awg_path1: bool | None = None
     cont_mode_waveform_idx_awg_path0: int | None = None
     cont_mode_waveform_idx_awg_path1: int | None = None
-    gain_awg_path0: float | None = None
-    gain_awg_path1: float | None = None
 
     @classmethod
     def build(
@@ -101,8 +99,6 @@ class SequencerConfig(Model):
             # TODO: mixer calibration not yet propagated
             offset_awg_path0=1.0 if is_cw else 0.0,
             offset_awg_path1=0.0,
-            gain_awg_path0=1.0 if is_cw else None,
-            gain_awg_path1=1.0 if is_cw else None,
             # TODO: properly document - the first 4 marker bits are used to toggle
             # outputs, enabling suitable amplification
             marker_ovr_en=True,

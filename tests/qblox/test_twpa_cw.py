@@ -195,8 +195,6 @@ def test_sequencer_config_build_twpa_cw():
     assert cfg.cont_mode_en_awg_path0 is True
     assert cfg.cont_mode_en_awg_path1 is True
     assert cfg.offset_awg_path0 == 1.0
-    assert cfg.gain_awg_path0 == 1.0
-    assert cfg.gain_awg_path1 == 1.0
     assert cfg.nco_freq == 0
     assert cfg.mixer_corr_gain_ratio == 1.0
     assert cfg.mixer_corr_phase_offset_degree == 0.0
@@ -280,8 +278,6 @@ def test_sequencer_config_build_twpa_swept():
     assert cfg.sync_en is True
     assert cfg.cont_mode_en_awg_path0 is None
     assert cfg.offset_awg_path0 == 0.0
-    assert cfg.gain_awg_path0 is None
-    assert cfg.gain_awg_path1 is None
     assert cfg.nco_freq == 0
     assert cfg.mixer_corr_gain_ratio == 0.9
     assert cfg.mixer_corr_phase_offset_degree == pytest.approx(np.degrees(0.1))
@@ -336,3 +332,22 @@ def test_cluster_twpa_channels_by_module():
     assert c._los["twpa2"] == "twpa2/lo"
     assert "twpa" not in c._mixers
     assert c._mixers["twpa2"] == "mixer2"
+
+
+def test_compile_twpa_rejects_pulses():
+    """Pulses on TWPA channels would be dropped, thus they are rejected."""
+    from qibolab._core.pulses import Pulse, Rectangular
+
+    ps = PulseSequence(
+        [("twpa", Pulse(duration=40, amplitude=0.5, envelope=Rectangular()))]
+    )
+    options = ExecutionParameters(nshots=10, relaxation_time=1000)
+    with pytest.raises(ValueError, match="TWPA channels.*twpa"):
+        compile(
+            sequence=ps,
+            sweepers=[],
+            options=options,
+            sampling_rate=1.0,
+            merged_vzs=True,
+            twpas={"twpa"},
+        )
