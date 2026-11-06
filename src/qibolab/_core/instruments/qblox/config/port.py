@@ -142,6 +142,14 @@ class PortConfig(BaseModel):
     lo_en: bool | None = None
     lo_freq: int | None = None
     att: int | None = None
+    """Attenuation of the port [dB].
+
+    Even values only, from 0 up to the maximum of the port, as validated by the Qblox
+    driver: 60 dB on the QRM-RF and the original QCM-RF outputs, 30 dB on the QCM-RF II
+    outputs and the QRM-RF input (cf. `QRM-RF
+    <https://docs.qblox.com/en/main/products/architecture/modules/qrm_rf.html>`_ and
+    `QCM-RF II <https://docs.qblox.com/en/main/products/architecture/modules/qcm_rf.html>`_).
+    """
     # mixer calibration
     offset_path0: float | None = None
     offset_path1: float | None = None

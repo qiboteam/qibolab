@@ -29,6 +29,13 @@ class MockSequencer:
         return wrapped
 
 
+MOCK_MAX_OUTPUT_ATTENUATION = 60
+"""Maximum output attenuation reported by mock modules [dB].
+
+As for the QRM-RF and the original QCM-RF.
+"""
+
+
 class MockModule:
     def __init__(self, slot: int) -> None:
         self.slot_idx = slot
@@ -62,6 +69,8 @@ class MockModule:
             "snapshot",
         ]:
             return super().__getattribute__(name)
+        if name.startswith("_get_max_out_att_"):
+            return lambda: MOCK_MAX_OUTPUT_ATTENUATION
 
         log: dict[str, Any] = {"name": name}
         self.register["calls"].append(log)

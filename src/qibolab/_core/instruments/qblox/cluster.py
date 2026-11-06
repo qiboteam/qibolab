@@ -40,6 +40,7 @@ from .identifiers import SequencerMap, SlotId
 from .log import Logger
 from .results import AcquiredData, extract, integration_lengths
 from .sequence import Q1Sequence, compile
+from .twpa import max_output_attenuation, twpa_attenuation_and_offset
 from .utils import (
     batch_shots,
     concat_shots,
@@ -215,6 +216,7 @@ class Cluster(Controller):
 
         # Execute each batch sequentially, and concatenate results
         log = Logger(configs)
+        twpa_powers = self._twpa_powers(configs)
         results = {}
         for ps in batched_seqs:
             psres = []
@@ -229,7 +231,10 @@ class Cluster(Controller):
                     options_,
                     self.sampling_rate,
                     merged_vzs=not phase_sweeper_present,
-                    twpas=self.twpas,
+                    twpas={
+                        ch: twpa_powers[ch][1] if ch in twpa_powers else 1.0
+                        for ch in self.twpas
+                    },
                 )
 
                 for channelid, seq in sequences_.items():
@@ -308,11 +313,19 @@ class Cluster(Controller):
         Returns a dictionary mapping slots to their respective ModuleConfig.
         """
         modcfgs = {}
+        twpa_powers = self._twpa_powers(configs)
         for slot, chs in self._channels_by_module.items():
             module = self._modules[slot]
             ids = {id for id, _ in chs}
             channels = {id: ch for id, ch in self.channels.items() if id in ids}
             los = config.module.los(self._los, configs, ids)
+            # the TWPA pumps' ports only apply part of their power, the rest being
+            # applied by the AWG offset (cf. `_twpa_powers`)
+            los |= {
+                ch: los[ch].model_copy(update={"power": -att})
+                for ch, (att, _) in twpa_powers.items()
+                if ch in los
+            }
             mixers = config.module.mixers(self._mixers, configs, ids)
             modcfg = modcfgs[slot] = config.ModuleConfig.build(
                 channels,
@@ -364,6 +377,7 @@ class Cluster(Controller):
         sequences_ = defaultdict(lambda: None, sequences if exec_mode else {})
 
         seqcfgs: dict[SlotId, dict[int, config.SequencerConfig]] = {}
+        twpa_powers = self._twpa_powers(configs)
         for slot, chs in self._channels_by_module.items():
             module = self._modules[slot]
 
@@ -399,6 +413,7 @@ class Cluster(Controller):
                     acquisition,
                     module.is_rf_type,
                     sequence=sequences_[ch],
+                    cw_offset=twpa_powers[ch][1] if ch in twpa_powers else 1.0,
                 )
 
                 # populate channel-to-sequencer mapping
@@ -569,6 +584,34 @@ class Cluster(Controller):
     def _mixers(self) -> dict[ChannelId, str]:
         """Extract channel to mixer mapping."""
         return _iqout_reference(self.channels, "mixer")
+
+    @cached_property
+    def _twpa_max_attenuations(self) -> dict[ChannelId, int]:
+        """Maximum attenuation of the outputs pumping TWPAs, reported by their modules."""
+        addresses = {
+            ch: PortAddress.from_path(self.channels[ch].path) for ch in self.twpas
+        }
+        return {
+            ch: max_output_attenuation(self._modules[addr.slot], addr.ports[0] - 1)
+            for ch, addr in addresses.items()
+        }
+
+    def _twpa_powers(self, configs: Configs) -> dict[ChannelId, tuple[int, float]]:
+        """Port attenuation and AWG offset of the TWPA pumps.
+
+        The pump power, held by the LO configuration, is split by
+        :func:`twpa_attenuation_and_offset`, within the attenuation range of the port.
+        Pumps without LO are omitted, keeping their port attenuation and full offset.
+        """
+        los = {ch: cast(IqChannel, self.channels[ch]).lo for ch in self.twpas}
+        return {
+            ch: twpa_attenuation_and_offset(
+                cast(OscillatorConfig, configs[lo]).power,
+                self._twpa_max_attenuations[ch],
+            )
+            for ch, lo in los.items()
+            if lo is not None
+        }
 
     def _ifs(self, configs: Configs) -> dict[ChannelId, float]:
         """Compute the intermediate frequencies for demodulation.
