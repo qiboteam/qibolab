@@ -17,7 +17,7 @@ from qibolab._core.identifier import ChannelId
 from qibolab._core.serialize import Model
 
 from ..q1asm.ast_ import Acquire, Line
-from ..sequence import Q1Sequence
+from ..sequence import CW_WAVEFORM_INDEX, Q1Sequence
 from .port import PortAddress
 
 __all__ = []
@@ -69,6 +69,11 @@ class SequencerConfig(Model):
     mod_en_awg: bool | None = None
     mixer_corr_gain_ratio: float | None = None
     mixer_corr_phase_offset_degree: float | None = None
+    # continuous-waveform mode (bypasses the Q1ASM sequence processor)
+    cont_mode_en_awg_path0: bool | None = None
+    cont_mode_en_awg_path1: bool | None = None
+    cont_mode_waveform_idx_awg_path0: int | None = None
+    cont_mode_waveform_idx_awg_path1: int | None = None
 
     @classmethod
     def build(
@@ -83,12 +88,16 @@ class SequencerConfig(Model):
     ) -> "SequencerConfig":
         config = configs[channel_id]
 
+        # channels can be used in continuous waveform mode; typically, this is done to
+        # pump TWPAs
+        is_cw = sequence is not None and sequence.is_continuous_wave
+
         # conditional configurations
         cfg = cls(
             # connect to physical address
             address=address.local_address,
             # TODO: mixer calibration not yet propagated
-            offset_awg_path0=0.0,
+            offset_awg_path0=1.0 if is_cw else 0.0,
             offset_awg_path1=0.0,
             # TODO: properly document - the first 4 marker bits are used to toggle
             # outputs, enabling suitable amplification
@@ -100,9 +109,13 @@ class SequencerConfig(Model):
                 json.loads(sequence.model_dump_json()) if sequence is not None else None
             ),
             # configure the sequencers to synchronize
-            sync_en=True,
+            sync_en=not is_cw,
             # modulation, only enabled for RF modules
             mod_en_awg=rf,
+            cont_mode_en_awg_path0=True if is_cw else None,
+            cont_mode_en_awg_path1=True if is_cw else None,
+            cont_mode_waveform_idx_awg_path0=CW_WAVEFORM_INDEX if is_cw else None,
+            cont_mode_waveform_idx_awg_path1=CW_WAVEFORM_INDEX if is_cw else None,
         )
 
         # acquisition
@@ -121,7 +134,7 @@ class SequencerConfig(Model):
             # demodulation
             cfg.demod_en_acq = acquisition is not AcquisitionType.RAW
 
-        # set NCO frequency
+        # set NCO frequency and mixer corrections
         # note that probe channels also include readout ones (probe+acquisition), thus
         # there is no need to set it separately for the acquisition (which is on the
         # same IO sequencer)
