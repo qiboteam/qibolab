@@ -313,11 +313,19 @@ class Cluster(Controller):
         Returns a dictionary mapping slots to their respective ModuleConfig.
         """
         modcfgs = {}
+        twpa_powers = self._twpa_powers(configs)
         for slot, chs in self._channels_by_module.items():
             module = self._modules[slot]
             ids = {id for id, _ in chs}
             channels = {id: ch for id, ch in self.channels.items() if id in ids}
             los = config.module.los(self._los, configs, ids)
+            # the TWPA pumps' ports only apply part of their power, the rest being
+            # applied by the AWG offset (cf. `_twpa_powers`)
+            los |= {
+                ch: los[ch].model_copy(update={"power": -att})
+                for ch, (att, _) in twpa_powers.items()
+                if ch in los
+            }
             mixers = config.module.mixers(self._mixers, configs, ids)
             modcfg = modcfgs[slot] = config.ModuleConfig.build(
                 channels,
@@ -325,7 +333,6 @@ class Cluster(Controller):
                 los,
                 mixers,
                 is_qcm_non_rf_type=module.is_qcm_type and not module.is_rf_type,
-                twpas={ch: att for ch, (att, _) in self._twpa_powers(configs).items()},
             )
             modcfg.apply(module)
         # `ModuleConfig.apply` disconnects all sequencers

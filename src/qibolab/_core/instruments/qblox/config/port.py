@@ -180,15 +180,11 @@ class PortConfig(BaseModel):
         lo: OscillatorConfig | None,
         mixer: MixerOffsetConfig | None,
         is_qcm_non_rf_type: bool,
-        twpa_attenuation: int | None = None,
     ) -> "PortConfig":
         """Create port configuration for the desired channel.
 
         Multiple channels can share the same port, in which case they should set
         consistent configurations.
-
-        ``twpa_attenuation`` is only set for channels pumping TWPAs, whose power is split
-        between the port attenuation and the AWG offset (cf. :meth:`att_`).
         """
         n = PortAddress.from_path(channel.path).ports[0] - 1
 
@@ -227,10 +223,7 @@ class PortConfig(BaseModel):
                 # of course, input attenuation is only available on QRM
                 if (acq and not in_out) or only_out:
                     # TODO: input attenuation unused, but available in Qblox
-                    port.att_(
-                        lo if not in_ else lo.model_copy(update={"power": 0.0}),
-                        twpa_attenuation if not in_ else None,
-                    )
+                    port.att_(lo if not in_ else lo.model_copy(update={"power": 0.0}))
 
             # but we do have separate mixers for input and output (on QRM, and only out
             # on QCM)
@@ -250,15 +243,8 @@ class PortConfig(BaseModel):
         self.lo_en = True
         self.lo_freq = int(lo.frequency)
 
-    def att_(self, lo: OscillatorConfig, twpa: int | None = None) -> None:
-        """Set the port attenuation from the LO power.
-
-        The whole attenuation is applied by the port, but for TWPA pumps, whose
-        attenuation ``twpa`` is computed by
-        :func:`~qibolab._core.instruments.qblox.twpa.twpa_attenuation_and_offset`, since
-        the remainder is applied by the AWG offset in continuous waveform mode.
-        """
-        self.att = -int(lo.power) if twpa is None else twpa
+    def att_(self, lo: OscillatorConfig) -> None:
+        self.att = -int(lo.power)
 
     def mixer(self, mixer: MixerOffsetConfig) -> None:
         self.offset_path0 = mixer.offset_i

@@ -11,7 +11,6 @@ from qibolab._core.components import (
 )
 from qibolab._core.execution_parameters import AcquisitionType, ExecutionParameters
 from qibolab._core.instruments.qblox.cluster import Cluster
-from qibolab._core.instruments.qblox.config.module import ModuleConfig
 from qibolab._core.instruments.qblox.config.port import PortAddress, PortConfig
 from qibolab._core.instruments.qblox.config.sequencer import SequencerConfig
 from qibolab._core.instruments.qblox.q1asm.ast_ import (
@@ -398,8 +397,10 @@ def test_twpa_attenuation_and_offset_above_full_scale():
         assert twpa_attenuation_and_offset(5.0, 30) == (0, 1.0)
 
 
-def _port_att(power: float, twpa_attenuation: int | None = None) -> int | None:
-    return PortConfig.build(
+@pytest.mark.parametrize("power, att", [(-10.0, 10), (-5.0, 5), (-34.0, 34)])
+def test_port_config_attenuation(power, att):
+    """Ports apply the whole attenuation of their LO."""
+    port = PortConfig.build(
         channel=IqChannel(path="8/o1"),
         config=IqConfig(frequency=6.5e9),
         in_=False,
@@ -407,39 +408,8 @@ def _port_att(power: float, twpa_attenuation: int | None = None) -> int | None:
         lo=OscillatorConfig(frequency=6.5e9, power=power),
         mixer=None,
         is_qcm_non_rf_type=False,
-        twpa_attenuation=twpa_attenuation,
-    ).att
-
-
-def test_port_config_twpa_attenuation():
-    """TWPA ports apply the attenuation computed for them, ignoring the LO power."""
-    assert _port_att(-35.0, twpa_attenuation=30) == 30
-
-
-@pytest.mark.parametrize("power, att", [(-10.0, 10), (-5.0, 5), (-34.0, 34)])
-def test_port_config_attenuation(power, att):
-    """Other ports apply the whole attenuation, unaffected by the TWPA splitting."""
-    assert _port_att(power) == att
-
-
-def test_module_config_twpa_attenuation():
-    """Only the ports of TWPA channels get their computed attenuation."""
-    channels = {
-        "drive": IqChannel(path="8/o1", lo="drive/lo"),
-        "twpa": IqChannel(path="8/o2", lo="twpa/lo"),
-    }
-    configs = {
-        "drive": IqConfig(frequency=6e9),
-        "drive/lo": OscillatorConfig(frequency=6e9, power=-35.0),
-        "twpa": IqConfig(frequency=8e9),
-        "twpa/lo": OscillatorConfig(frequency=8e9, power=-35.0),
-    }
-    los = {id: configs[f"{id}/lo"] for id in channels}
-    modcfg = ModuleConfig.build(
-        channels, configs, los, {}, is_qcm_non_rf_type=False, twpas={"twpa": 30}
     )
-    assert modcfg.ports["out0_att"] == 35
-    assert modcfg.ports["out1_att"] == 30
+    assert port.att == att
 
 
 class _AttenuatorModule:
@@ -453,6 +423,67 @@ class _AttenuatorModule:
 
     def _get_max_out_att_1(self) -> int:
         return self.max_attenuation
+
+
+class _Parameter:
+    def __init__(self, values: dict, name: str):
+        self.values, self.name = values, name
+
+    def set(self, value):
+        self.values[self.name] = value
+
+
+class _ConfigurableModule(_AttenuatorModule):
+    """Module recording the parameters set by the module configuration."""
+
+    is_qcm_type = True
+    is_qrm_type = False
+    is_rf_type = True
+
+    def __init__(self, max_attenuation: int):
+        super().__init__(max_attenuation)
+        self.values = {}
+
+    @property
+    def parameters(self):
+        return _Parameters(self.values)
+
+    def disconnect_outputs(self):
+        pass
+
+
+class _Parameters:
+    def __init__(self, values: dict):
+        self.values = values
+
+    def __getitem__(self, name: str) -> _Parameter:
+        return _Parameter(self.values, name)
+
+
+def test_cluster_configure_modules_twpa_attenuation():
+    """Only the ports of TWPA pumps apply part of their power, the rest being left to
+    the offset."""
+    c = Cluster(
+        address="addr",
+        name="my_cluster",
+        channels={
+            "drive": IqChannel(path="8/o1", lo="drive/lo"),
+            "twpa": IqChannel(path="8/o2", lo="twpa/lo"),
+        },
+        twpas={"twpa"},
+    )
+    module = _ConfigurableModule(30)
+    c.__dict__["_modules"] = {8: module}
+    configs = {
+        "drive": IqConfig(frequency=6e9),
+        "drive/lo": OscillatorConfig(frequency=6e9, power=-35.0),
+        "twpa": IqConfig(frequency=8e9),
+        "twpa/lo": OscillatorConfig(frequency=8e9, power=-35.0),
+    }
+    modcfg = c._configure_modules(configs)[8]
+    assert modcfg.ports["out0_att"] == 35
+    assert modcfg.ports["out1_att"] == 30
+    assert module.values["out1_att"] == 30
 
 
 @pytest.mark.parametrize("max_attenuation", [30, 60])
