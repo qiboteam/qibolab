@@ -53,7 +53,7 @@ def setup(
     trailing.
     """
     return (
-        Registers.init_zero_registers()
+        Registers.init_registers()
         + [
             Line(
                 instruction=Move(source=lp.length, destination=lp.reg),

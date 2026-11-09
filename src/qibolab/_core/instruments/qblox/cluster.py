@@ -15,6 +15,7 @@ from qcodes.instrument import find_or_create_instrument
 
 from qibolab._core.components import (
     AcquisitionChannel,
+    AcquisitionConfig,
     Channel,
     Configs,
     DcChannel,
@@ -246,12 +247,23 @@ class Cluster(Controller):
             if options.acquisition_type is AcquisitionType.RAW
             else {}
         )
+        kernels = (
+            {
+                ch: cfg.kernel
+                for ch, cfg in configs.items()
+                if isinstance(cfg, AcquisitionConfig) and cfg.kernel is not None
+            }
+            if options.acquisition_type
+            in (AcquisitionType.INTEGRATION, AcquisitionType.DISCRIMINATION)
+            else {}
+        )
 
         # Execute each batch sequentially, and concatenate results
         log = Logger(configs)
         twpa_offsets = self._twpa_offsets(configs)
         results = {}
         for ps in batched_seqs:
+            tofs = {ch: ev.time_of_flight for ch, ev in ps if isinstance(ev, Readout)}
             psres = []
             for shots in batch_shots(ps, sweepers_, options):
                 options_ = options.model_copy(update={"nshots": shots})
@@ -265,6 +277,7 @@ class Cluster(Controller):
                     self.sampling_rate,
                     merged_vzs=not phase_sweeper_present,
                     twpas=twpa_offsets,
+                    kernels=kernels,
                 )
 
                 for channelid, seq in sequences_.items():
@@ -311,6 +324,7 @@ class Cluster(Controller):
                         shape=options_.results_shape(sweepers_),
                         sampling_rate=self.sampling_rate * scipy.constants.giga,
                         frequencies=ifs_dict,
+                        times_of_flight=tofs,
                     )
                 )
 

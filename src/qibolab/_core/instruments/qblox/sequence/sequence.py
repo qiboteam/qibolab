@@ -2,11 +2,12 @@ from collections.abc import Collection, Iterable, Mapping
 from typing import Annotated
 
 import numpy as np
+import numpy.typing as npt
 from pydantic import PlainSerializer, PlainValidator
 
 from qibolab._core.execution_parameters import ExecutionParameters
 from qibolab._core.identifier import ChannelId
-from qibolab._core.pulses import Align, Pulse, PulseLike, Readout
+from qibolab._core.pulses import Acquisition, Align, Pulse, PulseLike, Readout
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.serialize import Model
 from qibolab._core.sweeper import (
@@ -18,7 +19,14 @@ from qibolab._core.sweeper import (
 
 from ..q1asm import Program, parse
 from ..q1asm.ast_ import Line, Stop
-from .acquisition import Acquisitions, MeasureId, Weight, Weights, acquisitions
+from .acquisition import (
+    KERNEL_WEIGHTS,
+    Acquisitions,
+    MeasureId,
+    Weights,
+    acquisitions,
+    kernel_weights,
+)
 from .program import program, twpa_program
 from .sweepers import is_offset_rectangular
 from .waveforms import Waveform, WaveformIndex, waveforms
@@ -33,10 +41,6 @@ CW_PROGRAM = Program(elements=[Line.instr(Stop())])
 In continuous waveform mode, the Q1 sequence processor is not involved, and the program
 is reduced to a single ``stop`` instruction.
 """
-
-
-def _weight_len(w: Weight | None) -> int | None:
-    return len(w.data) if w is not None else None
 
 
 def _apply_sampling_rate(
@@ -85,6 +89,7 @@ class Q1Sequence(Model):
         channel: set[ChannelId],
         duration: float,
         merged_vzs: bool,
+        kernel: npt.NDArray | None = None,
     ) -> "Q1Sequence":
         padding = (
             duration
@@ -105,13 +110,19 @@ class Q1Sequence(Model):
                 if pulse_id in pulse_and_readout_ids
             },
         )
+        if kernel is not None and set(swept_pulses(sweepers, {Parameter.duration})) & {
+            p.id for p in sequence if isinstance(p, (Acquisition, Readout))
+        }:
+            raise ValueError("Cannot sweep the duration of a weighted acquisition.")
         sequence, sweepers = _apply_sampling_rate(sequence, sweepers, sampling_rate)
         acquisitions_ = acquisitions(
-            sequence, np.prod(options.bins(sweepers), dtype=int)
+            sequence,
+            np.prod(options.bins(sweepers), dtype=int),
+            kernel_length=len(kernel) if kernel is not None else None,
         )
         return cls(
             waveforms={k: w.waveform for k, w in waveform_specs.items()},
-            weights={},
+            weights=kernel_weights(kernel) if kernel is not None else {},
             acquisitions={k: a.acquisition for k, a in acquisitions_.items()},
             program=program(
                 sequence,
@@ -210,7 +221,9 @@ class Q1Sequence(Model):
         https://docs.qblox.com/en/main/api_reference/sequencer.html#Sequencer.integration_length_acq
         """
 
-        return {acq: _weight_len(self.weights.get(acq)) for acq in self.acquisitions}
+        weight = self.weights.get(KERNEL_WEIGHTS[0])
+        length = len(weight.data) if weight is not None else None
+        return {acq: length for acq in self.acquisitions}
 
 
 def _effective_channels(ch: ChannelId, seq: Iterable[PulseLike]) -> set[ChannelId]:
@@ -278,6 +291,7 @@ def compile(
     sampling_rate: float,
     merged_vzs: bool,
     twpas: Mapping[ChannelId, float] = {},
+    kernels: Mapping[ChannelId, npt.NDArray] = {},
 ) -> dict[ChannelId, Q1Sequence]:
     """Compile the sequence for each channel.
 
@@ -285,6 +299,9 @@ def compile(
     of their power (cf.
     :func:`~qibolab._core.instruments.qblox.twpa.twpa_attenuation_and_offset`), which
     scales their swept offsets.
+
+    ``kernels`` maps acquisition channels to their integration kernels, used to weight
+    their acquisitions.
     """
     _check_no_offset_sweep_on_awg_offset_pulse_channel(sequence, sweepers)
     _check_no_pulses_on_twpas(sequence, twpas)
@@ -299,6 +316,7 @@ def compile(
             _effective_channels(ch, seq),
             duration,
             merged_vzs,
+            kernels.get(ch),
         )
         for ch, seq in (sweeper_channels | sequence.by_channel).items()
         if ch not in twpas
