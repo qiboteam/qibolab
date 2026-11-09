@@ -177,7 +177,13 @@ class Sweeper(Model):
         """
         return self.model_copy(
             update=(
-                {"range": (self.range[0] * value, self.range[1] * value, self.range[2])}
+                {
+                    "range": (
+                        self.range[0] * value,
+                        self.range[1] * value,
+                        self.range[2] * value,
+                    )
+                }
                 if self.range is not None
                 else {}
             )

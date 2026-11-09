@@ -1,4 +1,4 @@
-from collections.abc import Collection, Iterable
+from collections.abc import Collection, Iterable, Mapping
 from typing import Annotated
 
 import numpy as np
@@ -133,9 +133,28 @@ class Q1Sequence(Model):
         sampling_rate: float,
         channel: ChannelId,
         duration: float,
+        offset: float = 1.0,
     ) -> "Q1Sequence":
+        """Sweep a TWPA pump, synchronized with the other sequencers.
+
+        The swept offsets are scaled by ``offset``, applying the remainder of the pump
+        power beyond its port attenuation (cf.
+        :func:`~qibolab._core.instruments.qblox.twpa.twpa_attenuation_and_offset`).
+        """
         duration_samples = int(duration * sampling_rate)
         _, sweepers_ = _apply_sampling_rate([], sweepers, sampling_rate)
+        if offset != 1.0:
+            sweepers_ = [
+                [
+                    (s * offset)
+                    if s.parameter is Parameter.offset
+                    and s.channels is not None
+                    and channel in s.channels
+                    else s
+                    for s in parsweep
+                ]
+                for parsweep in sweepers_
+            ]
         return cls(
             waveforms={},
             weights={},
@@ -258,8 +277,15 @@ def compile(
     options: ExecutionParameters,
     sampling_rate: float,
     merged_vzs: bool,
-    twpas: Collection[ChannelId] = (),
+    twpas: Mapping[ChannelId, float] = {},
 ) -> dict[ChannelId, Q1Sequence]:
+    """Compile the sequence for each channel.
+
+    ``twpas`` maps the channels pumping TWPAs to the AWG offset applying the remainder
+    of their power (cf.
+    :func:`~qibolab._core.instruments.qblox.twpa.twpa_attenuation_and_offset`), which
+    scales their swept offsets.
+    """
     _check_no_offset_sweep_on_awg_offset_pulse_channel(sequence, sweepers)
     _check_no_pulses_on_twpas(sequence, twpas)
     duration = sequence.duration
@@ -286,6 +312,7 @@ def compile(
                 sampling_rate,
                 ch,
                 duration,
+                offset=twpas[ch],
             )
         )
         for ch in twpas
