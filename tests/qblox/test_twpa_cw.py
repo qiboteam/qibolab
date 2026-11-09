@@ -516,6 +516,37 @@ def test_cluster_twpa_powers():
     assert powers["twpa"][0] == 30
     assert np.isclose(powers["twpa"][1], 10.0 ** (-10.0 / 20.0))
     assert powers["twpa2"] == (40, 1.0)
+    # while all of them have an offset
+    offsets = c._twpa_offsets(configs)
+    assert offsets == {"twpa": powers["twpa"][1], "twpa2": 1.0, "twpa3": 1.0}
+
+
+class _StoppableModule(_AttenuatorModule):
+    def stop_sequencer(self):
+        pass
+
+
+class _ClosableCluster:
+    def close(self):
+        pass
+
+
+def test_cluster_disconnect_clears_max_attenuations():
+    """The maximum attenuations depend on the modules, possibly changed on
+    reconnection."""
+    c = Cluster(
+        address="addr",
+        name="my_cluster",
+        channels={"twpa": IqChannel(path="8/o2", lo="twpa/lo")},
+        twpas={"twpa"},
+    )
+    c.__dict__["_modules"] = {8: _StoppableModule(30)}
+    c._cluster = _ClosableCluster()
+    assert c._twpa_max_attenuations == {"twpa": 30}
+    c.disconnect()
+    assert "_twpa_max_attenuations" not in c.__dict__
+    c.__dict__["_modules"] = {8: _StoppableModule(60)}
+    assert c._twpa_max_attenuations == {"twpa": 60}
 
 
 def test_mock_module_max_output_attenuation():

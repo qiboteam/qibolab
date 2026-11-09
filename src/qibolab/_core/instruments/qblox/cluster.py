@@ -145,7 +145,9 @@ class Cluster(Controller):
             module.stop_sequencer()
         self._cluster.close()
         self._cluster = None
+        # hardware-dependent caches, possibly changed on reconnection
         self.__dict__.pop("_modules", None)
+        self.__dict__.pop("_twpa_max_attenuations", None)
         self._applied_seqcfgs = None
 
     def _set_dc_offsets_to_0(self) -> None:
@@ -216,7 +218,7 @@ class Cluster(Controller):
 
         # Execute each batch sequentially, and concatenate results
         log = Logger(configs)
-        twpa_powers = self._twpa_powers(configs)
+        twpa_offsets = self._twpa_offsets(configs)
         results = {}
         for ps in batched_seqs:
             psres = []
@@ -231,10 +233,7 @@ class Cluster(Controller):
                     options_,
                     self.sampling_rate,
                     merged_vzs=not phase_sweeper_present,
-                    twpas={
-                        ch: twpa_powers[ch][1] if ch in twpa_powers else 1.0
-                        for ch in self.twpas
-                    },
+                    twpas=twpa_offsets,
                 )
 
                 for channelid, seq in sequences_.items():
@@ -377,7 +376,7 @@ class Cluster(Controller):
         sequences_ = defaultdict(lambda: None, sequences if exec_mode else {})
 
         seqcfgs: dict[SlotId, dict[int, config.SequencerConfig]] = {}
-        twpa_powers = self._twpa_powers(configs)
+        twpa_offsets = self._twpa_offsets(configs)
         for slot, chs in self._channels_by_module.items():
             module = self._modules[slot]
 
@@ -413,7 +412,8 @@ class Cluster(Controller):
                     acquisition,
                     module.is_rf_type,
                     sequence=sequences_[ch],
-                    cw_offset=twpa_powers[ch][1] if ch in twpa_powers else 1.0,
+                    # only TWPA pumps run in continuous wave mode
+                    cw_offset=twpa_offsets.get(ch, 1.0),
                 )
 
                 # populate channel-to-sequencer mapping
@@ -612,6 +612,14 @@ class Cluster(Controller):
             for ch, lo in los.items()
             if lo is not None
         }
+
+    def _twpa_offsets(self, configs: Configs) -> dict[ChannelId, float]:
+        """AWG offsets of all the TWPA pumps.
+
+        Pumps without LO apply the full offset, cf. :meth:`_twpa_powers`.
+        """
+        powers = self._twpa_powers(configs)
+        return {ch: powers[ch][1] if ch in powers else 1.0 for ch in self.twpas}
 
     def _ifs(self, configs: Configs) -> dict[ChannelId, float]:
         """Compute the intermediate frequencies for demodulation.
