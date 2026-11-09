@@ -138,7 +138,10 @@ class SequencerConfig(Model):
                 # threshold needs to be compensated by length
                 # see: https://docs.qblox.com/en/main/api_reference/sequencer.html#Sequencer.thresholded_acq_threshold
                 cfg.thresholded_acq_threshold = config.threshold * length
-            # demodulation
+            # demodulation applies only to the integration path: the scope acquires the
+            # input before demodulation, so RAW traces are unaffected (and demodulated
+            # in software)
+            # https://docs.qblox.com/en/v2026.08.0/products/qblox_instruments/tutorials/QRM/030_scope_acquisition.html#No-Demodulation-on-Scope-Acquisition
             cfg.demod_en_acq = acquisition is not AcquisitionType.RAW
 
         # set NCO frequency and mixer corrections
