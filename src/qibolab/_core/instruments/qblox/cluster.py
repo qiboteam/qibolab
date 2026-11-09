@@ -8,11 +8,13 @@ from typing import cast
 
 import qblox_instruments as qblox
 import scipy.constants
+from pydantic import Field, model_validator
 from qblox_instruments.qcodes_drivers.module import Module
 from qcodes.instrument import find_or_create_instrument
 
 from qibolab._core.components import (
     AcquisitionChannel,
+    Channel,
     Configs,
     DcChannel,
     DcConfig,
@@ -59,75 +61,6 @@ __all__ = ["Cluster"]
 SAMPLING_RATE = 1  # GS/s
 
 
-def _compute_duration(
-    ps: PulseSequence,
-    sweepers: list[ParallelSweepers],
-    options: ExecutionParameters,
-) -> float:
-    """Compute the total program duration including synchronization waiting time."""
-
-    # TODO: wait_sync duration is determined as explained in this comment
-    # https://github.com/qiboteam/qibolab/pull/1389#issuecomment-3884129213.
-    # It should be checked with Qblox if the sync time can indeed be of the
-    # order of 900 ns.
-    wait_sync_duration = 900
-    return options.estimate_duration([ps], sweepers, wait_sync_duration)
-
-
-def _add_time_of_flight(sequence: PulseSequence, configs: Configs) -> PulseSequence:
-    time_of_flights_ = time_of_flights(configs)
-    return PulseSequence(
-        [
-            (
-                ch,
-                ev
-                if not isinstance(ev, Readout)
-                else ev.model_copy(update={"time_of_flight": time_of_flights_[ch]}),
-            )
-            for ch, ev in sequence
-        ]
-    )
-
-
-def _batch_sequences(
-    sequences: list[PulseSequence],
-    sweepers: list[ParallelSweepers],
-    options: ExecutionParameters,
-    qcm_channels: set[ChannelId],
-    qrm_channels: set[ChannelId],
-    configs: Configs,
-) -> list[PulseSequence]:
-    batched_seqs = (
-        batch_sequences_by_cluster_memory_limits(
-            sequences, sweepers, options, qcm_channels, qrm_channels
-        )
-        if options.acquisition_type is not AcquisitionType.RAW
-        else sequences
-    )
-    return [_add_time_of_flight(b, configs).align_to_delays() for b in batched_seqs]
-
-
-def _merge_phases_if_no_phase_sweeper(
-    sweepers: list[ParallelSweepers],
-    sequences: list[PulseSequence],
-) -> tuple[list[PulseSequence], bool]:
-    """
-    Process pulse sequences based on the presence of phase sweepers.
-
-    If any sweeper in the provided list is a phase or relative_phase sweeper,
-    the sequences are returned unchanged. Otherwise, the phases in the sequences
-    are summed to simplify the pulse sequences.
-    """
-    phase_sweeper_present = any(
-        sweeper.parameter in {Parameter.relative_phase, Parameter.phase}
-        for parallel_sweepers in sweepers
-        for sweeper in parallel_sweepers
-    )
-    return [
-        ps if phase_sweeper_present else ps.to_vzs().collect_vzs() for ps in sequences
-    ], phase_sweeper_present
-
-
 class ClusterConfigs(Model):
     modules: dict[int, config.ModuleConfig]
     sequencers: dict[int, dict[int, config.SequencerConfig]]
@@ -142,9 +75,28 @@ class Cluster(Controller):
     As described in:
     https://docs.qblox.com/en/main/getting_started/setup.html#connecting-to-multiple-instruments
     """
+    twpas: set[ChannelId] = Field(default_factory=set)
+    """Channels pumping TWPAs.
+
+    They are regular IQ channels in :attr:`channels`, configured by an
+    :class:`IqConfig` (pump tone) and the usual LO and mixer configurations. They have
+    a Q1 sequence associated (program and waveforms) as well, generating either a
+    continuous-wave tone in the background, or a synchronized single-pulse sweep when
+    targeted by channel sweepers.
+    """
+
     _cluster: qblox.Cluster | None = None
     _applied_seqcfgs: dict[SlotId, dict[int, config.SequencerConfig]] | None = None
     """Sequencer configurations applied on the hardware, ``None`` if unknown."""
+
+    @model_validator(mode="after")
+    def _check_twpas(self):
+        invalid = {
+            ch for ch in self.twpas if not isinstance(self.channels.get(ch), IqChannel)
+        }
+        if invalid:
+            raise ValueError(f"TWPAs have to be IQ channels in `channels`: {invalid}")
+        return self
 
     @property
     def cluster(self) -> qblox.Cluster:
@@ -252,7 +204,7 @@ class Cluster(Controller):
         )
 
         # configure the modules
-        _module_configs = self._configure_modules(configs)
+        self._configure_modules(configs)
 
         # compute intermediate values for the experiment, such as expected frequencies
         ifs_dict = (
@@ -277,6 +229,7 @@ class Cluster(Controller):
                     options_,
                     self.sampling_rate,
                     merged_vzs=not phase_sweeper_present,
+                    twpas=self.twpas,
                 )
 
                 for channelid, seq in sequences_.items():
@@ -414,8 +367,8 @@ class Cluster(Controller):
         for slot, chs in self._channels_by_module.items():
             module = self._modules[slot]
 
-            # each channel is going to be assigned to its own sequencer, thus they can
-            # not be outnumbered
+            # each channel is going to be assigned to its own sequencer; thus, channels
+            # can not be outnumbered
             assert len(module.sequencers) >= len(chs)
 
             seqcfgs[slot] = {}
@@ -568,7 +521,7 @@ class Cluster(Controller):
 
     @cached_property
     def _probes(self) -> set[ChannelId]:
-        """Determine probe channels."""
+        """Extract probe channels."""
         return {
             ch.probe
             for ch in self.channels.values()
@@ -581,17 +534,22 @@ class Cluster(Controller):
 
         Channels are otherwise a set, where the association is stored in
         the :attr:`qibolab.Channel.port` attributes of each channel.
+
+        Probe channels are explicitly ignored, since this driver is considering a
+        transmission line as a single object, and it is associated to the acquisition
+        channel. Configurations for the probe channels will be retrieved through the
+        reference in the acquisition.
         """
         addresses = {
-            name: PortAddress.from_path(ch.path) for name, ch in self.channels.items()
+            name: PortAddress.from_path(ch.path)
+            for name, ch in self.channels.items()
+            if name not in self._probes
         }
         return {
             k: [el[1] for el in g]
             for k, g in groupby(
                 sorted(
-                    (address.slot, (ch, address))
-                    for ch, address in addresses.items()
-                    if ch not in self._probes
+                    ((address.slot, (ch, address)) for ch, address in addresses.items())
                 ),
                 key=lambda el: el[0],
             )
@@ -605,31 +563,12 @@ class Cluster(Controller):
         address the LO through the API. While the LO identifier is used
         to retrieve the configuration.
         """
-        channels = self.channels
-        return {
-            ch: lo
-            for ch, lo in (
-                (ch, cast(IqChannel, channels[iq]).lo)
-                for ch, iq in ((ch, channels[ch].iqout(ch)) for ch in channels)
-                if iq is not None
-            )
-            if lo is not None
-        }
+        return _iqout_reference(self.channels, "lo")
 
     @cached_property
     def _mixers(self) -> dict[ChannelId, str]:
         """Extract channel to mixer mapping."""
-        # TODO: identical to the `._los` property, deduplicate it please...
-        channels = self.channels
-        return {
-            ch: mix
-            for ch, mix in (
-                (ch, cast(IqChannel, channels[iq]).mixer)
-                for ch, iq in ((ch, channels[ch].iqout(ch)) for ch in channels)
-                if iq is not None
-            )
-            if mix is not None
-        }
+        return _iqout_reference(self.channels, "mixer")
 
     def _ifs(self, configs: Configs) -> dict[ChannelId, float]:
         """Compute the intermediate frequencies for demodulation.
@@ -649,3 +588,87 @@ class Cluster(Controller):
             lo_freq = cast(OscillatorConfig, configs[lo]).frequency if lo else 0.0
             frequencies[ch] = cast(IqConfig, configs[probe]).frequency - lo_freq
         return frequencies
+
+
+def _iqout_reference(
+    channels: dict[ChannelId, Channel], name: str
+) -> dict[ChannelId, str]:
+    """Retrieve given attribute for all modulated output channels."""
+    return {
+        ch: cast(str, value)
+        for ch, value in (
+            (ch, getattr(channels[iq], name))
+            for ch, iq in ((ch, channels[ch].iqout(ch)) for ch in channels)
+            if iq is not None
+        )
+        if value is not None
+    }
+
+
+def _compute_duration(
+    ps: PulseSequence,
+    sweepers: list[ParallelSweepers],
+    options: ExecutionParameters,
+) -> float:
+    """Compute the total program duration including synchronization waiting time."""
+
+    # TODO: wait_sync duration is determined as explained in this comment
+    # https://github.com/qiboteam/qibolab/pull/1389#issuecomment-3884129213.
+    # It should be checked with Qblox if the sync time can indeed be of the
+    # order of 900 ns.
+    wait_sync_duration = 900
+    return options.estimate_duration([ps], sweepers, wait_sync_duration)
+
+
+def _add_time_of_flight(sequence: PulseSequence, configs: Configs) -> PulseSequence:
+    time_of_flights_ = time_of_flights(configs)
+    return PulseSequence(
+        [
+            (
+                ch,
+                ev
+                if not isinstance(ev, Readout)
+                else ev.model_copy(update={"time_of_flight": time_of_flights_[ch]}),
+            )
+            for ch, ev in sequence
+        ]
+    )
+
+
+def _batch_sequences(
+    sequences: list[PulseSequence],
+    sweepers: list[ParallelSweepers],
+    options: ExecutionParameters,
+    qcm_channels: set[ChannelId],
+    qrm_channels: set[ChannelId],
+    configs: Configs,
+) -> list[PulseSequence]:
+    batched_seqs = (
+        batch_sequences_by_cluster_memory_limits(
+            sequences, sweepers, options, qcm_channels, qrm_channels
+        )
+        if options.acquisition_type is not AcquisitionType.RAW
+        else sequences
+    )
+    return [_add_time_of_flight(b, configs).align_to_delays() for b in batched_seqs]
+
+
+def _merge_phases_if_no_phase_sweeper(
+    sweepers: list[ParallelSweepers],
+    sequences: list[PulseSequence],
+) -> tuple[list[PulseSequence], bool]:
+    """
+    Process pulse sequences based on the presence of phase sweepers.
+
+    If any sweeper in the provided list is a phase or relative_phase sweeper,
+    the sequences are returned unchanged. Otherwise, the phases in the sequences
+    are summed to simplify the pulse sequences.
+    """
+    phase_sweeper_present = any(
+        sweeper.parameter in {Parameter.relative_phase, Parameter.phase}
+        for parallel_sweepers in sweepers
+        for sweeper in parallel_sweepers
+    )
+    return [
+        ps if phase_sweeper_present else ps.to_vzs().collect_vzs() for ps in sequences
+    ], phase_sweeper_present
