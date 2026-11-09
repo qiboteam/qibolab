@@ -750,7 +750,7 @@ def _platinum_like():
             8,
             {
                 1: [1],
-                2: [Twpa(name="twpa", lo="qcm_rf2/o2/lo", mixer="qcm_rf2/o2/mixer")],
+                2: [Twpa()],
             },
         ),
         "qcm0": (16, {1: [0], 2: [1]}),
@@ -794,6 +794,27 @@ def test_build_channels_unknown_pump():
     cluster, qubits = _platinum_like()
     with pytest.raises(ValueError, match="not defined in the cluster"):
         build_channels(cluster, qubits, twpa_pumps={0: "missing"})
+
+
+def test_build_channels_twpa_explicit_references():
+    """Explicit LO and mixer of the TWPA pumps take precedence over inferred ones."""
+    from qibolab._core.instruments.qblox.platform import Twpa, build_channels
+
+    cluster = {
+        "qcm_rf": (8, {1: [Twpa(name="a", lo="my/lo")], 2: [Twpa(name="b", mixer="m")]})
+    }
+    channels, twpas = build_channels(cluster, {})
+    assert twpas == {"a", "b"}
+    assert channels["a"] == IqChannel(path="8/o1", lo="my/lo", mixer="qcm_rf/o1/mixer")
+    assert channels["b"] == IqChannel(path="8/o2", lo="qcm_rf/o2/lo", mixer="m")
+
+
+def test_map_ports_duplicate_twpa():
+    from qibolab._core.instruments.qblox.platform import Twpa, map_ports
+
+    cluster = {"qcm_rf": (8, {1: [Twpa()], 2: [Twpa()]})}
+    with pytest.raises(ValueError, match="Duplicate TWPA name 'twpa'"):
+        map_ports(cluster, {})
 
 
 def test_cluster_from_map():

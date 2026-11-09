@@ -28,11 +28,21 @@ Twpas = set[ChannelId]
 
 
 class Twpa(Model):
-    """TWPA pump configuration placeholder for port mapping."""
+    """TWPA pump, to be placed on its port in the compact representation.
 
-    name: str
+    All the attributes have defaults, such that ``Twpa()`` is enough for most
+    platforms, cf. :func:`build_channels`.
+    """
+
+    name: ChannelId = "twpa"
+    """Identifier of the pump channel, and its configuration.
+
+    It has to be unique: specify it explicitly when pumping multiple TWPAs.
+    """
     lo: str | None = None
+    """LO name, inferred as for the other output channels if not given."""
     mixer: str | None = None
+    """Mixer name, inferred as for the other output channels if not given."""
 
 
 SlotMap = dict[str | int, list[QubitId | Twpa]]
@@ -78,6 +88,11 @@ def _premap(
         for port, elements in props[1].items():
             for el in elements:
                 if isinstance(el, Twpa):
+                    if el.name in twpas:
+                        raise ValueError(
+                            f"Duplicate TWPA name '{el.name}': pass distinct names to "
+                            "`Twpa(name=...)` when pumping multiple TWPAs."
+                        )
                     twpas[el.name] = IqChannel(
                         path=_port_path(port, slot), lo=el.lo, mixer=el.mixer
                     )
@@ -154,6 +169,11 @@ def _out_port(port: str | int) -> QubitId:
     return port if isinstance(port, int) else _digits(port)
 
 
+def _output_reference(mod: str, port: str | int, suffix: str) -> str:
+    """Name of a component of an output, inferred from its module and port."""
+    return f"{mod}/o{_out_port(port)}/{suffix}"
+
+
 def _infer_outputs(cluster: dict, suffix: str) -> dict[tuple[QubitId, bool], str]:
     """``cluster`` should be a mapping compatible with the same input of :func:`map_ports`.
 
@@ -162,7 +182,7 @@ def _infer_outputs(cluster: dict, suffix: str) -> dict[tuple[QubitId, bool], str
     drive.
     """
     return {
-        (q, "qrm" in mod): f"{mod}/o{_out_port(port)}/{suffix}"
+        (q, "qrm" in mod): _output_reference(mod, port, suffix)
         for mod, specs in cluster.items()
         if "_rf" in mod
         for port, qs in specs[1].items()
@@ -179,6 +199,25 @@ def infer_los(cluster: dict) -> dict[tuple[QubitId, bool], str]:
 def infer_mixers(cluster: dict) -> dict[tuple[QubitId, bool], str]:
     """Infer mixer names for output channels."""
     return _infer_outputs(cluster, "mixer")
+
+
+def _twpa_references(cluster: ClusterMap) -> dict[ChannelId, dict[str, str]]:
+    """LOs and mixers of the TWPA pumps on RF modules.
+
+    Inferred as for the other output channels, cf. :func:`_infer_outputs`, unless
+    explicitly specified in their :class:`Twpa` instance.
+    """
+    return {
+        el.name: {
+            "lo": el.lo or _output_reference(mod, port, "lo"),
+            "mixer": el.mixer or _output_reference(mod, port, "mixer"),
+        }
+        for mod, (_, ports) in cluster.items()
+        if "_rf" in mod
+        for port, elements in ports.items()
+        for el in elements
+        if isinstance(el, Twpa)
+    }
 
 
 class _Outputs(NamedTuple):
@@ -217,7 +256,8 @@ def build_channels(
 
     On top of :func:`map_ports`, the probe and drive channels of RF modules are connected
     to their LOs and mixers, whose names are inferred by :func:`infer_los` and
-    :func:`infer_mixers`. Moreover, the acquisition channels are connected to the TWPA
+    :func:`infer_mixers`. The same applies to the TWPA pumps, unless their LO or mixer is
+    explicitly specified in their :class:`Twpa` instance. Moreover, the acquisition channels are connected to the TWPA
     pumping their transmission line, as specified by ``twpa_pumps``, mapping elements
     to the identifiers of :class:`Twpa` instances in ``cluster``.
     """
@@ -237,5 +277,8 @@ def build_channels(
         for id_, update in updates.items():
             if id_ is not None and id_ in channels and len(update) > 0:
                 channels[id_] = channels[id_].model_copy(update=update)
+
+    for id_, update in _twpa_references(cluster).items():
+        channels[id_] = channels[id_].model_copy(update=update)
 
     return channels, twpas
