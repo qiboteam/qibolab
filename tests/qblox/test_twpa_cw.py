@@ -739,7 +739,7 @@ def test_infer_los_and_mixers_with_twpa():
     }
 
 
-def _platinum_like():
+def _cluster_with_twpa():
     from qibolab._core.instruments.qblox.platform import Twpa
     from qibolab._core.qubits import Qubit
 
@@ -762,7 +762,7 @@ def _platinum_like():
 def test_build_channels():
     from qibolab._core.instruments.qblox.platform import build_channels
 
-    cluster, qubits = _platinum_like()
+    cluster, qubits = _cluster_with_twpa()
     channels, twpas = build_channels(cluster, qubits, twpa_pumps={0: "twpa", 1: "twpa"})
 
     assert twpas == {"twpa"}
@@ -783,7 +783,7 @@ def test_build_channels():
 def test_build_channels_without_pumps():
     from qibolab._core.instruments.qblox.platform import build_channels
 
-    cluster, qubits = _platinum_like()
+    cluster, qubits = _cluster_with_twpa()
     channels, _ = build_channels(cluster, qubits)
     assert all(channels[q.acquisition].twpa_pump is None for q in qubits.values())
 
@@ -791,7 +791,7 @@ def test_build_channels_without_pumps():
 def test_build_channels_unknown_pump():
     from qibolab._core.instruments.qblox.platform import build_channels
 
-    cluster, qubits = _platinum_like()
+    cluster, qubits = _cluster_with_twpa()
     with pytest.raises(ValueError, match="not defined in the cluster"):
         build_channels(cluster, qubits, twpa_pumps={0: "missing"})
 
@@ -820,7 +820,7 @@ def test_map_ports_duplicate_twpa():
 def test_cluster_from_map():
     from qibolab._core.instruments.qblox.platform import build_channels
 
-    cluster, qubits = _platinum_like()
+    cluster, qubits = _cluster_with_twpa()
     pumps = {0: "twpa", 1: "twpa"}
     c = Cluster.from_map("c", "addr", cluster, qubits, twpa_pumps=pumps)
     channels, twpas = build_channels(cluster, qubits, twpa_pumps=pumps)

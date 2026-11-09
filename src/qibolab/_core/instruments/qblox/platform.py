@@ -1,6 +1,6 @@
 import re
 from collections import defaultdict
-from collections.abc import Mapping
+from collections.abc import Iterator, Mapping
 from typing import NamedTuple
 
 from qibolab._core.components.channels import (
@@ -45,8 +45,20 @@ class Twpa(Model):
     """Mixer name, inferred as for the other output channels if not given."""
 
 
-SlotMap = dict[str | int, list[QubitId | Twpa]]
+Port = str | int
+SlotMap = dict[Port, list[QubitId | Twpa]]
 ClusterMap = dict[str, tuple[int, SlotMap]]
+
+
+def _elements(cluster: ClusterMap) -> Iterator[tuple[str, int, Port, QubitId | Twpa]]:
+    """Flatten the compact representation.
+
+    Yield each element, together with its module name, slot, and port.
+    """
+    for mod, (slot, ports) in cluster.items():
+        for port, elements in ports.items():
+            for el in elements:
+                yield mod, slot, port, el
 
 
 def _chtype(mod: str, input: bool) -> tuple[str, type[Channel]]:
@@ -61,12 +73,12 @@ def _chtype(mod: str, input: bool) -> tuple[str, type[Channel]]:
     raise ValueError
 
 
-def _port_path(port: int | str, slot: int) -> str:
+def _port_path(port: Port, slot: int) -> str:
     port = f"o{port}" if isinstance(port, int) else port
     return f"{slot}/{port}"
 
 
-def _port_channels(mod: str, port: int | str, slot: int) -> dict[str, Channel]:
+def _port_channels(mod: str, port: Port, slot: int) -> dict[str, Channel]:
     if isinstance(port, str) and port.startswith("io"):
         return {
             "probe": IqChannel(path=f"{slot}/o{port[2:]}"),
@@ -83,21 +95,18 @@ def _premap(
     channels = defaultdict(lambda: defaultdict(dict))
     twpas: Channels = {}
 
-    for mod, props in cluster.items():
-        slot = props[0]
-        for port, elements in props[1].items():
-            for el in elements:
-                if isinstance(el, Twpa):
-                    if el.name in twpas:
-                        raise ValueError(
-                            f"Duplicate TWPA name '{el.name}': pass distinct names to "
-                            "`Twpa(name=...)` when pumping multiple TWPAs."
-                        )
-                    twpas[el.name] = IqChannel(
-                        path=_port_path(port, slot), lo=el.lo, mixer=el.mixer
-                    )
-                else:
-                    channels[el] |= _port_channels(mod, port, slot)
+    for mod, slot, port, el in _elements(cluster):
+        if isinstance(el, Twpa):
+            if el.name in twpas:
+                raise ValueError(
+                    f"Duplicate TWPA name '{el.name}': pass distinct names to "
+                    "`Twpa(name=...)` when pumping multiple TWPAs."
+                )
+            twpas[el.name] = IqChannel(
+                path=_port_path(port, slot), lo=el.lo, mixer=el.mixer
+            )
+        else:
+            channels[el] |= _port_channels(mod, port, slot)
 
     return channels, twpas
 
@@ -165,16 +174,16 @@ def _digits(string: str) -> QubitId:
     return _qubit_id(res[1]) if res is not None else ""
 
 
-def _out_port(port: str | int) -> QubitId:
+def _out_port(port: Port) -> QubitId:
     return port if isinstance(port, int) else _digits(port)
 
 
-def _output_reference(mod: str, port: str | int, suffix: str) -> str:
+def _output_reference(mod: str, port: Port, suffix: str) -> str:
     """Name of a component of an output, inferred from its module and port."""
     return f"{mod}/o{_out_port(port)}/{suffix}"
 
 
-def _infer_outputs(cluster: dict, suffix: str) -> dict[tuple[QubitId, bool], str]:
+def _infer_outputs(cluster: ClusterMap, suffix: str) -> dict[tuple[QubitId, bool], str]:
     """``cluster`` should be a mapping compatible with the same input of :func:`map_ports`.
 
     The result is a mapping from ``(qubit, channel)``, where ``qubit`` is the identifier,
@@ -182,21 +191,18 @@ def _infer_outputs(cluster: dict, suffix: str) -> dict[tuple[QubitId, bool], str
     drive.
     """
     return {
-        (q, "qrm" in mod): _output_reference(mod, port, suffix)
-        for mod, specs in cluster.items()
-        if "_rf" in mod
-        for port, qs in specs[1].items()
-        for q in (qs if isinstance(qs, (list, tuple, set)) else [qs])
-        if not isinstance(q, Twpa)
+        (el, "qrm" in mod): _output_reference(mod, port, suffix)
+        for mod, _, port, el in _elements(cluster)
+        if "_rf" in mod and not isinstance(el, Twpa)
     }
 
 
-def infer_los(cluster: dict) -> dict[tuple[QubitId, bool], str]:
+def infer_los(cluster: ClusterMap) -> dict[tuple[QubitId, bool], str]:
     """Infer LOs names for output channels."""
     return _infer_outputs(cluster, "lo")
 
 
-def infer_mixers(cluster: dict) -> dict[tuple[QubitId, bool], str]:
+def infer_mixers(cluster: ClusterMap) -> dict[tuple[QubitId, bool], str]:
     """Infer mixer names for output channels."""
     return _infer_outputs(cluster, "mixer")
 
@@ -212,11 +218,8 @@ def _twpa_references(cluster: ClusterMap) -> dict[ChannelId, dict[str, str]]:
             "lo": el.lo or _output_reference(mod, port, "lo"),
             "mixer": el.mixer or _output_reference(mod, port, "mixer"),
         }
-        for mod, (_, ports) in cluster.items()
-        if "_rf" in mod
-        for port, elements in ports.items()
-        for el in elements
-        if isinstance(el, Twpa)
+        for mod, _, port, el in _elements(cluster)
+        if "_rf" in mod and isinstance(el, Twpa)
     }
 
 
