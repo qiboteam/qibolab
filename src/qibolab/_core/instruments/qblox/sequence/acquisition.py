@@ -32,7 +32,7 @@ class AcquisitionSpec(Model):
     weighted: bool = False
 
 
-def kernel_weights(kernel: npt.NDArray) -> Weights:
+def kernel_weights(kernel: npt.NDArray[np.number]) -> Weights:
     """Split a complex kernel into the weights of the I and Q paths.
 
     The matched filter is ``Re(k s) = Re(k) I - Im(k) Q``. Each path is normalized to
