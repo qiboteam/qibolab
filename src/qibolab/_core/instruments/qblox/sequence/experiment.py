@@ -220,7 +220,9 @@ def _process_virtualz(pulse: VirtualZ, params: set[Param], merged_vzs: bool):
 
 def _acquire(acq: AcquisitionSpec, duration: int) -> Instruction:
     if acq.weighted:
-        # weight_0 takes the weight index 0 for I
+        # the bin is a register, so the weight indices have to be registers too: `zero`
+        # and `one` select the I and Q weights, stored at indices 0 and 1 by
+        # `kernel_weights`
         return AcquireWeighed(
             acquisition=acq.acquisition.index,
             bin=Registers.bin.value,
