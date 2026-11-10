@@ -4,6 +4,7 @@ from typing import TypedDict
 from uuid import UUID
 
 import numpy as np
+import scipy.constants
 from qblox_instruments.qcodes_drivers.module import Module
 
 from qibolab._core.execution_parameters import AcquisitionType
@@ -100,7 +101,7 @@ def _scope(
     length: int,
     frequency: float | None,
     sampling_rate: float,
-    time_of_flight: float = 0.0,
+    time_of_flight: float,
 ) -> Result:
     res = np.array([data["path0"]["data"], data["path1"]["data"]])
     # The scope always records its whole memory: retain only the acquisition window,
@@ -114,10 +115,12 @@ def _scope(
         # Software demodulation starts with zero phase at the acquisition start, while
         # the hardware one follows the NCO, whose phase there is `IF * time_of_flight`
         # (reset at the probe start). Rotate into the hardware frame, such that kernels
-        # calibrated on RAW traces apply to the hardware-demodulated paths.
-        # Qblox demodulation shares the `demodulate` sign convention: verified on
-        # hardware, RAW trace means match INTEGRATION within a few degrees across IFs.
-        res = rotate(res, -2 * np.pi * frequency * time_of_flight * 1e-9)
+        # calibrated on RAW traces apply to the hardware-demodulated paths. Qblox
+        # demodulation shares the `demodulate` sign convention: verified on hardware,
+        # RAW trace means match INTEGRATION within a few degrees across IFs.
+        res = rotate(
+            res, -2 * np.pi * frequency * time_of_flight * scipy.constants.nano
+        )
     return np.moveaxis(res, 0, -1)
 
 
