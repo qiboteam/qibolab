@@ -1,5 +1,7 @@
 from qibolab._core.execution_parameters import AcquisitionType, ExecutionParameters
 from qibolab._core.identifier import ChannelId
+from qibolab._core.pulses import Acquisition as AcquisitionPulse
+from qibolab._core.pulses import Readout
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import ParallelSweepers
 
@@ -8,6 +10,7 @@ from .limits import (
     ACQUISITION_NUMBER,
     QCM_INSTRUCTION_MEMORY,
     QRM_INSTRUCTION_MEMORY,
+    SCOPE_MEMORY,
     WAVEFORM_MEMORY,
     WAVEFORM_NUMBER,
     WEIGHT_MEMORY,
@@ -117,3 +120,24 @@ def validate_raw_options(
             "scope acquisition memory limits; AveragingMode.SINGLESHOT is not "
             "supported."
         )
+
+
+def validate_raw_duration(
+    sequences: list[PulseSequence], options: ExecutionParameters
+) -> None:
+    """Require each RAW acquisition to fit in the scope memory.
+
+    The scope trace has a fixed length of :data:`SCOPE_MEMORY` samples, at 1 GSps,
+    i.e. one sample per nanosecond. Longer acquisitions could not be fully recorded.
+    """
+    if options.acquisition_type is not AcquisitionType.RAW:
+        return
+
+    for sequence in sequences:
+        for _, event in sequence:
+            acq = event.acquisition if isinstance(event, Readout) else event
+            if isinstance(acq, AcquisitionPulse) and acq.duration > SCOPE_MEMORY:
+                raise ValueError(
+                    f"RAW acquisition duration ({acq.duration:g} ns) exceeds the "
+                    f"scope memory ({SCOPE_MEMORY} ns)."
+                )

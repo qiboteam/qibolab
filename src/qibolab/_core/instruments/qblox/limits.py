@@ -50,6 +50,12 @@ ACQUISITION_NUMBER = 2**5
 https://docs.qblox.com/en/v0.16.0/cluster/q1_sequence_processor.html#:~:text=Square%20Weight%20Acquisitions
 """
 
+SCOPE_MEMORY = 2**14
+"""Number of samples in a scope acquisition trace.
+
+https://docs.qblox.com/en/v2026.08.0/products/qblox_instruments/tutorials/QRM/030_scope_acquisition.html
+"""
+
 SEQUENCER_REGISTERS = 64
 """Number of registers available in the Q1 sequencer.
 

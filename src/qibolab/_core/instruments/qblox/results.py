@@ -101,11 +101,8 @@ def _scope(
     res = np.array([data["path0"]["data"], data["path1"]["data"]])
     # The scope always records its whole memory: retain only the acquisition window,
     # before demodulation, such that it is not affected by samples outside of it.
-    if res.shape[-1] < length:
-        raise ValueError(
-            f"Scope trace ({res.shape[-1]} samples) is shorter than the acquisition "
-            f"window ({length} samples)."
-        )
+    # Longer acquisitions are rejected upstream, cf. `validate.validate_raw_duration`.
+    assert res.shape[-1] >= length
     res = res[:, :length]
     # Demodulate scope data to baseband when a frequency is provided.
     if frequency is not None:
