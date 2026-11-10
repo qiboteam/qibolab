@@ -249,8 +249,11 @@ def _process_readout(
 ):
     acq = acquisitions[pulse.id]
     return [
-        # fix the NCO phase at the acquisition start to `IF * time_of_flight`, the
-        # reference used to bring RAW traces in the hardware demodulation frame
+        # zero the NCO phase at the probe start, such that the acquisition always starts
+        # at phase `IF * time_of_flight`, compensated in `_scope`. Hardware demodulation
+        # does not need it: the same NCO modulates the probe and demodulates the signal,
+        # so its accumulated phase cancels. RAW traces are instead demodulated in
+        # software from zero phase, and would otherwise depend on the preceding pulses.
         Line(instruction=ResetPh(), comment="phase reset"),
         _play_waveforms(pulse.probe, waveforms).update(
             {"duration": int(pulse.time_of_flight)}
