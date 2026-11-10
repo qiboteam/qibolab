@@ -9,13 +9,13 @@ from qibolab._core.pulses.pulse import PulseLike
 from qibolab._core.serialize import Model
 from qibolab._core.sweeper import ParallelSweepers, Parameter, swept_pulses
 
-from .waveforms import Waveform
+from .waveforms import Waveform, WaveformIndex
 
 __all__ = []
 
 MeasureId = UUID4
 Weight = Waveform
-Weights = dict[str, Weight]
+Weights = dict[WaveformIndex, Weight]
 
 
 class Acquisition(Model):
@@ -40,16 +40,14 @@ def kernel_weights(kernel: npt.NDArray[np.number]) -> Weights:
     IQ-plane rotation used for discrimination realizes the full matched filter. The
     weights are then scaled to the hardware range ``[-1, 1]``.
     """
-    w = np.stack([kernel.real, -kernel.imag]).astype(float)
-    norms = np.linalg.norm(w, axis=1, keepdims=True)
+    weights_ = np.stack([kernel.real, -kernel.imag]).astype(float)
+    norms = np.linalg.norm(weights_, axis=1, keepdims=True)
     if not np.any(norms):
         raise ValueError("Integration kernel is identically zero.")
-    w = np.divide(w, norms, out=np.zeros_like(w), where=norms > 0)
-    w /= np.max(np.abs(w))
-    return {
-        name: Weight(data=data, index=i)
-        for i, (name, data) in enumerate(zip(("kernel_i", "kernel_q"), w))
-    }
+    # normalize each path, leaving a zero path (e.g. Q, for a real kernel) as zeros
+    weights_ = np.divide(weights_, norms, out=np.zeros_like(weights_), where=norms > 0)
+    weights_ /= np.max(np.abs(weights_))
+    return {i: Weight(data=data, index=i) for i, data in enumerate(weights_)}
 
 
 def check_kernel(
