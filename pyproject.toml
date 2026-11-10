@@ -1,6 +1,6 @@
 [project]
 name = "qibolab"
-version = "0.2.18"
+version = "0.2.19"
 description = "Quantum hardware module and drivers for Qibo"
 authors = [{name = "The Qibo team"}]
 license = "Apache-2.0"
