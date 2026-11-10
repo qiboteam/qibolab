@@ -7,6 +7,7 @@ from pydantic import UUID4
 from qibolab._core import pulses
 from qibolab._core.pulses.pulse import PulseLike
 from qibolab._core.serialize import Model
+from qibolab._core.sweeper import ParallelSweepers, Parameter, swept_pulses
 
 from .waveforms import Waveform
 
@@ -15,9 +16,6 @@ __all__ = []
 MeasureId = UUID4
 Weight = Waveform
 Weights = dict[str, Weight]
-
-KERNEL_WEIGHTS = ("kernel_i", "kernel_q")
-"""Names of the I and Q path weights, stored at indices 0 and 1."""
 
 
 class Acquisition(Model):
@@ -50,29 +48,42 @@ def kernel_weights(kernel: npt.NDArray) -> Weights:
     w /= np.max(np.abs(w))
     return {
         name: Weight(data=data, index=i)
-        for i, (name, data) in enumerate(zip(KERNEL_WEIGHTS, w))
+        for i, (name, data) in enumerate(zip(("kernel_i", "kernel_q"), w))
     }
 
 
-def acquisitions(
-    sequence: Iterable[PulseLike], num_bins: int, kernel_length: int | None = None
-) -> dict[MeasureId, AcquisitionSpec]:
-    """Collect acquisitions, weighted with the kernel when its length is given."""
+def check_kernel(
+    kernel: npt.NDArray,
+    sequence: Iterable[PulseLike],
+    sweepers: list[ParallelSweepers],
+) -> None:
+    """Reject acquisitions the kernel can not weight.
+
+    Durations are expected in samples, i.e. after applying the sampling rate.
+    """
     acqs = [p for p in sequence if isinstance(p, (pulses.Acquisition, pulses.Readout))]
-    if kernel_length is not None:
-        for acq in acqs:
-            window = acq.acquisition if isinstance(acq, pulses.Readout) else acq
-            # the weight length sets the integration length
-            if int(window.duration) != kernel_length:
-                raise ValueError(
-                    f"Integration kernel length ({kernel_length} samples) differs from "
-                    f"the acquisition duration ({int(window.duration)} samples)."
-                )
+    if set(swept_pulses(sweepers, {Parameter.duration})) & {p.id for p in acqs}:
+        raise ValueError("Cannot sweep the duration of a weighted acquisition.")
+    for acq in acqs:
+        window = acq.acquisition if isinstance(acq, pulses.Readout) else acq
+        # the weight length sets the integration length
+        if int(window.duration) != len(kernel):
+            raise ValueError(
+                f"Integration kernel length ({len(kernel)} samples) differs from the "
+                f"acquisition duration ({int(window.duration)} samples)."
+            )
+
+
+def acquisitions(
+    sequence: Iterable[PulseLike], num_bins: int, weighted: bool = False
+) -> dict[MeasureId, AcquisitionSpec]:
     return {
         acq.id: AcquisitionSpec(
             acquisition=Acquisition(num_bins=num_bins, index=i),
             duration=int(acq.duration),
-            weighted=kernel_length is not None,
+            weighted=weighted,
         )
-        for i, acq in enumerate(acqs)
+        for i, acq in enumerate(
+            p for p in sequence if isinstance(p, (pulses.Acquisition, pulses.Readout))
+        )
     }

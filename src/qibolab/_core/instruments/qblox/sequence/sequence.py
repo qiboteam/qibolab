@@ -7,7 +7,7 @@ from pydantic import PlainSerializer, PlainValidator
 
 from qibolab._core.execution_parameters import ExecutionParameters
 from qibolab._core.identifier import ChannelId
-from qibolab._core.pulses import Acquisition, Align, Pulse, PulseLike, Readout
+from qibolab._core.pulses import Align, Pulse, PulseLike, Readout
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.serialize import Model
 from qibolab._core.sweeper import (
@@ -20,11 +20,11 @@ from qibolab._core.sweeper import (
 from ..q1asm import Program, parse
 from ..q1asm.ast_ import Line, Stop
 from .acquisition import (
-    KERNEL_WEIGHTS,
     Acquisitions,
     MeasureId,
     Weights,
     acquisitions,
+    check_kernel,
     kernel_weights,
 )
 from .program import program, twpa_program
@@ -110,15 +110,13 @@ class Q1Sequence(Model):
                 if pulse_id in pulse_and_readout_ids
             },
         )
-        if kernel is not None and set(swept_pulses(sweepers, {Parameter.duration})) & {
-            p.id for p in sequence if isinstance(p, (Acquisition, Readout))
-        }:
-            raise ValueError("Cannot sweep the duration of a weighted acquisition.")
         sequence, sweepers = _apply_sampling_rate(sequence, sweepers, sampling_rate)
+        if kernel is not None:
+            check_kernel(kernel, sequence, sweepers)
         acquisitions_ = acquisitions(
             sequence,
             np.prod(options.bins(sweepers), dtype=int),
-            kernel_length=len(kernel) if kernel is not None else None,
+            weighted=kernel is not None,
         )
         return cls(
             waveforms={k: w.waveform for k, w in waveform_specs.items()},
@@ -221,8 +219,8 @@ class Q1Sequence(Model):
         https://docs.qblox.com/en/main/api_reference/sequencer.html#Sequencer.integration_length_acq
         """
 
-        weight = self.weights.get(KERNEL_WEIGHTS[0])
-        length = len(weight.data) if weight is not None else None
+        # all weights share the same length
+        length = next((len(w.data) for w in self.weights.values()), None)
         return {acq: length for acq in self.acquisitions}
 
 
