@@ -116,8 +116,7 @@ def _scope(
         # the hardware one follows the NCO, whose phase there is `IF * time_of_flight`
         # (reset at the probe start). Rotate into the hardware frame, such that kernels
         # calibrated on RAW traces apply to the hardware-demodulated paths. Qblox
-        # demodulation shares the `demodulate` sign convention: verified on hardware,
-        # RAW trace means match INTEGRATION within a few degrees across IFs.
+        # demodulation shares the `demodulate` sign convention.
         res = rotate(
             res, -2 * np.pi * frequency * time_of_flight * scipy.constants.nano
         )
