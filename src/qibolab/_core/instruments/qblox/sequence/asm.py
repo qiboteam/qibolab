@@ -18,9 +18,7 @@ class Registers(Enum):
     wait = Register(number=3)
     phase_delta = Register(number=4)
     zero = Register(number=5)
-    # `acquire_weighed` takes weight indices in registers, like the bin: the I weight
-    # index (0) is read from `zero`
-    weight_q = Register(number=6)
+    one = Register(number=6)
 
     @classmethod
     def first_available(cls) -> int:
@@ -33,8 +31,8 @@ class Registers(Enum):
             (cls.bin, 0, "init bin counter"),
             (cls.bin_reset, 0, "init bin reset"),
             (cls.phase_delta, 0, "init delta phase register"),
-            (cls.zero, 0, "init zero register"),
-            (cls.weight_q, 1, "init Q weight index"),
+            (cls.zero, 0, "init always zero register"),
+            (cls.one, 1, "init always one register"),
         ]
         return [
             Line(

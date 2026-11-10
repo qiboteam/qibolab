@@ -220,11 +220,12 @@ def _process_virtualz(pulse: VirtualZ, params: set[Param], merged_vzs: bool):
 
 def _acquire(acq: AcquisitionSpec, duration: int) -> Instruction:
     if acq.weighted:
+        # weight_0 takes the weight index 0 for I
         return AcquireWeighed(
             acquisition=acq.acquisition.index,
             bin=Registers.bin.value,
             weight_0=Registers.zero.value,
-            weight_1=Registers.weight_q.value,
+            weight_1=Registers.one.value,
             duration=duration,
         )
     return Acquire(
