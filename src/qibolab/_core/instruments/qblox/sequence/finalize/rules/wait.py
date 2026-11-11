@@ -11,6 +11,7 @@ __all__ = [
 ]
 
 MAX_WAIT = 2**16 - 1
+MIN_WAIT = 4
 
 
 class LongWaits(Model):
@@ -34,14 +35,16 @@ def _map_long_wait(line: Line, state: LongWaits) -> tuple[Block, LongWaits]:
     duration = instr.duration
     assert isinstance(duration, int)
 
-    iterations = duration // MAX_WAIT
-    remainder = duration % MAX_WAIT
+    # loop on a shorter step, so the remainder wait always fits the minimum
+    step = MAX_WAIT - MIN_WAIT + 1
+    iterations, remainder = divmod(duration - MIN_WAIT, step)
     register = Registers.wait.value
     label = f"wait{state.n}"
 
-    block = ([Wait(duration=remainder)] if remainder > 0 else []) + [
+    block = [
+        Wait(duration=remainder + MIN_WAIT),
         Move(source=iterations, destination=register),
-        Line(instruction=Wait(duration=MAX_WAIT), label=label),
+        Line(instruction=Wait(duration=step), label=label),
         Line.instr(Loop(a=register, address=Reference(label=label))),
     ]
 

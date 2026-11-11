@@ -197,11 +197,21 @@ def test_long_wait_split():
     assert [type(el.instruction) for el in result] == [Wait, Move, Wait, Loop]
 
     # remainder, iteration count, bounded wait in loop, loop back
-    assert result[0].instruction.duration == 17
+    assert result[0].instruction.duration == 26
     assert result[1].instruction.source == 3
-    assert result[2].instruction.duration == wait.MAX_WAIT
+    assert result[2].instruction.duration == wait.MAX_WAIT - wait.MIN_WAIT + 1
     label = result[2].label
     assert result[3].instruction.address == Reference(label=label)
+
+
+@pytest.mark.parametrize(
+    "duration", [65536, 65538, 65539, 131067, 131068, 131071, 131072, 196607]
+)
+def test_long_wait_bounds(duration):
+    """Remainder wait respects MIN_WAIT and the total is preserved."""
+    head, move, body, _ = transform([Wait(duration=duration)], (wait.long_wait,))
+    assert wait.MIN_WAIT <= head.instruction.duration <= wait.MAX_WAIT
+    assert head.instruction.duration + move.instruction.source * body.instruction.duration == duration
 
 
 def test_long_wait_short_wait_untouched():
@@ -257,10 +267,10 @@ def test_default_pipeline_combined():
     assert len(loops) == 1
     assert len(subs) == 1
     assert subs[0].instruction.b == 3
-    # wait durations: 5 (merged 4 + remainder 1), MAX_WAIT (loop body), 2 (short)
+    # wait durations: 11 (remainder of merged 4 + long), loop body, 2 (short)
     assert {w.instruction.duration for w in waits} == {
-        5,
-        wait.MAX_WAIT,
+        11,
+        wait.MAX_WAIT - wait.MIN_WAIT + 1,
         2,
     }
     # the loop moves the iteration count to the preassigned wait register
