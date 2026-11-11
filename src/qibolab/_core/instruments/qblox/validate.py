@@ -1,8 +1,4 @@
-from qibolab._core.execution_parameters import (
-    AcquisitionType,
-    ExecutionParameters,
-    default,
-)
+from qibolab._core.execution_parameters import AcquisitionType, ExecutionParameters
 from qibolab._core.identifier import ChannelId
 from qibolab._core.pulses import Acquisition as AcquisitionPulse
 from qibolab._core.pulses import Readout
@@ -129,26 +125,19 @@ def validate_raw_options(
 def validate_raw_duration(
     sequences: list[PulseSequence], options: ExecutionParameters
 ) -> None:
-    """Require each RAW shot to span the whole scope memory.
+    """Require each RAW acquisition to fit in the scope memory.
 
-    The scope capture restarts at every shot. Samples never written by the current
-    experiment retain data from previous ones, since hardware averaging does not reset
-    them. Acquisition and relaxation are a lower bound of the time between two captures,
-    so together they must fill the trace.
+    The scope trace has a fixed length of :data:`SCOPE_MEMORY` samples, at 1 GSps,
+    i.e. one sample per nanosecond. Longer acquisitions could not be fully recorded.
     """
     if options.acquisition_type is not AcquisitionType.RAW:
         return
 
-    relaxation = default(options.relaxation_time, 0)
     for sequence in sequences:
         for _, event in sequence:
             acq = event.acquisition if isinstance(event, Readout) else event
-            if (
-                isinstance(acq, AcquisitionPulse)
-                and acq.duration + relaxation < SCOPE_MEMORY
-            ):
+            if isinstance(acq, AcquisitionPulse) and acq.duration > SCOPE_MEMORY:
                 raise ValueError(
-                    f"RAW acquisition requires acquisition duration ({acq.duration:g} "
-                    f"ns) plus relaxation time ({relaxation:g} ns) to be at least "
-                    f"{SCOPE_MEMORY} ns, to fill the scope memory."
+                    f"RAW acquisition duration ({acq.duration:g} ns) exceeds the "
+                    f"scope memory ({SCOPE_MEMORY} ns)."
                 )

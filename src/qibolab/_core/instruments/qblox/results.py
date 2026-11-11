@@ -95,8 +95,15 @@ def _integration(data: Integration, length: int) -> Result:
     return np.moveaxis(res, 0, -1) / length
 
 
-def _scope(data: ScopeData, frequency: float | None, sampling_rate: float) -> Result:
+def _scope(
+    data: ScopeData, length: int, frequency: float | None, sampling_rate: float
+) -> Result:
     res = np.array([data["path0"]["data"], data["path1"]["data"]])
+    # The scope always records its whole memory: retain only the acquisition window,
+    # before demodulation, such that it is not affected by samples outside of it.
+    # Longer acquisitions are rejected upstream, cf. `validate.validate_raw_duration`.
+    assert res.shape[-1] >= length
+    res = res[:, :length]
     # Demodulate scope data to baseband when a frequency is provided.
     if frequency is not None:
         res = demodulate(res, frequency, sampling_rate)
@@ -127,6 +134,7 @@ def extract(
             if acquisition is AcquisitionType.DISCRIMINATION
             else _scope(
                 idata["acquisition"]["scope"],
+                lengths[UUID(acq)],
                 frequencies.get(channel, None),
                 sampling_rate,
             )

@@ -64,8 +64,10 @@ def demodulate(
     Samples are on the last axis, so that a batch of traces of shape ``(2, ..., samples)``
     can be demodulated at once.
     """
-    # in case the offsets have not been removed in hardware
-    modulated = modulated - np.mean(modulated, axis=-1, keepdims=True)
+    # remove the offset in case it has not been removed in hardware, except at zero
+    # frequency, where the signal itself is constant and would be removed as well
+    if freq != 0:
+        modulated = modulated - np.mean(modulated, axis=-1, keepdims=True)
 
     samples = np.arange(modulated.shape[-1])
     phases = (2 * np.pi * freq / rate) * samples
