@@ -211,7 +211,10 @@ def test_long_wait_bounds(duration):
     """Remainder wait respects MIN_WAIT and the total is preserved."""
     head, move, body, _ = transform([Wait(duration=duration)], (wait.long_wait,))
     assert wait.MIN_WAIT <= head.instruction.duration <= wait.MAX_WAIT
-    assert head.instruction.duration + move.instruction.source * body.instruction.duration == duration
+    assert (
+        head.instruction.duration + move.instruction.source * body.instruction.duration
+        == duration
+    )
 
 
 def test_long_wait_short_wait_untouched():
