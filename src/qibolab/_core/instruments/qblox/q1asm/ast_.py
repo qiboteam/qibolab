@@ -577,7 +577,7 @@ class AcquireWeighed(Instr):
     bin: Value
     weight_0: Value
     weight_1: Value
-    duration: Immediate
+    duration: MultiBaseInt
 
     @model_validator(mode="after")
     def check_signature(self):

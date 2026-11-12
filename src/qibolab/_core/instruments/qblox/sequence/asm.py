@@ -18,26 +18,28 @@ class Registers(Enum):
     wait = Register(number=3)
     phase_delta = Register(number=4)
     zero = Register(number=5)
+    one = Register(number=6)
 
     @classmethod
     def first_available(cls) -> int:
         return max(r.value.number for r in cls) + 1
 
     @classmethod
-    def init_zero_registers(cls) -> list[Line]:
-        """Generate `Move` instructions to initialize registers with zero value."""
+    def init_registers(cls) -> list[Line]:
+        """Generate `Move` instructions to initialize registers."""
         init_specs = [
-            (cls.bin, "init bin counter"),
-            (cls.bin_reset, "init bin reset"),
-            (cls.phase_delta, "init delta phase register"),
-            (cls.zero, "init zero register"),
+            (cls.bin, 0, "init bin counter"),
+            (cls.bin_reset, 0, "init bin reset"),
+            (cls.phase_delta, 0, "init delta phase register"),
+            (cls.zero, 0, "init always zero register"),
+            (cls.one, 1, "init always one register"),
         ]
         return [
             Line(
-                instruction=Move(source=0, destination=reg.value),
+                instruction=Move(source=value, destination=reg.value),
                 comment=comment,
             )
-            for reg, comment in init_specs
+            for reg, value, comment in init_specs
         ]
 
 

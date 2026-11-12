@@ -10,6 +10,7 @@ from qibolab._core.sweeper import Parameter
 
 from ..q1asm.ast_ import (
     Acquire,
+    AcquireWeighed,
     Add,
     Block,
     Instruction,
@@ -18,6 +19,7 @@ from ..q1asm.ast_ import (
     Move,
     Play,
     Register,
+    ResetPh,
     SetAwgOffs,
     SetPhDelta,
     UpdParam,
@@ -216,17 +218,28 @@ def _process_virtualz(pulse: VirtualZ, params: set[Param], merged_vzs: bool):
         ]
 
 
+def _acquire(acq: AcquisitionSpec, duration: int) -> Instruction:
+    if acq.weighted:
+        # the bin is a register, so the weight indices have to be registers too: `zero`
+        # and `one` select the I and Q weights, stored at indices 0 and 1 by
+        # `kernel_weights`
+        return AcquireWeighed(
+            acquisition=acq.acquisition.index,
+            bin=Registers.bin.value,
+            weight_0=Registers.zero.value,
+            weight_1=Registers.one.value,
+            duration=duration,
+        )
+    return Acquire(
+        acquisition=acq.acquisition.index, bin=Registers.bin.value, duration=duration
+    )
+
+
 def _process_acquisition(
     pulse: Acquisition, acquisitions: dict[MeasureId, AcquisitionSpec]
 ):
     acq = acquisitions[pulse.id]
-    return [
-        Acquire(
-            acquisition=acq.acquisition.index,
-            bin=Registers.bin.value,
-            duration=acq.duration,
-        )
-    ]
+    return [_acquire(acq, acq.duration)]
 
 
 def _process_readout(
@@ -236,14 +249,16 @@ def _process_readout(
 ):
     acq = acquisitions[pulse.id]
     return [
+        # zero the NCO phase at the probe start, such that the acquisition always starts
+        # at phase `IF * time_of_flight`, compensated in `_scope`. Hardware demodulation
+        # does not need it: the same NCO modulates the probe and demodulates the signal,
+        # so its accumulated phase cancels. RAW traces are instead demodulated in
+        # software from zero phase, and would otherwise depend on the preceding pulses.
+        Line(instruction=ResetPh(), comment="phase reset"),
         _play_waveforms(pulse.probe, waveforms).update(
             {"duration": int(pulse.time_of_flight)}
         ),
-        Acquire(
-            acquisition=acq.acquisition.index,
-            bin=Registers.bin.value,
-            duration=int(pulse.acquisition.duration),
-        ),
+        _acquire(acq, int(pulse.acquisition.duration)),
     ]
 
 
