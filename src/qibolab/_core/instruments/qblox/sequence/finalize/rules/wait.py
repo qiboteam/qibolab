@@ -25,7 +25,6 @@ __all__ = [
 MAX_WAIT = 2**16 - 1
 MIN_WAIT = 4
 STEP = MAX_WAIT - MIN_WAIT + 1
-"""Loop wait, short enough that the remainder always fits :const:`MIN_WAIT`."""
 
 
 class LongWaits(Model):
