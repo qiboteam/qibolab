@@ -2,16 +2,17 @@ name: Build wheels
 
 on:
   push:
+    branches-ignore: ["gh-readonly-queue/**"]
+  merge_group:
   release:
     types:
       - published
 
 jobs:
   build:
-    uses: qiboteam/workflows/.github/workflows/wheels.yml@uv
+    uses: qiboteam/workflows/.github/workflows/wheels.yml@v3
     with:
       os: ubuntu-latest
       python-version: "3.12"
       publish: ${{ github.event_name == 'release' && github.event.action == 'published' }}
-      uv-extras: "--no-dev --group docs --group tests --group analysis --all-extras"
     secrets: inherit
