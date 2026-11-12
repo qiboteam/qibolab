@@ -1,3 +1,5 @@
+import itertools
+
 from qibolab._core.pulses.pulse import (
     Acquisition,
     Align,
@@ -13,19 +15,24 @@ from ..q1asm.ast_ import (
     Add,
     Block,
     Instruction,
+    Jlt,
+    Jmp,
     Line,
     Lineable,
     Move,
     Play,
+    Reference,
     Register,
     SetAwgOffs,
     SetPhDelta,
+    Sub,
     UpdParam,
     Wait,
     WaitSync,
 )
 from .acquisition import AcquisitionSpec, MeasureId
 from .asm import Registers, convert
+from .finalize.rules.wait import MAX_WAIT, MIN_WAIT
 from .sweepers import (
     Param,
     ParameterizedPulse,
@@ -182,6 +189,9 @@ def _process_pulse(
         )
 
 
+_swept_waits = itertools.count()
+
+
 def _process_delay(pulse: Delay, params: set[Param]):
     if len(params) == 0:
         return [
@@ -190,8 +200,26 @@ def _process_delay(pulse: Delay, params: set[Param]):
                 comment=f"id: 0x{pulse.id.hex[:5]}",
             )
         ]
-    else:
-        return [Wait(duration=next(iter(params)).reg)]
+    param = next(iter(params))
+    if max(param.start, param.stop) <= MAX_WAIT:
+        return [Wait(duration=param.reg)]
+
+    # `wait` reads only 16 bits of a register: split the swept wait at runtime
+    reg = Registers.wait.value
+    step = MAX_WAIT - MIN_WAIT + 1
+    n = next(_swept_waits)
+    loop, end = f"swept_wait{n}", f"swept_wait_end{n}"
+    return [
+        Move(source=param.reg, destination=reg),
+        Line(
+            instruction=Jlt(a=reg, b=MAX_WAIT + 1, address=Reference(label=end)),
+            label=loop,
+        ),
+        Wait(duration=step),
+        Sub(a=reg, b=step, destination=reg),
+        Jmp(address=Reference(label=loop)),
+        Line(instruction=Wait(duration=reg), label=end),
+    ]
 
 
 def _process_virtualz(pulse: VirtualZ, params: set[Param], merged_vzs: bool):

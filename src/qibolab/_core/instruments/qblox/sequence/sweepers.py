@@ -115,6 +115,8 @@ class Param(Model):
     """Initial value."""
     step: int
     """Increment."""
+    stop: int
+    """Final value (range bound, excluded)."""
     role: ParamRole
     """The parameter type."""
     pulse: PulseId | None
@@ -148,8 +150,9 @@ class Param(Model):
 
         Validates the entire range (start, stop, step) before converting.
         """
-        start_, stop, step = irange
-        start = start_ - _duration_shift(role, pulse)
+        start_, stop_, step = irange
+        shift = _duration_shift(role, pulse)
+        start, stop = start_ - shift, stop_ - shift
         # Validate all points in the range
         for value in (start, stop, step):
             _validate_sweeper_value(value, kind)
@@ -157,6 +160,7 @@ class Param(Model):
             reg=Register(number=0),
             start=int(convert(start, kind)),
             step=int(convert(step, kind)),
+            stop=int(convert(stop, kind)),
             pulse=pulse.id if pulse is not None else None,
             channel=channel,
             role=role,
