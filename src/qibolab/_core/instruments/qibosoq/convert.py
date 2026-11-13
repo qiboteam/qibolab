@@ -114,6 +114,7 @@ def order_pulse_sequence(
     sequence: PulseSequence,
 ) -> tuple[list[tuple[ChannelId, PulseLike, float]], dict[PulseId, list[PulseId]]]:
     """Order pulse sequence by execution time."""
+    sequence = sequence.align_to_delays()
 
     channel_time: dict[str, float] = {}
     channel_order = {ch: i for i, ch in enumerate(sequence.by_channel.keys())}
@@ -128,13 +129,6 @@ def order_pulse_sequence(
             if isinstance(pulse, Delay):
                 start = channel_time[ch]
                 channel_time[ch] = stop = start + pulse.duration
-                delays_before_pulse.append(pulse.id)
-
-            elif isinstance(pulse, Align):
-                start = channel_time[ch]
-                stop = max(channel_time.values())
-                for c in channel_time:
-                    channel_time[c] = stop
                 delays_before_pulse.append(pulse.id)
 
             else:

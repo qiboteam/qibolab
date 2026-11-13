@@ -224,8 +224,7 @@ def test_pipe():
     # |= inserts an Align marker before appending other
     s1_ior = deepcopy(s1)
     s1_ior |= s2
-    assert isinstance(list(s1_ior.channel("ch1"))[1], Align)
-    assert isinstance(next(iter(s1_ior.channel("ch2"))), Align)
+    assert s1_ior[1] == ("ch1", Align(channels=("ch1", "ch2")))
     compiled = s1_ior.align_to_delays()
     assert not any(isinstance(p, Align) for _, p in compiled)
     assert compiled.channels == {"ch1", "ch2"}
@@ -323,12 +322,12 @@ def test_align_to_delay():
     )
 
     delay_sequence = sequence.align_to_delays()
-    assert len(delay_sequence) == len(sequence) - 1
+    assert len(delay_sequence) == len(sequence)
     for (ch1, p1), (ch2, p2) in zip(sequence[:5], delay_sequence[:5]):
         assert ch1 == ch2
         assert p1 is p2
     assert delay_sequence[5] == ("ch1", Delay(duration=40))
-    for (ch1, p1), (ch2, p2) in zip(sequence[7:], delay_sequence[6:]):
+    for (ch1, p1), (ch2, p2) in zip(sequence[6:], delay_sequence[6:]):
         assert ch1 == ch2
         assert p1 is p2
     # assert that pulses after align start simultaneously

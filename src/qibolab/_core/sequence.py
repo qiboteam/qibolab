@@ -78,7 +78,10 @@ class PulseSequence(UserList[_Element]):
     @property
     def channels(self) -> set[ChannelId]:
         """Channels involved in the sequence."""
-        return {ch for (ch, _) in self}
+        # an ``Align`` is filed under one channel only, so add all the channels it syncs
+        return {ch for (ch, _) in self} | {
+            ch for (_, p) in self if isinstance(p, Align) for ch in p.channels
+        }
 
     def channel(self, channel: ChannelId) -> Iterable[PulseLike]:
         """Isolate pulses on a given channel."""
@@ -163,27 +166,18 @@ class PulseSequence(UserList[_Element]):
         return copy
 
     def align(self, channels: Iterable[ChannelId]) -> Align:
-        """Introduce align commands to the sequence."""
-        align = Align()
-        for channel in channels:
-            self.append((channel, align))
+        """Introduce an align command to the sequence."""
+        align = Align(channels=tuple(channels))
+        if align.channels:
+            self.append((align.channels[0], align))
         return align
 
     def align_to_delays(self) -> "PulseSequence":
         """Compile align commands to delays."""
-
-        # keep track of ``Align`` command that were already played
-        # because the same ``Align`` will appear on multiple channels
-        # in the sequence
-        processed_aligns = set()
-
         new = type(self)()
         for channel, pulse in self:
             if isinstance(pulse, Align):
-                if pulse.id not in processed_aligns:
-                    channels = self.pulse_channels(pulse.id)
-                    _synchronize(new, channels)
-                    processed_aligns.add(pulse.id)
+                _synchronize(new, pulse.channels)
             else:
                 new.append((channel, pulse))
         return new
