@@ -181,3 +181,19 @@ def test_single_qubit_natives_r_uuid_uniqueness():
     r6 = natives_rx.R(theta=np.pi, phi=np.pi / 4)
     assert r4[0][1].id != r6[0][1].id
     assert r5[0][1].id != r6[0][1].id
+
+
+def test_align_survives_copy_and_serialization():
+    seq = Native([("a", Pulse(duration=20, amplitude=0.1, envelope=Rectangular()))])
+    seq.align(["a", "b"])
+    # "b" is only in the align so far, it still counts
+    assert seq.channels == {"a", "b"}
+    seq.append(("b", Pulse(duration=56, amplitude=0.1, envelope=Rectangular())))
+    assert seq.channel_duration("b") == 76
+
+    # natives are copied, with new ids, before use
+    assert seq.create_sequence().channel_duration("b") == 76
+    # ids are not serialized
+    loaded = Native.load(PulseSequence._serialize(seq))
+    assert loaded == seq
+    assert loaded.create_sequence().channel_duration("b") == 76

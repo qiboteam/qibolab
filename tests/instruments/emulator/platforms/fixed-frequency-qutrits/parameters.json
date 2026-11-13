@@ -274,19 +274,12 @@
                     [
                         "1/drive",
                         {
-                            "kind": "align"
-                        }
-                    ],
-                    [
-                        "0/drive1",
-                        {
-                            "kind": "align"
-                        }
-                    ],
-                    [
-                        "0/drive",
-                        {
-                            "kind": "align"
+                            "kind": "align",
+                            "channels": [
+                                "0/drive",
+                                "0/drive1",
+                                "1/drive"
+                            ]
                         }
                     ],
                     [
