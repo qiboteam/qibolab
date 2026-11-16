@@ -76,8 +76,6 @@ class Platform:
         log.info("Loading platform %s", self.name)
         signal.signal(signal.SIGTERM, self.termination_handler)
         signal.signal(signal.SIGINT, self.termination_handler)
-        if self.resonator_type is None:
-            self.resonator_type = "3D" if self.nqubits == 1 else "2D"
 
     def __str__(self):
         return self.name

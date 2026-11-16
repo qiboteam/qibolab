@@ -4,8 +4,9 @@ from typing import Annotated, Literal, cast
 from uuid import uuid4
 
 import numpy as np
-from pydantic import UUID4, Field
+from pydantic import UUID4, AfterValidator, Field
 
+from ..identifier import ChannelId
 from ..serialize import Model
 from .envelope import Envelope, IqWaveform, Waveform
 
@@ -197,9 +198,13 @@ class Readout(_PulseLike):
 
 
 class Align(_PulseLike):
-    """Brings different channels at the same point in time."""
+    """Brings ``channels`` at the same point in time, as a single sequence entry."""
 
     kind: Literal["align"] = "align"
+    channels: Annotated[
+        tuple[ChannelId, ...], AfterValidator(lambda chs: tuple(sorted(set(chs))))
+    ]
+    """Channels to synchronize. Sorted and deduplicated, since order is irrelevant."""
 
 
 PulseLike = Annotated[

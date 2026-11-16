@@ -99,11 +99,6 @@ def play(args: ExecutionArguments):
     """
     qua.align()
 
-    # keep track of ``Align`` command that were already played
-    # because the same ``Align`` will appear on multiple channels
-    # in the sequence
-    processed_aligns = set()
-
     for channel_id, pulse in args.sequence:
         element = str(channel_id)
         op = operation(pulse)
@@ -123,10 +118,8 @@ def play(args: ExecutionArguments):
             _delay(pulse, element, params)
         elif isinstance(pulse, VirtualZ):
             _virtualz(pulse, element, params)
-        elif isinstance(pulse, Align) and pulse.id not in processed_aligns:
-            channel_ids = args.sequence.pulse_channels(pulse.id)
-            qua.align(*(str(ch) for ch in channel_ids))
-            processed_aligns.add(pulse.id)
+        elif isinstance(pulse, Align):
+            qua.align(*(str(ch) for ch in pulse.channels))
 
     if args.relaxation_time > 0:
         qua.wait(args.relaxation_time // 4)
