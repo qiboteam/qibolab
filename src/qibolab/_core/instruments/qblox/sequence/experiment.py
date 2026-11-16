@@ -253,7 +253,10 @@ def _process_readout(
         # at phase `IF * time_of_flight`, compensated in `_scope`. Hardware demodulation
         # does not need it: the same NCO modulates the probe and demodulates the signal,
         # so its accumulated phase cancels. RAW traces are instead demodulated in
-        # software from zero phase, and would otherwise depend on the preceding pulses.
+        # software from zero phase, and would otherwise depend on the time elapsed since
+        # the program start (hence would even be different between shots). Note that
+        # this also clears any phase accumulated through `set_ph_delta` on this
+        # sequencer.
         Line(instruction=ResetPh(), comment="phase reset"),
         _play_waveforms(pulse.probe, waveforms).update(
             {"duration": int(pulse.time_of_flight)}
