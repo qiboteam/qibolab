@@ -168,7 +168,7 @@ class PulseSequence(UserList[_Element]):
     def align(self, channels: Iterable[ChannelId]) -> Align:
         """Introduce an align command to the sequence."""
         align = Align(channels=tuple(channels))
-        if align.channels:
+        if len(align.channels) > 0:
             self.append((align.channels[0], align))
         return align
 
