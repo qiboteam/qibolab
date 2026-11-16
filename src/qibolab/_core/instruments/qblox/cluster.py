@@ -253,8 +253,7 @@ class Cluster(Controller):
                 for ch, cfg in configs.items()
                 if isinstance(cfg, AcquisitionConfig) and cfg.kernel is not None
             }
-            if options.acquisition_type
-            in (AcquisitionType.INTEGRATION, AcquisitionType.DISCRIMINATION)
+            if options.acquisition_type is not AcquisitionType.RAW
             else {}
         )
 
