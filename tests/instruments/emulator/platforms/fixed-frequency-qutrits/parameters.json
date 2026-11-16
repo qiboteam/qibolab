@@ -272,7 +272,7 @@
                         }
                     ],
                     [
-                        "1/drive",
+                        "align",
                         {
                             "kind": "align",
                             "channels": [
