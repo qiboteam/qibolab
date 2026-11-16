@@ -15,7 +15,7 @@ from qibolab._core.pulses import (
     Rectangular,
     VirtualZ,
 )
-from qibolab._core.sequence import PulseSequence
+from qibolab._core.sequence import ALIGN, PulseSequence
 
 
 def test_init():
@@ -224,7 +224,7 @@ def test_pipe():
     # |= inserts an Align marker before appending other
     s1_ior = deepcopy(s1)
     s1_ior |= s2
-    assert s1_ior[1] == ("ch1", Align(channels=("ch1", "ch2")))
+    assert s1_ior[1] == (ALIGN, Align(channels=("ch1", "ch2")))
     compiled = s1_ior.align_to_delays()
     assert not any(isinstance(p, Align) for _, p in compiled)
     assert compiled.channels == {"ch1", "ch2"}
