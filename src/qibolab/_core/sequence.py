@@ -17,6 +17,8 @@ from .pulses import Acquisition, Align, Delay, Pulse, PulseLike, Readout
 __all__ = ["PulseSequence"]
 
 _Element = tuple[ChannelId, PulseLike]
+ALIGN: ChannelId = "align"
+"""Dummy channel for :class:`Align` entries, which act on their own ``channels``."""
 InputOps = Readout | Acquisition
 
 _adapted_sequence = TypeAdapter(list[_Element])
@@ -78,8 +80,7 @@ class PulseSequence(UserList[_Element]):
     @property
     def channels(self) -> set[ChannelId]:
         """Channels involved in the sequence."""
-        # an ``Align`` is filed under one channel only, so add all the channels it syncs
-        return {ch for (ch, _) in self} | {
+        return {ch for (ch, _) in self if ch != ALIGN} | {
             ch for (_, p) in self if isinstance(p, Align) for ch in p.channels
         }
 
@@ -169,7 +170,7 @@ class PulseSequence(UserList[_Element]):
         """Introduce an align command to the sequence."""
         align = Align(channels=tuple(channels))
         if len(align.channels) > 0:
-            self.append((align.channels[0], align))
+            self.append((ALIGN, align))
         return align
 
     def align_to_delays(self) -> "PulseSequence":
