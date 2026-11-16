@@ -8,6 +8,7 @@ from qibolab._core.instruments.qblox.q1asm.ast_ import (
     Asr,
     Block,
     Jlt,
+    Jmp,
     Line,
     Loop,
     Move,
@@ -229,6 +230,47 @@ def test_long_wait_sequential_labels():
     result = transform(block, (wait.long_wait,))
     labels = {el.label for el in result if el.label is not None}
     assert labels == {"wait0", "wait1"}
+
+
+def _run_swept_wait(lines: list[Line], value: int) -> int:
+    """Interpret an expanded swept wait, returning the total waited time."""
+    labels = {line.label: i for i, line in enumerate(lines) if line.label is not None}
+    reg, total, pc = None, 0, 0
+    while pc < len(lines):
+        instr = lines[pc].instruction
+        if isinstance(instr, Move):
+            reg = value
+        elif isinstance(instr, Sub):
+            reg -= instr.b
+        elif isinstance(instr, Wait):
+            duration = instr.duration if isinstance(instr.duration, int) else reg
+            assert wait.MIN_WAIT <= duration <= wait.MAX_WAIT
+            total += duration
+        if isinstance(instr, Jmp) or (isinstance(instr, Jlt) and reg < instr.b):
+            pc = labels[instr.address.label]
+        else:
+            pc += 1
+    return total
+
+
+@pytest.mark.parametrize("value", [4, 65535, 65536, 65539, 131067, 200_000])
+def test_swept_wait_split(value):
+    """A register wait is split into bounded waits, preserving the total."""
+    block = [Wait(duration=Register(number=7)), Wait(duration=Register(number=7))]
+    result = transform(block, (wait.swept_wait,))
+    labels = [el.label for el in result if el.label is not None]
+    assert labels == [
+        "swept_wait0",
+        "swept_wait_end0",
+        "swept_wait1",
+        "swept_wait_end1",
+    ]
+    assert _run_swept_wait(result, value) == 2 * value
+
+
+def test_default_pipeline_splits_swept_wait():
+    result = transform([Wait(duration=Register(number=7))], DEFAULT_PIPELINE)
+    assert any(isinstance(el.instruction, Jmp) for el in result)
 
 
 def test_negative_immediate_move():
