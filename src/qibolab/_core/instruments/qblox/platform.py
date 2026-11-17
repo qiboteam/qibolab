@@ -281,7 +281,13 @@ def build_channels(
             el.drive: outputs.references(name, False),
             el.acquisition: {"twpa_pump": pumps[name]} if name in pumps else {},
         } | {
-            extra: outputs.references(name, False) for extra in el.drive_extra.values()
+            # WARNING: the extra drive channels are assumed to share the LO and
+            # mixer of the main drive channel. This may not always hold: for
+            # some operations (e.g. cross-resonance or 1-2 transition drives)
+            # the target frequency might fall outside the LO bandwidth,
+            # requiring a different LO - which is currently not supported here
+            extra: outputs.references(name, False)
+            for extra in el.drive_extra.values()
         }
         for id_, update in updates.items():
             if id_ is not None and id_ in channels and len(update) > 0:
