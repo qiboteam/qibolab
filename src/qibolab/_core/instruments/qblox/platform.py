@@ -285,7 +285,10 @@ def build_channels(
             # mixer of the main drive channel. This may not always hold: for
             # some operations (e.g. cross-resonance or 1-2 transition drives)
             # the target frequency might fall outside the LO bandwidth,
-            # requiring a different LO - which is currently not supported here
+            # requiring a different LO - which is currently not supported here.
+            # If the extra channels need a different LO from the main drive
+            # channel, it has to be inserted manually in the QPU platform
+            # script (in the QIBOLAB_PLATFORMS folder)
             extra: outputs.references(name, False)
             for extra in el.drive_extra.values()
         }
