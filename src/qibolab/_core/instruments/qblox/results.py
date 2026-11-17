@@ -4,11 +4,12 @@ from typing import TypedDict
 from uuid import UUID
 
 import numpy as np
+import scipy.constants
 from qblox_instruments.qcodes_drivers.module import Module
 
 from qibolab._core.execution_parameters import AcquisitionType
 from qibolab._core.identifier import ChannelId, Result
-from qibolab._core.pulses.modulation import demodulate
+from qibolab._core.pulses.modulation import demodulate, rotate
 from qibolab._core.pulses.pulse import PulseId
 
 from .identifiers import SequencerId, SequencerMap, SlotId
@@ -96,7 +97,11 @@ def _integration(data: Integration, length: int) -> Result:
 
 
 def _scope(
-    data: ScopeData, length: int, frequency: float | None, sampling_rate: float
+    data: ScopeData,
+    length: int,
+    frequency: float | None,
+    sampling_rate: float,
+    time_of_flight: float,
 ) -> Result:
     res = np.array([data["path0"]["data"], data["path1"]["data"]])
     # The scope always records its whole memory: retain only the acquisition window,
@@ -107,6 +112,14 @@ def _scope(
     # Demodulate scope data to baseband when a frequency is provided.
     if frequency is not None:
         res = demodulate(res, frequency, sampling_rate)
+        # Software demodulation starts with zero phase at the acquisition start, while
+        # the hardware one follows the NCO, whose phase there is `IF * time_of_flight`
+        # (reset at the probe start). Rotate into the hardware frame, such that kernels
+        # calibrated on RAW traces apply to the hardware-demodulated paths. Qblox
+        # demodulation shares the `demodulate` sign convention.
+        res = rotate(
+            res, -2 * np.pi * frequency * time_of_flight * scipy.constants.nano
+        )
     return np.moveaxis(res, 0, -1)
 
 
@@ -121,7 +134,14 @@ def extract(
     shape: tuple[int, ...],
     sampling_rate: float,
     frequencies: dict[ChannelId, float],
+    times_of_flight: dict[ChannelId, float] | None = None,
 ) -> dict[PulseId, Result]:
+    """Convert acquired data to the standard format.
+
+    ``times_of_flight``, in ns, are only used to align RAW traces with the hardware
+    demodulation frame.
+    """
+    times_of_flight = times_of_flight or {}
     # TODO: check if the `lengths` info coincide with the
     # idata["acquisition"]["bins"]["avg_cnt"]
     return {
@@ -137,6 +157,7 @@ def extract(
                 lengths[UUID(acq)],
                 frequencies.get(channel, None),
                 sampling_rate,
+                times_of_flight.get(channel, 0.0),
             )
             if acquisition is AcquisitionType.RAW
             else np.array([])

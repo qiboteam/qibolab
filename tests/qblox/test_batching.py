@@ -145,7 +145,7 @@ def test_batch_sequences_by_register_limit():
         qrm_channels=set(),
     )
 
-    # 6 fixed registers + 1 loop counter leave 57 registers for the swept pulses
+    # 7 fixed registers + 1 loop counter leave 56 registers for the swept pulses
     assert sum(len(b) for b in batches) == 30
     assert [len(b) for b in batches] == [30]
 
@@ -176,8 +176,8 @@ def test_batch_registers_split_distinct_swept_pulses():
         qrm_channels=set(),
     )
 
-    # Splitting resets the pulse ID union; each batch can hold 57 distinct IDs.
-    assert [len(b) for b in batches] == [57, 57, 57, 9]
+    # Splitting resets the pulse ID union; each batch can hold 56 distinct IDs.
+    assert [len(b) for b in batches] == [56, 56, 56, 12]
 
 
 @pytest.mark.parametrize("parameter", [Parameter.amplitude, Parameter.duration])
@@ -224,12 +224,12 @@ def test_batch_registers_deduplicate_multiple_parameters():
     )
 
     # Each unique Gaussian pulse ID needs three duration-sweep registers.
-    assert [len(b) for b in batches] == [19, 19, 2]
+    assert [len(b) for b in batches] == [18, 18, 4]
 
 
 def test_batch_registers_are_counted_per_channel():
     """Pulse register budget is per sequencer: 100 pulses split across 2 channels fit
-    because each channel gets its own 57-register allowance."""
+    because each channel gets its own 56-register allowance."""
     channels = ["0/drive", "1/drive"]
     pulses: list[PulseLike] = [
         Pulse(duration=20, amplitude=0.1, envelope=Rectangular()) for _ in range(100)
@@ -245,7 +245,7 @@ def test_batch_registers_are_counted_per_channel():
         qrm_channels=set(),
     )
 
-    # 7 fixed registers leave 57 per sequencer: 100 pulses fit once spread on 2 channels
+    # 8 fixed registers leave 56 per sequencer: 100 pulses fit once spread on 2 channels
     assert [len(b) for b in batches] == [100]
 
 
@@ -308,7 +308,7 @@ def test_batch_registers_count_own_channel_sweepers():
     """Sweepers on the same channel do consume its register budget."""
     channels, pulses, sweepers = _channel_sweep_setup(1, 60)
 
-    # 8 fixed + 1 own frequency + 60 amplitudes exceeds the 64 registers
+    # 9 fixed + 1 own frequency + 60 amplitudes exceeds the 64 registers
     with pytest.raises(ValueError, match="exceeds the Q1 sequencer registers"):
         batching._split_sequences_by_memory_limits(
             [PulseSequence([("0/drive", p) for p in pulses])],
@@ -319,7 +319,7 @@ def test_batch_registers_count_own_channel_sweepers():
         )
 
 
-@pytest.mark.parametrize("nparameters", [1, 57, 58])
+@pytest.mark.parametrize("nparameters", [1, 56, 57])
 def test_batch_registers_count_sweeper_only_channels(nparameters):
     """Channel-parameter sweepers on a channel with no pulses still count registers."""
     sequence = PulseSequence([("0/drive", Delay(duration=4))])
@@ -337,8 +337,8 @@ def test_batch_registers_count_sweeper_only_channels(nparameters):
     )
     options = ExecutionParameters(nshots=1, relaxation_time=100)
 
-    # Six fixed registers and one loop leave 57 channel-parameter registers.
-    if nparameters > 57:
+    # Seven fixed registers and one loop leave 56 channel-parameter registers.
+    if nparameters > 56:
         with pytest.raises(
             ValueError,
             match="channel 1/drive: requested=65, limit=64",
@@ -494,14 +494,17 @@ def test_register_budget_matches_compiler(averaging_mode, ndimensions):
 
 
 @pytest.mark.parametrize(
-    ("parameter", "envelope", "capacity"),
+    ("parameter", "envelope", "capacity", "used_registers"),
     [
-        (Parameter.amplitude, Rectangular(), 57),
-        (Parameter.duration, Rectangular(), 57),
-        (Parameter.duration, Gaussian(rel_sigma=5), 19),
+        (Parameter.amplitude, Rectangular(), 56, 64),
+        (Parameter.duration, Rectangular(), 56, 64),
+        # 3 registers per Gaussian: 18 pulses leave 2 registers unused
+        (Parameter.duration, Gaussian(rel_sigma=5), 18, 62),
     ],
 )
-def test_register_limited_batches_match_compiler(parameter, envelope, capacity):
+def test_register_limited_batches_match_compiler(
+    parameter, envelope, capacity, used_registers
+):
     """Prevent unnecessary splitting or register overflow at the compiler's limit."""
     pulses: list[PulseLike] = [
         Pulse(duration=20, amplitude=0.1, envelope=envelope) for _ in range(60)
@@ -533,7 +536,7 @@ def test_register_limited_batches_match_compiler(parameter, envelope, capacity):
         _assert_register_budget_matches_compiler(batch, sweepers, options)
         for batch in batches
     ]
-    assert budgets[0] == {ch: 64 for ch in channels}
+    assert budgets[0] == {ch: used_registers for ch in channels}
 
     oversized = PulseSequence(
         [(ch, pulse) for pulse in pulses[: capacity + 1] for ch in sorted(channels)]

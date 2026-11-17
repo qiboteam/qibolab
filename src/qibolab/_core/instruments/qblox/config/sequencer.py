@@ -16,7 +16,7 @@ from qibolab._core.execution_parameters import AcquisitionType
 from qibolab._core.identifier import ChannelId
 from qibolab._core.serialize import Model
 
-from ..q1asm.ast_ import Acquire, Line
+from ..q1asm.ast_ import Acquire, AcquireWeighed, Line
 from ..sequence import CW_WAVEFORM_INDEX, Q1Sequence
 from .port import PortAddress
 
@@ -29,7 +29,7 @@ def _integration_length(sequence: Q1Sequence) -> int | None:
         line.instruction.duration
         for line in sequence.program.elements
         if isinstance(line, Line)
-        if isinstance(line.instruction, Acquire)
+        if isinstance(line.instruction, (Acquire, AcquireWeighed))
     }
     if len(lengths) == 0:
         return None
