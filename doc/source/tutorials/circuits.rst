@@ -1,173 +1,182 @@
-.. admonition:: Work in progress
-
-    This page is only partially updated from a previous version of Qibolab.
-
-    In case of doubts, contact the `Qibo developers
-    <https://github.com/qiboteam/qibo#contacts>`_.
-
 .. _tutorials_circuits:
 
-Circuit execution
-=================
+Executing a circuit
+===================
 
-Qibolab can be used as a ``qibo`` backend for executing executions. The purpose
-of this section is to show how to do it, without entering into the details of
-circuits definition that we leave to the `Qibo
-<https://qibo.science/qibo/stable/>`_ documentation.
+This tutorial follows a circuit from construction to acquired measurement
+samples. We use the built-in ``dummy`` platform so the workflow can be checked
+without hardware access. The purpose is to validate gate compatibility,
+measurement bookkeeping and result handling, not to reproduce an ideal quantum
+distribution. For a pulse-level physical simulation, continue with
+:ref:`tutorials_emulator`.
 
-.. testcode:: python
+Install ``qibolab[backend]`` before running these examples:
+
+.. code-block:: console
+
+    pip install "qibolab[backend]"
+
+Select a platform and write a native circuit
+--------------------------------------------
+
+Construct an explicit Qibo backend first, so its platform and supported
+operations are available while preparing the circuit. The dummy platform has
+physical qubits 0 through 4 and includes a CZ native sequence on pair ``(0, 2)``.
+We keep the default integer placement here: three logical wires correspond to
+physical qubits 0, 1 and 2.
+
+.. testcode:: circuit-execution
 
     import numpy as np
-    import qibo
-    from qibo import Circuit, gates
+    from qibo import Circuit, construct_backend, gates
 
-    np.random.seed(0)
+    backend = construct_backend("qibolab", platform="dummy")
+    platform = backend.platform
+    assert (0, 2) in backend.connectivity
+    assert platform.natives.two_qubit[(0, 2)].CZ is not None
 
-    # create a single qubit circuit
-    circuit = Circuit(1, wire_names=[0])
-
-    # attach Hadamard gate and a measurement
+    circuit = Circuit(3, wire_names=[0, 1, 2])
     circuit.add(gates.GPI2(0, phi=np.pi / 2))
-    circuit.add(gates.M(0))
+    circuit.add(gates.CZ(0, 2))
+    measurement = circuit.add(gates.M(0, 2))
 
-    # execute on quantum hardware
-    qibo.set_backend("qibolab", platform="dummy")
-    hardware_result = circuit(nshots=5000)
+``GPI2`` is a native equatorial rotation by :math:`\pi/2`; its ``phi`` parameter
+chooses the axis, not the rotation angle. CZ then acts on the connected physical
+pair. The measurement requests only logical wires 0 and 2, so the returned sample
+array will have two columns, not three. We intentionally use compiler-supported
+gates; an arbitrary Qibo circuit would first need transpilation as explained in
+:ref:`main_doc_compiler`.
 
-    # retrieve measured probabilities
-    freq = hardware_result.frequencies()
-    p0 = freq["0"] / 5000 if "0" in freq else 0
-    p1 = freq["1"] / 5000 if "1" in freq else 0
-    hardware = [p0, p1]
+.. figure:: figures/native-circuit.svg
+    :alt: Logical wire 0, mapped to physical qubit 0, receives GPI2 with phi pi over two. CZ joins physical qubits 0 and 2, which are then measured. Wire 1 is untouched and unmeasured. Results contain 128 rows and two columns in measured-wire order, 0 then 2.
+    :width: 100%
 
-    # execute with classical quantum simulation
-    qibo.set_backend("numpy")
-    simulation_result = circuit(nshots=5000)
+    The exact gate structure above, with time progressing to the right
+    (gate widths do not represent pulse durations). Only measured wires
+    become sample columns; dummy samples do not establish entanglement.
 
-    simulation = simulation_result.probabilities(qubits=(0,))
+Gate arguments remain logical indices even when ``wire_names`` contains
+different physical identifiers. Check the mapping, pair calibration and
+compiled timing before using a nontrivial placement on hardware. Changing
+wire names does not route otherwise disconnected interactions.
 
+Execute and check the acquired data
+-----------------------------------
 
-In this snippet, we first define a single-qubit circuit containing a single GPI2 gate and a measurement.
-We then proceed to define the qibo backend as ``qibolab`` using the ``dummy`` platform.
-Finally, we change the backend to ``numpy``, a simulation one, to compare the results with ideality.
-After executing the script we can print our results that will appear more or less as:
+The explicit backend compiles the circuit and manages the connection for this
+execution. A ``finally`` block is useful even here: it demonstrates cleanup for
+applications that later replace the dummy platform with hardware, where an
+execution failure may leave a connection open.
 
-.. testcode:: python
+.. testcode:: circuit-execution
 
-    print(f"Qibolab: P(0) = {hardware[0]:.2f}\tP(1) = {hardware[1]:.2f}")
-    print(f"Numpy:   P(0) = {simulation[0]:.2f}\tP(1) = {simulation[1]:.2f}")
+    nshots = 128
+    try:
+        result = backend.execute_circuit(circuit, nshots=nshots)
+    finally:
+        platform.disconnect()
 
-Returns:
+    samples = result.samples()
+    frequencies = result.frequencies()
+    assert set(frequencies).issubset({"00", "01", "10", "11"})
+    np.testing.assert_array_equal(measurement.samples(), samples)
+    print(samples.shape)
+    print(sum(frequencies.values()))
+    print(platform.is_connected)
 
-.. testoutput:: python
-    :options: +NORMALIZE_WHITESPACE
+.. testoutput:: circuit-execution
 
-    Qibolab: P(0) = 0.49    P(1) = 0.51
-    Numpy:   P(0) = 0.50    P(1) = 0.50
+    (128, 2)
+    128
+    False
 
-Clearly, we do not expect the results to be exactly equal due to the non
-ideality of current NISQ devices.
+These are deterministic checks of the interface. We deliberately do not print
+exact frequencies: the dummy platform generates random binary acquisitions
+regardless of the preceding gates. A seemingly balanced histogram would not
+demonstrate a successful rotation, entanglement or hardware noise.
 
-.. note::
-   Qibo circuits and gates are backend agnostic. The same circuit can be executed on multiple backends, including simulation and quantum platforms.
+On a calibrated hardware or emulator platform, a frequency divided by the shot
+count estimates the probability of that measured bit string. Dictionary entries
+for unobserved strings may be absent, so use ``get`` when extracting a particular
+outcome:
 
-A slightly more complex circuit, a variable rotation, will produce similar
-results:
+.. testcode:: circuit-execution
 
-.. testcode:: python
+    observed_11_fraction = frequencies.get("11", 0) / nshots
+    assert 0 <= observed_11_fraction <= 1
 
-    import matplotlib.pyplot as plt
-    import numpy as np
+This result concerns only the measured wires, in their measurement order. It is
+not a full state vector, and it says nothing about the unmeasured wire 1.
+
+Prepare and submit several circuits
+-----------------------------------
+
+State preparation is itself a circuit. It is prepended to the experiment rather
+than passed as a numerical state array. For a collection of experiments,
+``initial_states`` accepts one common preparation circuit.
+
+.. testcode:: circuit-execution
+
+    preparation = Circuit(1, wire_names=[0])
+    preparation.add(gates.GPI(0, phi=0.0))
+
+    experiments = []
+    for phi in (0.0, np.pi / 2):
+        experiment = Circuit(1, wire_names=[0])
+        experiment.add(gates.GPI2(0, phi=phi))
+        experiment.add(gates.M(0))
+        experiments.append(experiment)
+
+    try:
+        results = backend.execute_circuits(
+            experiments, initial_states=preparation, nshots=32
+        )
+    finally:
+        platform.disconnect()
+
+    print(len(results))
+    print([outcome.samples().shape for outcome in results])
+    assert all(sum(outcome.frequencies().values()) == 32 for outcome in results)
+
+.. testoutput:: circuit-execution
+
+    2
+    [(32, 1), (32, 1)]
+
+The backend submits both compiled sequences in one connection lifetime and
+returns results in input order. The sweep above changes the axis of a fixed-angle
+GPI2 rotation; it is not a sweep of rotation angle. With dummy acquisitions,
+the two experiments cannot be used to infer a physical phase response.
+
+Using Qibo's global backend
+---------------------------
+
+If the rest of an application executes circuits through ``circuit(...)``, select
+Qibolab as the global Qibo backend. This is an alternative to the explicit object
+used above, not a required extra step. This example selects NumPy again when
+finished; in an application, reselect whichever backend you intend to use next.
+
+.. testcode:: circuit-global-backend
+
     import qibo
     from qibo import Circuit, gates
 
-
-    def execute_rotation():
-        # create single qubit circuit
-        circuit = Circuit(1, wire_names=[0])
-
-        # attach Rotation on X-Pauli with angle = 0
-        circuit.add(gates.GPI2(0, phi=0))
-        circuit.add(gates.M(0))
-
-        # define range of angles from [0, 2pi]
-        exp_angles = np.arange(0, 2 * np.pi, np.pi / 16)
-
-        res = []
-        for angle in exp_angles:
-            # update circuit's rotation angle
-            circuit.set_parameters([angle])
-
-            # execute circuit
-            result = circuit(nshots=4000)
-	    freq = result.frequencies()
-	    p0 = freq['0'] / 4000 if '0' in freq else 0
-	    p1 = freq['1'] / 4000 if '1' in freq else 0
-
-            # store probability in state |1>
-            res.append(p1)
-
-        return res
-
-
-    # execute on quantum hardware
     qibo.set_backend("qibolab", platform="dummy")
-    hardware = execute_rotation()
+    selected_backend = qibo.get_backend()
+    try:
+        circuit = Circuit(1, wire_names=[0])
+        circuit.add(gates.M(0))
+        outcome = circuit(nshots=16)
+        print(outcome.samples().shape)
+    finally:
+        selected_backend.platform.disconnect()
+        qibo.set_backend("numpy")
 
-    # execute with classical quantum simulation
-    qibo.set_backend("numpy")
-    simulation = execute_rotation()
+.. testoutput:: circuit-global-backend
 
-    # plot results
-    exp_angles = np.arange(0, 2 * np.pi, np.pi / 16)
-    plt.plot(exp_angles, hardware, label="qibolab hardware")
-    plt.plot(exp_angles, simulation, label="numpy")
+    (16, 1)
 
-    plt.legend()
-    plt.ylabel("P(1)")
-    plt.xlabel("Rotation [rad]")
-    plt.show()
-
-Returns the following plot:
-
-.. image:: rotation_light.svg
-   :class: only-light
-.. image:: rotation_dark.svg
-   :class: only-dark
-
-.. note::
-   Executing circuits using the Qibolab backend results to automatic application of the compilation pipeline (:ref:`main_doc_compiler`)
-   which converts the circuit to a pulse sequence that is executed by the given platform.
-
-QASM Execution
---------------
-
-Qibolab also supports the execution of circuits starting from a QASM string. The QASM circuit:
-
-.. testcode::
-
-   circuit = """// Generated by QIBO 0.2.4
-   OPENQASM 2.0;
-   include "qelib1.inc";
-   qreg q[3];
-   creg a[2];
-   cz q[0],q[2];
-   gpi2(0.3) q[1];
-   cz q[1],q[2];
-   measure q[0] -> a[0];
-   measure q[2] -> a[1];"""
-
-can be executed by passing it together with the platform name to the :func:`qibolab._core.backends.execute_qasm` function:
-
-.. testcode::
-
-   from qibolab._core.backends import execute_qasm
-
-   result = execute_qasm(circuit, platform="dummy")
-
-
-C-API
------
-
-Qibolab also supports the execution of circuits starting from a QASM string using a C-API.
-Please refer to the `C-API documentation <https://github.com/qiboteam/qibolab/tree/main/capi>`_.
+An ideal Qibo simulation may be useful as a separate reference experiment, but
+its state or probabilities should not be compared to dummy data as a measure of
+device fidelity. For meaningful comparisons, use a calibrated platform and
+respect its connectivity, native-gate availability and measurement limitations.

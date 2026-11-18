@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="345" viewBox="0 0 760 345" role="img" aria-labelledby="title desc">
+  <title id="title">Baseline and rotated emulated experiments</title>
+  <desc id="desc">The baseline is an independent native MZ sequence. The rotated experiment pipes native RX into a new MZ sequence. Each has a different acquisition identifier and returns 1000 classified shots. The two array means estimate separate fractions of outcome 1. No numerical fractions, ideal initialization, or calibrated bit-flip fidelity are assumed.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0 1 L8 5 L0 9" fill="none" stroke="#526078" stroke-width="1.5"/></marker>
+  </defs>
+  <rect width="760" height="345" rx="12" fill="#fff"/>
+  <g font-family="sans-serif" font-size="17" fill="#243047">
+    <text x="28" y="34" font-size="21" font-weight="bold">Independent evolutions on the same numerical platform</text>
+    <rect x="28" y="58" width="334" height="243" rx="9" fill="#f4f5f8" stroke="#526078"/>
+    <rect x="398" y="58" width="334" height="243" rx="9" fill="#f4f5f8" stroke="#526078"/>
+    <text x="195" y="88" text-anchor="middle" font-size="21" font-weight="bold">Baseline: MZ</text>
+    <text x="565" y="88" text-anchor="middle" font-size="21" font-weight="bold">Rotated: RX | MZ</text>
+    <rect x="138" y="110" width="114" height="44" rx="5" fill="#e8f4fa" stroke="#387c99"/>
+    <text x="195" y="138" text-anchor="middle">MZ (id A)</text>
+    <rect x="427" y="110" width="84" height="44" rx="5" fill="#f0eaff" stroke="#7145bd"/>
+    <text x="469" y="138" text-anchor="middle">RX</text>
+    <path d="M516 132 H572" stroke="#526078" stroke-width="2" marker-end="url(#arrow)"/>
+    <rect x="580" y="110" width="122" height="44" rx="5" fill="#e8f4fa" stroke="#387c99"/>
+    <text x="641" y="138" text-anchor="middle">MZ (id B)</text>
+    <text x="195" y="192" text-anchor="middle">readout[id A]</text><text x="565" y="192" text-anchor="middle">readout[id B]</text>
+    <text x="195" y="220" text-anchor="middle">1000 classified shots</text><text x="565" y="220" text-anchor="middle">1000 classified shots</text>
+    <text x="195" y="273" text-anchor="middle" font-weight="bold">mean = baseline fraction</text><text x="565" y="273" text-anchor="middle" font-weight="bold">mean = rotated fraction</text>
+    <text x="380" y="330" text-anchor="middle" font-size="16">A and B denote distinct UUIDs, not literal dictionary keys; widths are schematic</text>
+  </g>
+</svg>

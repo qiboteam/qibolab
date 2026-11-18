@@ -18,7 +18,12 @@ Some of the key features of Qibolab are:
 
 [![docs](https://github.com/qiboteam/qibolab/actions/workflows/publish.yml/badge.svg)](https://qibo.science/qibolab/stable/)
 
-The qibolab backend documentation is available at [https://qibo.science/qibolab/stable/](https://qibo.science/qibolab/stable/).
+The [documentation](https://qibo.science/qibolab/stable/) covers the platform and
+pulse APIs as well as the optional Qibo backend. Start with the
+[first pulse experiment](https://qibo.science/qibolab/stable/getting-started/experiment.html),
+which runs without hardware, then follow the conceptual guides and tutorials for
+pulse construction, parameter sweeps, circuit execution, and platform management.
+Individual instrument drivers and device-specific setup are outside its scope.
 
 ## Minimum working example
 

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="340" viewBox="0 0 760 340" role="img" aria-labelledby="title desc">
+  <title id="title">Ideal simulation, dummy data, and pulse emulation</title>
+  <desc id="desc">An ideal Qibo simulator evolves a state by applying gate operators. The dummy Qibolab platform generates random acquisition arrays with the requested layout. A Qibolab emulator evolves a physical model under a pulse program, including modeled dissipation, and returns model-derived acquisitions. Only the latter two use the Platform.execute interface.</desc>
+  <rect width="760" height="340" rx="12" fill="#fff"/>
+  <g font-family="sans-serif" font-size="17" fill="#243047">
+    <rect x="24" y="22" width="712" height="80" rx="9" fill="#f4f5f8" stroke="#526078"/>
+    <text x="44" y="53" font-size="21" font-weight="bold">Ideal circuit simulator</text>
+    <text x="340" y="52">Circuit &#8594; gate operators &#8594; quantum state</text>
+    <text x="340" y="80">Mathematical gates, not pulse dynamics</text>
+    <text x="44" y="137" font-size="18" font-weight="bold">Same Qibolab pulse interface: Platform.execute(...)</text>
+    <rect x="24" y="151" width="712" height="80" rx="9" fill="#f0eaff" stroke="#7145bd"/>
+    <text x="44" y="182" font-size="21" font-weight="bold">Dummy platform</text>
+    <text x="340" y="181">Pulse program &#8594; random arrays</text>
+    <text x="340" y="209">Expected layout; no quantum evolution</text>
+    <rect x="24" y="247" width="712" height="80" rx="9" fill="#e8f4fa" stroke="#387c99"/>
+    <text x="44" y="278" font-size="21" font-weight="bold">Emulator platform</text>
+    <text x="340" y="277">Pulses + physical model &#8594; acquisitions</text>
+    <text x="340" y="305">Quantum dynamics + modeled dissipation</text>
+  </g>
+</svg>
