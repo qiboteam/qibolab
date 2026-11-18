@@ -150,6 +150,10 @@ def map_ports(
     for name, el in (qubits | couplers).items():
         for chname, ch in premap[name].items():
             channels[getattr(el, chname)] = ch
+            if chname == "drive":
+                # extra drive channels share the port of the main drive one
+                for extra in el.drive_extra.values():
+                    channels[extra] = ch.model_copy()
         try:
             channels[el.acquisition] = channels[el.acquisition].model_copy(
                 update={"probe": el.probe}
@@ -276,6 +280,17 @@ def build_channels(
             el.probe: outputs.references(name, True),
             el.drive: outputs.references(name, False),
             el.acquisition: {"twpa_pump": pumps[name]} if name in pumps else {},
+        } | {
+            # WARNING: the extra drive channels are assumed to share the LO and
+            # mixer of the main drive channel. This may not always hold: for
+            # some operations (e.g. cross-resonance or 1-2 transition drives)
+            # the target frequency might fall outside the LO bandwidth,
+            # requiring a different LO - which is currently not supported here.
+            # If the extra channels need a different LO from the main drive
+            # channel, it has to be inserted manually in the QPU platform
+            # script (in the QIBOLAB_PLATFORMS folder)
+            extra: outputs.references(name, False)
+            for extra in el.drive_extra.values()
         }
         for id_, update in updates.items():
             if id_ is not None and id_ in channels and len(update) > 0:
