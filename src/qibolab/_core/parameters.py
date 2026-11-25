@@ -29,6 +29,8 @@ __all__ = ["ConfigKinds", "Parameters"]
 def update_configs(configs: dict[str, Config], updates: list[ConfigUpdate]):
     """Apply updates to configs in place.
 
+    Updated configs are validated, thus unknown fields and invalid values are rejected.
+
     Args:
         configs: configs to update. Maps component name to respective config.
         updates: list of config updates. Later entries in the list take precedence over earlier entries
@@ -44,7 +46,9 @@ def update_configs(configs: dict[str, Config], updates: list[ConfigUpdate]):
                     raise ValueError(
                         f"Cannot update configuration for unknown component {name}"
                     )
-            configs[name] = replace(configs[name], **changes)
+            config = configs[name]
+            # validate, to reject unknown fields and invalid values
+            configs[name] = type(config).model_validate(config.model_dump() | changes)
 
 
 class Settings(Model):
