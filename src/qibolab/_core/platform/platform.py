@@ -51,22 +51,14 @@ class Platform:
     name: str
     """Name of the platform."""
     parameters: Parameters
-    """..."""
+    """Serializable configurations, native operations, and execution defaults."""
     instruments: InstrumentMap
     """Mapping instrument names to
     :class:`qibolab.instruments.abstract.Instrument` objects."""
     qubits: QubitMap
-    """Qubit controllers.
-
-    The mapped objects hold the :class:`qubit.components.channels.Channel` instances
-    required to send pulses addressing the desired qubits.
-    """
+    """Mapping of physical qubit identifiers to their channel-role containers."""
     couplers: QubitMap = field(default_factory=dict)
-    """Coupler controllers.
-
-    Fully analogue to :attr:`qubits`. Only the flux channel is expected to be populated
-    in the mapped objects.
-    """
+    """Coupler identifiers mapped to channel-role containers, usually flux-only."""
     resonator_type: Literal["2D", "3D"] = "2D"
     """Type of resonator (2D or 3D) in the used QPU."""
     is_connected: bool = False

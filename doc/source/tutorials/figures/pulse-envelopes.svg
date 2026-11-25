@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="325" viewBox="0 0 760 325" role="img" aria-labelledby="title desc">
+  <title id="title">Gaussian and rectangular digital envelopes</title>
+  <desc id="desc">The Gaussian panel connects the actual 40 I samples of the tutorial pulse, at one sample per nanosecond, with duration 40 ns, amplitude 0.2, and sigma 8 ns. Q is zero. The rectangular panel shows four I samples at amplitude 0.25 and zero Q. The panels have different scales; neither shows a carrier or physical response.</desc>
+  <rect width="760" height="325" rx="12" fill="#fff"/>
+  <g font-family="sans-serif" font-size="17" fill="#243047">
+    <text x="28" y="34" font-size="21" font-weight="bold">Gaussian: 40 ns, amplitude 0.2</text>
+    <text x="407" y="34" font-size="21" font-weight="bold">Rectangular: 4 ns, amplitude 0.25</text>
+    <path d="M100 225 V77 M100 225 H346 M480 225 V77 M480 225 H721" fill="none" stroke="#526078" stroke-width="2"/>
+    <path d="M100 95 H340 M480 95 H714" stroke="#d9dfe8" stroke-dasharray="3 4"/>
+    <g text-anchor="end" font-size="16"><text x="90" y="101">0.2</text><text x="90" y="231">0</text><text x="470" y="101">0.25</text><text x="470" y="231">0</text></g>
+    <polyline points="100.0,218.3 106.0,216.0 112.0,213.1 118.0,209.5 124.0,205.1 130.0,199.8 136.0,193.7 142.0,186.6 148.0,178.7 154.0,170.1 160.0,160.8 166.0,151.1 172.0,141.2 178.0,131.5 184.0,122.4 190.0,114.0 196.0,106.9 202.0,101.2 208.0,97.3 214.0,95.3 220.0,95.3 226.0,97.3 232.0,101.2 238.0,106.9 244.0,114.0 250.0,122.4 256.0,131.5 262.0,141.2 268.0,151.1 274.0,160.8 280.0,170.1 286.0,178.7 292.0,186.6 298.0,193.7 304.0,199.8 310.0,205.1 316.0,209.5 322.0,213.1 328.0,216.0 334.0,218.3" fill="none" stroke="#7145bd" stroke-width="3"/>
+    <path d="M100 225 H334 M480 225 H714" stroke="#287c99" stroke-width="3" stroke-dasharray="7 5"/>
+    <path d="M480 95 H714" stroke="#7145bd" stroke-width="3"/>
+    <g fill="#7145bd"><circle cx="480" cy="95" r="5"/><circle cx="558" cy="95" r="5"/><circle cx="636" cy="95" r="5"/><circle cx="714" cy="95" r="5"/></g>
+    <g text-anchor="middle" font-size="16">
+      <text x="100" y="249">0</text><text x="220" y="249">20</text><text x="340" y="249">40</text>
+      <text x="480" y="249">0</text><text x="558" y="249">1</text><text x="636" y="249">2</text><text x="714" y="249">3</text>
+      <text x="220" y="276">Sample time [ns]</text><text x="597" y="276">Sample time [ns]</text>
+    </g>
+    <text transform="translate(40 167) rotate(-90)" text-anchor="middle" font-size="16">Digital amplitude</text>
+    <text transform="translate(420 167) rotate(-90)" text-anchor="middle" font-size="16">Digital amplitude</text>
+    <path d="M206 304 H242" stroke="#7145bd" stroke-width="3"/><text x="252" y="310">I envelope</text>
+    <path d="M408 304 H444" stroke="#287c99" stroke-width="3" stroke-dasharray="7 5"/><text x="454" y="310">Q = 0</text>
+  </g>
+</svg>
